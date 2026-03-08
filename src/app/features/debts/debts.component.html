@@ -1,0 +1,264 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <div class="page-header">
+      <div class="user-avatar">{{ userInitial }}</div>
+      <span class="page-title">Debts</span>
+      <ion-button fill="clear" (click)="goToSettings()">
+        <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-segment [(ngModel)]="activeSegment" class="ion-margin">
+    <ion-segment-button value="installments">
+      <ion-label>Installments</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="cards">
+      <ion-label>Credit Cards</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  <!-- Installments Tab -->
+  @if (activeSegment === 'installments') {
+    @if (vm$ | async; as list) {
+      @if (!list.length) {
+        <p class="empty-state">No installments yet. Tap + to add one.</p>
+      } @else {
+        <!-- Installment Totals Summary -->
+        <div class="installment-totals">
+          <div class="installment-total-item">
+            <span class="installment-total-label">Total</span>
+            <span class="installment-total-value">{{ totalCost(list) | currency:currencyCode:'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="installment-total-divider"></div>
+          <div class="installment-total-item">
+            <span class="installment-total-label">Paid</span>
+            <span class="installment-total-value success-text">{{ totalPaid(list) | currency:currencyCode:'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="installment-total-divider"></div>
+          <div class="installment-total-item">
+            <span class="installment-total-label">Remaining</span>
+            <span class="installment-total-value danger-text">{{ totalRemaining(list) | currency:currencyCode:'symbol':'1.0-0' }}</span>
+          </div>
+        </div>
+
+        <ion-accordion-group>
+          @for (inst of list; track inst.id) {
+            <ion-accordion [value]="inst.id">
+              <ion-item slot="header">
+                <ion-label>
+                  <h3>{{ inst.transaction }}</h3>
+                  <p>{{ inst.cardName }} · {{ inst.monthlyAmount | currency:currencyCode:'symbol':'1.0-0' }}/mo</p>
+                  <p>{{ inst.paidCount }}/{{ inst.months }} paid · {{ inst.remainingMonths }} remaining</p>
+                  <p class="installment-header-total">Total: {{ inst.totalCost | currency:currencyCode:'symbol':'1.0-0' }} · Left: {{ inst.remainingAmount | currency:currencyCode:'symbol':'1.0-0' }}</p>
+                </ion-label>
+                <ion-badge slot="end" color="primary">{{ inst.remainingMonths }}mo</ion-badge>
+              </ion-item>
+              <div slot="content">
+                <ion-list lines="full">
+                  @for (p of inst.payments; track p.id) {
+                    <ion-item-sliding>
+                      <ion-item>
+                        <ion-label>
+                          <h3>{{ p.dueDate | date:'MMMM y' }}</h3>
+                          <p>Due: {{ p.dueDate | date:'MMM d, y' }}</p>
+                          @if (p.status === 'paid' && getPaymentIncomeSources(p.id)) {
+                            <p class="paid-source-label">Paid from: {{ getPaymentIncomeSources(p.id) }}</p>
+                          }
+                        </ion-label>
+                        <ion-badge slot="end" [color]="badgeColor(p.status)">{{ p.status }}</ion-badge>
+                        <ion-note slot="end">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</ion-note>
+                      </ion-item>
+                      <ion-item-options side="end">
+                        @if (p.status !== 'paid') {
+                          <ion-item-option color="success" (click)="markPaid(p, inst.transaction)">
+                            <ion-icon name="checkmark-outline" slot="icon-only" />
+                          </ion-item-option>
+                        }
+                        <ion-item-option color="primary" (click)="openEditPayment(p)">
+                          <ion-icon name="create-outline" slot="icon-only" />
+                        </ion-item-option>
+                        <ion-item-option color="danger" (click)="deletePayment(p, inst.transaction)">
+                          <ion-icon name="trash-outline" slot="icon-only" />
+                        </ion-item-option>
+                      </ion-item-options>
+                    </ion-item-sliding>
+                  }
+                </ion-list>
+                <ion-button expand="block" fill="outline" color="primary" class="ion-margin" (click)="openEditInstallment(inst)">
+                  <ion-icon name="create-outline" slot="start" />
+                  Edit Installment
+                </ion-button>
+                <ion-button expand="block" fill="outline" color="danger" class="ion-margin" (click)="deleteInstallment(inst.id, inst.transaction)">
+                  <ion-icon name="trash-outline" slot="start" />
+                  Delete Installment
+                </ion-button>
+              </div>
+            </ion-accordion>
+          }
+        </ion-accordion-group>
+      }
+    }
+  }
+
+  <!-- Credit Cards Tab -->
+  @if (activeSegment === 'cards') {
+    @if (cards$ | async; as cards) {
+      @if (!cards.length) {
+        <p class="empty-state">No cards yet. Tap + to add one.</p>
+      }
+      @for (c of cards; track c.id) {
+        <ion-card class="card-item">
+          <ion-card-header>
+            <ion-card-subtitle>{{ c.bank }}</ion-card-subtitle>
+            <ion-card-title>
+              <ion-icon name="card-outline" /> {{ c.name }}
+            </ion-card-title>
+          </ion-card-header>
+          <ion-card-content>
+            <ion-list lines="none">
+              <ion-item>
+                <ion-label>
+                  <p>Due Date: <strong>{{ c.dueDate }}{{ ordinal(c.dueDate) }} of every month</strong></p>
+                  <p>Cutoff: <strong>{{ c.cutoffDate }}{{ ordinal(c.cutoffDate) }} of every month</strong></p>
+                  <p>Credit Limit: <strong>{{ c.creditLimit | currency:currencyCode:'symbol':'1.0-0' }}</strong></p>
+                  <p>Next Due: <strong>{{ nextDueDate(c) | date:'MMM d, y' }}</strong></p>
+                </ion-label>
+              </ion-item>
+            </ion-list>
+            <ion-button fill="outline" color="primary" size="small" (click)="openEditCard(c)">
+              <ion-icon name="create-outline" slot="start" />
+              Edit Card
+            </ion-button>
+            <ion-button fill="outline" color="danger" size="small" (click)="deleteCard(c.id, c.bank + ' – ' + c.name)">
+              <ion-icon name="trash-outline" slot="start" />
+              Remove Card
+            </ion-button>
+          </ion-card-content>
+        </ion-card>
+      }
+    }
+  }
+
+  <!-- FAB -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button (click)="openAddModal()">
+      <ion-icon name="add-outline" />
+    </ion-fab-button>
+  </ion-fab>
+
+  <!-- Add Installment Modal -->
+  <ion-modal [isOpen]="isInstallmentModalOpen" (didDismiss)="closeInstallmentModal()">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>{{ editingInstallment ? 'Edit Installment' : 'Add Installment' }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeInstallmentModal()">Cancel</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input label="Transaction Name" [(ngModel)]="installmentForm.transaction" placeholder="e.g. Honda ADV" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Monthly Amount (PHP)" type="number" [(ngModel)]="installmentForm.monthlyAmount" placeholder="0.00" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Start Date" type="date" [(ngModel)]="installmentForm.startDate" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Number of Months" type="number" [(ngModel)]="installmentForm.months" placeholder="12" />
+        </ion-item>
+        <ion-item>
+          <ion-select label="Credit Card" [(ngModel)]="installmentForm.cardId" placeholder="Select card (optional)">
+            <ion-select-option value="">None</ion-select-option>
+            @for (c of cards$ | async; track c.id) {
+              <ion-select-option [value]="c.id">
+                {{ c.bank }} – {{ c.name }}
+              </ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-button expand="block" class="ion-margin-top" (click)="saveInstallment()">{{ editingInstallment ? 'Update Installment' : 'Save Installment' }}</ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Add Card Modal -->
+  <ion-modal [isOpen]="isCardModalOpen" (didDismiss)="closeCardModal()">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>{{ editingCard ? 'Edit Credit Card' : 'Add Credit Card' }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeCardModal()">Cancel</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input label="Bank" [(ngModel)]="cardForm.bank" placeholder="e.g. RCBC" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Card Name" [(ngModel)]="cardForm.name" placeholder="e.g. Visa Classic" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Due Date (day)" type="number" [(ngModel)]="cardForm.dueDate" placeholder="3" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Cutoff Date (day)" type="number" [(ngModel)]="cardForm.cutoffDate" placeholder="25" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Credit Limit (PHP)" type="number" [(ngModel)]="cardForm.creditLimit" placeholder="0" />
+        </ion-item>
+        <ion-button expand="block" class="ion-margin-top" (click)="saveCard()">{{ editingCard ? 'Update Card' : 'Save Card' }}</ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Edit Payment Modal -->
+  <ion-modal [isOpen]="isEditPaymentModalOpen" (didDismiss)="closeEditPaymentModal()">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Edit Payment</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeEditPaymentModal()">Cancel</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input label="Amount" type="number" [(ngModel)]="paymentForm.amount" placeholder="0.00" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Due Date" type="date" [(ngModel)]="paymentForm.dueDate" />
+        </ion-item>
+        <ion-item>
+          <ion-select label="Status" [(ngModel)]="paymentForm.status">
+            <ion-select-option value="pending">Pending</ion-select-option>
+            <ion-select-option value="paid">Paid</ion-select-option>
+            <ion-select-option value="overdue">Overdue</ion-select-option>
+          </ion-select>
+        </ion-item>
+        <ion-button expand="block" class="ion-margin-top" (click)="savePayment()">Update Payment</ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Pay Modal -->
+  <app-pay-modal
+    [isOpen]="isPayModalOpen"
+    [amount]="payingPayment?.amount || 0"
+    [itemName]="payingTransaction"
+    [currencyCode]="currencyCode"
+    (dismissed)="closePayModal()"
+    (paid)="onPayResult($event)"
+  />
+
+  <div style="height: 100px;"></div>
+</ion-content>

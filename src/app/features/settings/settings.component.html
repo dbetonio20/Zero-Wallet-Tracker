@@ -1,0 +1,86 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text="" icon="chevron-back-outline"></ion-back-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <!-- Brand Header -->
+  <div class="brand-header">
+    <div class="brand-icon">◐</div>
+    <div class="brand-name">zero</div>
+  </div>
+
+  <!-- Appearance & Personalization -->
+  <div class="section-header">Appearance & Personalization</div>
+  <div class="settings-group">
+    <ion-item button (click)="changeTheme()" [detail]="false">
+      <ion-label>
+        <h3>Choose Theme</h3>
+      </ion-label>
+      <span slot="end" class="settings-value">{{ theme }}</span>
+    </ion-item>
+    <ion-item button (click)="changeName()" [detail]="false">
+      <ion-label>
+        <h3>Change Name</h3>
+      </ion-label>
+      <span slot="end" class="settings-value">{{ userName }}</span>
+    </ion-item>
+    <ion-item button (click)="changeCurrency()" [detail]="false">
+      <ion-label>
+        <h3>Change Currency Symbol</h3>
+      </ion-label>
+      <span slot="end" class="settings-value">{{ currencySymbol }}<br>{{ currencyCode }}</span>
+    </ion-item>
+  </div>
+
+  <!-- Manage your Data -->
+  <div class="section-header">Manage your Data</div>
+  <div class="settings-group">
+    <ion-item button (click)="downloadData()" [detail]="false">
+      <ion-label>
+        <h3>Download your data</h3>
+        <p>You can import this data in a new device</p>
+      </ion-label>
+    </ion-item>
+    <ion-item button (click)="deleteAllData()" [detail]="false">
+      <ion-label>
+        <h3>Delete all data</h3>
+        <p>All data associated with zero will be deleted</p>
+      </ion-label>
+    </ion-item>
+  </div>
+
+  <!-- Help & Feedback -->
+  <div class="section-header">Help & Feedback</div>
+  <div class="settings-group">
+    <ion-item [detail]="false">
+      <ion-label>
+        <h3>Rate the app</h3>
+        <p>Enjoying Expense Tracker? Your feedback helps us improve!</p>
+      </ion-label>
+    </ion-item>
+    <ion-item href="https://github.com" target="_blank" [detail]="false">
+      <ion-label>
+        <h3>Github</h3>
+        <p>Explore the Source Code</p>
+      </ion-label>
+    </ion-item>
+    <ion-item [detail]="false">
+      <ion-label>
+        <h3>Privacy Policy</h3>
+        <p>Your Data, Your Device: zero Servers, zero Access.</p>
+      </ion-label>
+    </ion-item>
+    <ion-item [detail]="false">
+      <ion-label>
+        <h3>Version</h3>
+        <p>v1.0</p>
+      </ion-label>
+    </ion-item>
+  </div>
+
+  <div style="height: 100px;"></div>
+</ion-content>

@@ -1,0 +1,1290 @@
+/* Ionic Core CSS */
+@import "@ionic/angular/css/core.css";
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+/* Force dark palette based on class — applied dynamically */
+@import "@ionic/angular/css/palettes/dark.class.css";
+
+/* ── Theme Variables ────────────────────────────────────── */
+:root {
+  --ion-color-primary: #2dd36f;
+  --ion-color-primary-rgb: 45, 211, 111;
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-shade: #28ba62;
+  --ion-color-primary-tint: #42d77d;
+}
+
+/* Dark theme variables — applied when .ion-palette-dark is on html */
+.ion-palette-dark {
+  --ion-background-color: #121212;
+  --ion-background-color-rgb: 18, 18, 18;
+  --ion-text-color: #e0e0e0;
+  --ion-text-color-rgb: 224, 224, 224;
+
+  --ion-item-background: #1e1e1e;
+  --ion-card-background: #1e1e1e;
+  --ion-toolbar-background: #121212;
+
+  --dashboard-bg: #121212;
+  --card-bg: #1e1e1e;
+  --card-border: #2a2a2a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #888888;
+  --accent-green: #2dd36f;
+  --accent-red: #ff4961;
+  --accent-yellow: #ffc409;
+  --accent-blue: #3dc2ff;
+}
+
+/* Light theme defaults */
+:root:not(.ion-palette-dark) {
+  --ion-background-color: #ffffff;
+  --ion-background-color-rgb: 255, 255, 255;
+  --ion-text-color: #1a1a1a;
+  --ion-text-color-rgb: 26, 26, 26;
+
+  --ion-item-background: #f5f5f5;
+  --ion-card-background: #ffffff;
+  --ion-toolbar-background: #ffffff;
+
+  --dashboard-bg: #f0f0f0;
+  --card-bg: #ffffff;
+  --card-border: #e0e0e0;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --accent-green: #2dd36f;
+  --accent-red: #eb445a;
+  --accent-yellow: #e0ac08;
+  --accent-blue: #3880ff;
+}
+
+/* ── Global Font ───────────────────────────────────────── */
+* {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
+}
+
+ion-content {
+  --background: var(--dashboard-bg);
+}
+
+/* ── Page Header (avatar + title + gear) ───────────────── */
+.page-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  gap: 12px;
+}
+
+.page-header .page-title {
+  flex: 1;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ion-text-color);
+  color: var(--ion-background-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+/* ── Hero Balance Section ──────────────────────────────── */
+.hero-section {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  margin: 12px 16px;
+  border-radius: 16px;
+  padding: 24px 20px 20px;
+  text-align: center;
+}
+
+.hero-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.hero-amount {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--accent-green);
+  letter-spacing: -1px;
+  line-height: 1.2;
+}
+
+.hero-amount.negative {
+  color: var(--accent-red);
+}
+
+.negative-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 73, 97, 0.15);
+  color: var(--accent-red);
+  border-radius: 8px;
+  padding: 6px 14px;
+  margin-top: 10px;
+  font-weight: 600;
+  font-size: 0.78rem;
+}
+
+.hero-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-top: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.hero-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+}
+
+.hero-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--card-border);
+  margin: 0 8px;
+}
+
+.hero-stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.hero-stat-icon.income-icon {
+  background: rgba(45, 211, 111, 0.15);
+  color: var(--accent-green);
+}
+
+.hero-stat-icon.expense-icon {
+  background: rgba(255, 73, 97, 0.15);
+  color: var(--accent-red);
+}
+
+.hero-stat-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.hero-stat-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hero-stat-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ── Stats Grid ────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 0 16px;
+  margin-bottom: 8px;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 14px 8px;
+  text-align: center;
+}
+
+.stat-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 8px;
+  font-size: 1rem;
+}
+
+.stat-overdue .stat-card-icon {
+  background: rgba(255, 73, 97, 0.15);
+  color: var(--accent-red);
+}
+
+.stat-upcoming .stat-card-icon {
+  background: rgba(255, 196, 9, 0.15);
+  color: var(--accent-yellow);
+}
+
+.stat-installment .stat-card-icon {
+  background: rgba(61, 194, 255, 0.15);
+  color: var(--accent-blue);
+}
+
+.stat-card-value {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-card-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Section Headers ───────────────────────────────────── */
+.section {
+  padding: 0 16px;
+  margin-top: 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 4px;
+  color: var(--accent-green);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.section-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-danger { background: var(--accent-red); }
+.dot-warning { background: var(--accent-yellow); }
+.dot-success { background: var(--accent-green); }
+
+/* ── Glass Card ────────────────────────────────────────── */
+.card-glass {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 4px 0;
+  overflow: hidden;
+}
+
+/* ── Transaction Items ─────────────────────────────────── */
+.transaction-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.transaction-item + .transaction-item {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.transaction-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.danger-bg { background: rgba(255, 73, 97, 0.15); color: var(--accent-red); }
+.warning-bg { background: rgba(255, 196, 9, 0.15); color: var(--accent-yellow); }
+.success-bg { background: rgba(45, 211, 111, 0.15); color: var(--accent-green); }
+.medium-bg { background: rgba(255, 255, 255, 0.06); color: var(--text-secondary); }
+
+.transaction-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.transaction-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transaction-date {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.transaction-amount {
+  font-size: 0.88rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  color: var(--text-primary);
+}
+
+.danger-text { color: var(--accent-red); }
+.warning-text { color: var(--accent-yellow); }
+.success-text { color: var(--accent-green); }
+
+/* ── Ionic List Overrides ──────────────────────────────── */
+.transparent-list {
+  background: transparent !important;
+  padding: 0;
+}
+
+.transparent-list ion-item {
+  --background: transparent;
+  --color: var(--text-primary);
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --inner-padding-end: 0;
+  --border-color: rgba(255, 255, 255, 0.04);
+}
+
+.transaction-item-ionic {
+  --background: transparent;
+  --color: var(--text-primary);
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+  --min-height: 60px;
+}
+
+.recurring-badge {
+  margin-left: 6px;
+  font-size: 0.72rem;
+}
+
+/* ── Empty State ───────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 32px 16px;
+  font-size: 0.9rem;
+}
+
+.empty-state .empty-icon {
+  font-size: 2.2rem;
+  display: block;
+  margin: 0 auto 12px;
+  opacity: 0.4;
+}
+
+.empty-state p {
+  margin-bottom: 16px;
+}
+
+.empty-state ion-button {
+  --border-color: var(--accent-green);
+  --color: var(--accent-green);
+  font-size: 0.8rem;
+}
+
+/* ── Add Button ────────────────────────────────────────── */
+.add-btn {
+  --color: var(--accent-green);
+  font-size: 1.3rem;
+}
+
+/* ── Modal Styles ──────────────────────────────────────── */
+.modal-toolbar {
+  --background: var(--dashboard-bg);
+  --color: var(--text-primary);
+}
+
+.modal-close-btn {
+  --color: var(--text-secondary);
+}
+
+.modal-content {
+  --background: var(--dashboard-bg);
+  --color: var(--text-primary);
+}
+
+.form-item {
+  --background: var(--card-bg);
+  --color: var(--text-primary);
+  --border-color: var(--card-border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.save-btn {
+  --background: var(--accent-green);
+  --color: #000;
+  --border-radius: 12px;
+  margin-top: 20px;
+  font-weight: 700;
+  height: 48px;
+}
+
+/* ── Badge Overrides ───────────────────────────────────── */
+ion-badge {
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+
+/* ── Tab Bar ───────────────────────────────────────────── */
+ion-tab-bar {
+  --background: var(--card-bg);
+  --border: 1px solid var(--card-border);
+  border-top: 1px solid var(--card-border);
+}
+
+ion-tab-button {
+  --color: #666;
+  --color-selected: var(--accent-green);
+}
+
+/* ── FAB Button ────────────────────────────────────────── */
+ion-fab-button {
+  --background: var(--accent-green);
+  --color: #000;
+}
+
+/* ── Settings Page ─────────────────────────────────────── */
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px 8px;
+}
+
+.brand-icon {
+  font-size: 1.6rem;
+  color: var(--text-primary);
+}
+
+.brand-name {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.settings-group {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  margin: 0 16px 16px;
+  overflow: hidden;
+}
+
+.settings-group ion-item {
+  --background: transparent;
+  --border-color: var(--card-border);
+  --color: var(--text-primary);
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+  --min-height: 52px;
+}
+
+.settings-group ion-item:last-child {
+  --border-style: none;
+}
+
+.settings-group ion-item h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.settings-group ion-item p {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.settings-value {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+/* ── Reports Page ──────────────────────────────────────── */
+.month-selector {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.month-selector::-webkit-scrollbar {
+  display: none;
+}
+
+.month-chip {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.month-chip.active {
+  background: var(--accent-green);
+  color: #000;
+  border-color: var(--accent-green);
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.summary-card {
+  background: var(--accent-green);
+  color: #000;
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+.summary-card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.summary-card-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.chart-container {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.chart-container canvas {
+  max-width: 280px;
+  max-height: 280px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 16px;
+  padding: 8px 16px 16px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Calendar ──────────────────────────────────────────── */
+.calendar {
+  padding: 0 16px 16px;
+}
+
+.calendar-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.calendar-header span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 0;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.calendar-day.has-expense {
+  background: rgba(45, 211, 111, 0.2);
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+.calendar-day.today {
+  background: var(--accent-green);
+  color: #000;
+  font-weight: 700;
+}
+
+.calendar-day.high-spend {
+  background: rgba(45, 211, 111, 0.4);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar {
+  display: none;
+}
+
+.card-item {
+  margin: 12px;
+}
+
+/* ── Ionic global overrides for dark theme ─────────────── */
+ion-toolbar {
+  --background: var(--dashboard-bg);
+  --border-width: 0;
+}
+
+ion-card {
+  --background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+ion-list {
+  --ion-item-background: var(--card-bg);
+}
+
+ion-segment {
+  --background: var(--card-bg);
+}
+
+ion-segment-button {
+  --indicator-color: var(--accent-green);
+  --color: var(--text-secondary);
+  --color-checked: var(--ion-color-primary);
+}
+
+ion-accordion-group {
+  margin: 0 16px;
+}
+
+ion-accordion {
+  margin-bottom: 8px;
+  border-radius: 14px !important;
+  overflow: hidden;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+}
+
+/* ── Pay Modal ────────────────────────────────────────── */
+.pay-modal-amount {
+  text-align: center;
+  padding: 16px 0 24px;
+}
+
+.pay-modal-amount-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.pay-modal-amount-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent-green);
+}
+
+.pay-modal-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+.pay-income-row {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  gap: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pay-income-row + .pay-income-row {
+  border-top: 1px solid var(--card-border);
+}
+
+.pay-income-row.selected {
+  background: rgba(45, 211, 111, 0.08);
+}
+
+.pay-income-check {
+  flex-shrink: 0;
+}
+
+.pay-income-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pay-income-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.pay-income-date {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.pay-income-remaining {
+  font-size: 0.8rem;
+  color: var(--accent-green);
+  margin-top: 2px;
+}
+
+.pay-income-total {
+  color: var(--text-secondary);
+}
+
+.pay-income-amount-input {
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.pay-amount-field {
+  --background: var(--card-bg);
+  --border-radius: 8px;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 0.9rem;
+  text-align: right;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
+.pay-modal-summary {
+  margin: 16px 0;
+  padding: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+}
+
+.pay-modal-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.pay-without-btn {
+  --color: var(--text-secondary);
+  --border-color: var(--card-border);
+  font-size: 0.85rem;
+}
+
+/* ── Income Detail Page ───────────────────────────────── */
+.income-detail-header {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.income-detail-source {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.income-detail-date {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.income-usage-bar-container {
+  margin-top: 16px;
+  padding: 0 16px;
+}
+
+.income-usage-bar {
+  height: 8px;
+  background: var(--card-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.income-usage-fill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.income-usage-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 0.8rem;
+}
+
+.income-usage-used {
+  color: var(--text-secondary);
+}
+
+.income-usage-remaining {
+  font-weight: 600;
+}
+
+/* ── Dashboard: Income usage inline ───────────────────── */
+.income-usage-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.income-usage-bar-mini {
+  width: 60px;
+  height: 4px;
+  background: var(--card-border);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.income-usage-bar-mini .income-usage-fill {
+  height: 100%;
+  background: var(--accent-green);
+  border-radius: 2px;
+}
+
+.income-usage-text {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.income-end-slot {
+  text-align: right;
+}
+
+.income-remaining-small {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ── Paid source label ────────────────────────────────── */
+.paid-source-label {
+  font-size: 0.75rem;
+  color: var(--accent-green);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* ── Installment Totals Summary ───────────────────────── */
+.installment-totals {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin: 8px 16px 12px;
+  padding: 12px 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+}
+
+.installment-total-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.installment-total-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.installment-total-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.installment-total-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--card-border);
+}
+
+.installment-header-total {
+  font-size: 0.75rem;
+  color: var(--accent-green);
+  margin-top: 2px;
+}
+
+/* ── Report Page Enhancements ──────────────────────────── */
+.report-segment {
+  margin: 0 12px 4px;
+}
+
+.report-section-subtitle {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 4px 16px 0;
+}
+
+.bar-chart-container {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.bar-chart-container canvas {
+  max-width: 100%;
+  max-height: 240px;
+}
+
+.report-month-header {
+  display: grid;
+  grid-template-columns: 1fr 2fr 2fr 2fr;
+  padding: 6px 16px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.report-month-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr 2fr 2fr;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--card-border);
+  font-size: 0.78rem;
+  gap: 4px;
+}
+
+.report-month-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.report-month-income {
+  color: #4ade80;
+  text-align: right;
+}
+
+.report-month-expense {
+  color: #f87171;
+  text-align: right;
+}
+
+.report-month-balance {
+  font-weight: 700;
+  text-align: right;
+}
+
+.report-month-balance.positive { color: #4ade80; }
+.report-month-balance.negative { color: #f87171; }
+
+.report-balance-banner {
+  margin: 8px 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.report-balance-banner.positive {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.report-balance-banner.negative {
+  background: rgba(248, 113, 113, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.report-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  margin: 8px 16px;
+  padding: 14px;
+}
+
+.report-card-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.report-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.report-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.report-progress-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.report-monthly-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.report-card-footer {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ── Expenses feature improvements ────────────────────── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+/* Category filter chips scrollable row */
+.chips-toolbar {
+  --background: transparent;
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
+.chips-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 12px 8px;
+  scrollbar-width: none;
+}
+
+.chips-row::-webkit-scrollbar {
+  display: none;
+}
+
+/* Category group header in list */
+.group-header {
+  --background: var(--dashboard-bg);
+  padding: 10px 0 2px;
+}
+
+.group-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  width: 100%;
+}
+
+.group-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.group-title {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-total {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.group-list {
+  margin-bottom: 4px;
+}
+
+/* Recurring badge inside list item */
+.recurring-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  margin-top: 3px;
+  padding: 2px 6px;
+}
+
+/* Category management modal */
+.cat-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.picker-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 14px 16px 6px;
+}
+
+.icon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.icon-option {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(128, 128, 128, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: 2px solid transparent;
+}
+
+.icon-option.selected {
+  border-color: var(--ion-color-primary);
+  background: rgba(45, 211, 111, 0.15);
+}
+
+.color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: transform 0.15s;
+}
+
+.color-swatch.selected {
+  border-color: var(--ion-text-color);
+  transform: scale(1.15);
+}

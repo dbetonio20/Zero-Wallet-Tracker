@@ -1,0 +1,285 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <div class="page-header">
+      <div class="user-avatar">{{ userInitial }}</div>
+      <span class="page-title">Reports</span>
+      <ion-button fill="clear" (click)="goToSettings()">
+        <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <!-- Year + Month Selector -->
+  <div class="month-selector">
+    @for (y of years; track y) {
+      <span class="month-chip" [class.active]="y === selectedYear" (click)="selectYear(y)">{{ y }}</span>
+    }
+    @for (m of months; track m; let i = $index) {
+      <span class="month-chip" [class.active]="i === selectedMonth" (click)="selectMonth(i)">{{ m }}</span>
+    }
+  </div>
+
+  <!-- Segment Navigation -->
+  <ion-segment [(ngModel)]="activeSegment" [scrollable]="true" class="report-segment">
+    <ion-segment-button value="expenses"><ion-label>Expenses</ion-label></ion-segment-button>
+    <ion-segment-button value="income"><ion-label>Income</ion-label></ion-segment-button>
+    <ion-segment-button value="comparison"><ion-label>Comparison</ion-label></ion-segment-button>
+    <ion-segment-button value="cash-flow"><ion-label>Cash Flow</ion-label></ion-segment-button>
+    <ion-segment-button value="installments"><ion-label>Installments</ion-label></ion-segment-button>
+    <ion-segment-button value="pay-methods"><ion-label>By Method</ion-label></ion-segment-button>
+    <ion-segment-button value="cards"><ion-label>Cards</ion-label></ion-segment-button>
+  </ion-segment>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- EXPENSES TAB                                                -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'expenses') {
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="summary-card-label">Total Spent</div>
+        <div class="summary-card-value">{{ totalForMonth | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Avg / Day</div>
+        <div class="summary-card-value">{{ avgPerDay | currency:currencyCode:'symbol':'1.2-2' }}</div>
+      </div>
+    </div>
+
+    @if (categories.length) {
+      <div class="chart-container">
+        <canvas baseChart [data]="donutData" type="doughnut" [options]="donutOptions"></canvas>
+      </div>
+      <div class="chart-legend">
+        @for (c of categories; track c.category) {
+          <span class="legend-item">
+            <span class="legend-dot" [style.background]="c.color"></span>
+            {{ c.category }}: {{ c.amount | currency:currencyCode:'symbol':'1.0-0' }}
+          </span>
+        }
+      </div>
+    } @else {
+      <div class="empty-state"><p>No expenses for this month</p></div>
+    }
+
+    <div class="calendar">
+      <div class="calendar-header">
+        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span>
+        <span>Thu</span><span>Fri</span><span>Sat</span>
+      </div>
+      <div class="calendar-grid">
+        @for (week of calendarWeeks; track $index) {
+          @for (d of week; track $index) {
+            <div class="calendar-day"
+                 [class.has-expense]="d.hasExpense && !d.isToday && !d.isHighSpend"
+                 [class.today]="d.isToday"
+                 [class.high-spend]="d.isHighSpend && !d.isToday">
+              {{ d.day || '' }}
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- INCOME TAB                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'income') {
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="summary-card-label">Total Income</div>
+        <div class="summary-card-value">{{ incomeTotal | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Sources</div>
+        <div class="summary-card-value">{{ incomeSourceBreakdown.length }}</div>
+      </div>
+    </div>
+
+    @if (incomeSourceBreakdown.length) {
+      <div class="chart-container">
+        <canvas baseChart [data]="incomeDonutData" type="doughnut" [options]="incomeDonutOptions"></canvas>
+      </div>
+      <div class="chart-legend">
+        @for (s of incomeSourceBreakdown; track s.source) {
+          <span class="legend-item">
+            <span class="legend-dot" [style.background]="s.color"></span>
+            {{ s.source }}: {{ s.amount | currency:currencyCode:'symbol':'1.0-0' }}
+            ({{ incomeTotal > 0 ? (s.amount / incomeTotal * 100 | number:'1.0-0') : 0 }}%)
+          </span>
+        }
+      </div>
+    } @else {
+      <div class="empty-state"><p>No income recorded for this month</p></div>
+    }
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- COMPARISON TAB                                              -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'comparison') {
+    <p class="report-section-subtitle">Income vs Expenses — last 6 months</p>
+    <div class="bar-chart-container">
+      <canvas baseChart [data]="incomeVsExpensesData" type="bar" [options]="incomeVsExpensesOptions"></canvas>
+    </div>
+
+    <div class="report-month-header">
+      <span>Month</span><span>Income</span><span>Expenses</span><span>Balance</span>
+    </div>
+    @for (m of cashFlowMonths; track m.label) {
+      <div class="report-month-row">
+        <span class="report-month-label">{{ m.label }}</span>
+        <span class="report-month-income">{{ m.income | currency:currencyCode:'symbol':'1.0-0' }}</span>
+        <span class="report-month-expense">{{ (m.expenses + m.installments) | currency:currencyCode:'symbol':'1.0-0' }}</span>
+        <span class="report-month-balance" [class.positive]="m.balance >= 0" [class.negative]="m.balance < 0">
+          {{ m.balance >= 0 ? '+' : '' }}{{ m.balance | currency:currencyCode:'symbol':'1.0-0' }}
+        </span>
+      </div>
+    }
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- CASH FLOW TAB                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'cash-flow') {
+    <p class="report-section-subtitle">Balance trend — last 6 months</p>
+    <div class="bar-chart-container">
+      <canvas baseChart [data]="cashFlowData" type="line" [options]="cashFlowOptions"></canvas>
+    </div>
+
+    <div class="summary-row" style="margin-top: 8px;">
+      <div class="summary-card">
+        <div class="summary-card-label">This Month Income</div>
+        <div class="summary-card-value">{{ currentMonthIncome | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">This Month Spend</div>
+        <div class="summary-card-value">{{ currentMonthSpend | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      </div>
+    </div>
+    <div class="report-balance-banner" [class.positive]="currentMonthBalance >= 0" [class.negative]="currentMonthBalance < 0">
+      Net Balance: {{ currentMonthBalance >= 0 ? '+' : '' }}{{ currentMonthBalance | currency:currencyCode:'symbol':'1.0-0' }}
+    </div>
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- INSTALLMENTS TAB                                            -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'installments') {
+    <div class="installment-totals">
+      <div class="installment-total-item">
+        <span class="installment-total-label">Month Due</span>
+        <span class="installment-total-value">{{ installmentMonthTotal | currency:currencyCode:'symbol':'1.0-0' }}</span>
+      </div>
+      <div class="installment-total-divider"></div>
+      <div class="installment-total-item">
+        <span class="installment-total-label">Month Paid</span>
+        <span class="installment-total-value success-text">{{ installmentMonthPaid | currency:currencyCode:'symbol':'1.0-0' }}</span>
+      </div>
+      <div class="installment-total-divider"></div>
+      <div class="installment-total-item">
+        <span class="installment-total-label">Grand Total</span>
+        <span class="installment-total-value">{{ installmentGrandTotal | currency:currencyCode:'symbol':'1.0-0' }}</span>
+      </div>
+      <div class="installment-total-divider"></div>
+      <div class="installment-total-item">
+        <span class="installment-total-label">Grand Paid</span>
+        <span class="installment-total-value success-text">{{ installmentGrandPaid | currency:currencyCode:'symbol':'1.0-0' }}</span>
+      </div>
+    </div>
+
+    @if (!installmentOverview.length) {
+      <div class="empty-state"><p>No installments added yet</p></div>
+    }
+    @for (inst of installmentOverview; track inst.id) {
+      <div class="report-card">
+        <div class="report-card-header">
+          <span class="report-card-title">{{ inst.transaction }}</span>
+          <span class="report-card-sub">{{ inst.cardName }} · {{ inst.monthlyAmount | currency:currencyCode:'symbol':'1.0-0' }}/mo</span>
+        </div>
+        <div class="report-progress-row">
+          <span>{{ inst.paidCount }} / {{ inst.months }} months ({{ (inst.progress * 100) | number:'1.0-0' }}%)</span>
+          <span>{{ inst.paidAmount | currency:currencyCode:'symbol':'1.0-0' }} / {{ inst.totalCost | currency:currencyCode:'symbol':'1.0-0' }}</span>
+        </div>
+        <ion-progress-bar [value]="inst.progress" color="success"></ion-progress-bar>
+        @if (inst.monthlyDue > 0) {
+          <div class="report-monthly-badge">
+            This month: {{ inst.monthlyDue | currency:currencyCode:'symbol':'1.0-0' }}
+            @if (inst.monthlyPaid > 0) {
+              <ion-badge color="success">paid</ion-badge>
+            } @else {
+              <ion-badge color="warning">pending</ion-badge>
+            }
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- PAYMENT METHODS TAB                                         -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'pay-methods') {
+    @if (paymentMethodBreakdown.length) {
+      <div class="summary-row">
+        <div class="summary-card">
+          <div class="summary-card-label">Total Expenses</div>
+          <div class="summary-card-value">{{ totalForMonth | currency:currencyCode:'symbol':'1.0-0' }}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Methods Used</div>
+          <div class="summary-card-value">{{ paymentMethodBreakdown.length }}</div>
+        </div>
+      </div>
+      <div class="bar-chart-container">
+        <canvas baseChart [data]="paymentMethodData" type="bar" [options]="paymentMethodOptions"></canvas>
+      </div>
+      <div class="chart-legend" style="margin-top: 8px;">
+        @for (m of paymentMethodBreakdown; track m.method) {
+          <span class="legend-item">
+            <span class="legend-dot" [style.background]="m.color"></span>
+            {{ m.method }}: {{ m.amount | currency:currencyCode:'symbol':'1.0-0' }}
+            ({{ totalForMonth > 0 ? (m.amount / totalForMonth * 100 | number:'1.0-0') : 0 }}%)
+          </span>
+        }
+      </div>
+    } @else {
+      <div class="empty-state"><p>No expenses for this month</p></div>
+    }
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- CARDS UTILIZATION TAB                                       -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'cards') {
+    @if (!cardUtilization.length) {
+      <div class="empty-state"><p>No credit cards added yet</p></div>
+    }
+    @for (card of cardUtilization; track card.id) {
+      <div class="report-card">
+        <div class="report-card-header">
+          <span class="report-card-title">{{ card.name }}</span>
+          <span class="report-card-sub">{{ card.bank }}</span>
+        </div>
+        <div class="report-progress-row">
+          <span [class.danger-text]="card.isHigh" [class.success-text]="!card.isHigh">
+            {{ (card.utilizationPercent * 100) | number:'1.0-0' }}% utilized
+          </span>
+          <span>{{ card.unpaidBalance | currency:currencyCode:'symbol':'1.0-0' }} / {{ card.creditLimit | currency:currencyCode:'symbol':'1.0-0' }}</span>
+        </div>
+        <ion-progress-bar
+          [value]="card.utilizationPercent"
+          [color]="card.isHigh ? 'danger' : card.utilizationPercent > 0.5 ? 'warning' : 'success'">
+        </ion-progress-bar>
+        <div class="report-card-footer">
+          Limit: {{ card.creditLimit | currency:currencyCode:'symbol':'1.0-0' }} ·
+          Available: {{ (card.creditLimit - card.unpaidBalance) | currency:currencyCode:'symbol':'1.0-0' }}
+        </div>
+      </div>
+    }
+  }
+
+  <div style="height: 100px;"></div>
+</ion-content>

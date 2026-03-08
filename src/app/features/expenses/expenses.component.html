@@ -1,0 +1,298 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <div class="page-header">
+      <div class="user-avatar">{{ userInitial }}</div>
+      <span class="page-title">Expenses</span>
+      <div class="header-actions">
+        <ion-button fill="clear" (click)="openAddCategory()">
+          <ion-icon name="layers-outline" slot="icon-only" color="medium"></ion-icon>
+        </ion-button>
+        <ion-button fill="clear" (click)="goToSettings()">
+          <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
+        </ion-button>
+      </div>
+    </div>
+  </ion-toolbar>
+
+  <!-- Search bar -->
+  <ion-toolbar>
+    <ion-searchbar
+      [value]="searchText"
+      (ionInput)="searchText = $any($event.target).value"
+      placeholder="Search expenses..."
+      animated="true"
+    />
+  </ion-toolbar>
+
+  <!-- Period filter -->
+  <ion-toolbar>
+    <ion-segment [value]="period" (ionChange)="period = $any($event.detail.value)">
+      <ion-segment-button value="month">
+        <ion-label>Month</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="year">
+        <ion-label>Year</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="all">
+        <ion-label>All</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+
+  <!-- Category filter chips -->
+  <ion-toolbar class="chips-toolbar">
+    <div class="chips-row">
+      <ion-chip
+        [color]="categoryFilter === '' ? 'primary' : 'medium'"
+        [outline]="categoryFilter !== ''"
+        (click)="categoryFilter = ''"
+      >All</ion-chip>
+      @if (categories$ | async; as cats) {
+        @for (c of cats; track c.id) {
+          <ion-chip
+            [color]="categoryFilter === c.name ? 'primary' : 'medium'"
+            [outline]="categoryFilter !== c.name"
+            (click)="categoryFilter = categoryFilter === c.name ? '' : c.name"
+          >
+            <ion-icon [name]="c.icon" [style.color]="c.color" style="margin-right:4px" />
+            {{ c.name }}
+          </ion-chip>
+        }
+      }
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  @if (groups$ | async; as groups) {
+    @if (!groups.length) {
+      <p class="empty-state">No expenses found. Tap + to add one.</p>
+    }
+
+    @for (group of groups; track group.category) {
+      <!-- Category group header -->
+      <ion-list-header class="group-header">
+        <div class="group-header-row">
+          <div class="group-icon-wrap" [style.background-color]="group.color + '22'">
+            <ion-icon [name]="group.icon" [style.color]="group.color" />
+          </div>
+          <span class="group-title">{{ group.category }}</span>
+          <span class="group-total">{{ group.total | currency:currencyCode:'symbol':'1.0-0' }}</span>
+        </div>
+      </ion-list-header>
+
+      <ion-list lines="full" class="group-list">
+        @for (e of group.expenses; track e.id) {
+          <ion-item-sliding>
+            <ion-item>
+              <ion-label>
+                <h3>{{ displayName(e) }}</h3>
+                <p>{{ e.date | date:'MMM d, y' }} · {{ e.paymentMethod }}</p>
+                @if (e.recurring) {
+                  <ion-badge color="tertiary" class="recurring-badge">
+                    <ion-icon name="repeat-outline" /> Recurring
+                  </ion-badge>
+                }
+                @if (e.notes) {
+                  <p>{{ e.notes }}</p>
+                }
+                @if (e.status === 'paid' && getExpenseIncomeSources(e.id)) {
+                  <p class="paid-source-label">Paid from: {{ getExpenseIncomeSources(e.id) }}</p>
+                }
+              </ion-label>
+              <ion-note slot="end" [color]="badgeColor(e.status)">
+                {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
+              </ion-note>
+              <ion-badge slot="end" [color]="badgeColor(e.status)">{{ e.status }}</ion-badge>
+            </ion-item>
+            <ion-item-options side="end">
+              <ion-item-option color="primary" (click)="openEditExpense(e)">
+                <ion-icon name="create-outline" slot="icon-only" />
+              </ion-item-option>
+              @if (e.status !== 'paid') {
+                <ion-item-option color="success" (click)="markPaid(e)">
+                  <ion-icon name="checkmark-outline" slot="icon-only" />
+                </ion-item-option>
+              }
+              <ion-item-option color="danger" (click)="delete(e.id)">
+                <ion-icon name="trash-outline" slot="icon-only" />
+              </ion-item-option>
+            </ion-item-options>
+          </ion-item-sliding>
+        }
+      </ion-list>
+    }
+  }
+
+  <!-- Add FAB -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button (click)="openModal()">
+      <ion-icon name="add-outline" />
+    </ion-fab-button>
+  </ion-fab>
+
+  <!-- Add / Edit Expense Modal -->
+  <ion-modal [isOpen]="isModalOpen" (didDismiss)="closeModal()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ editingExpense ? 'Edit Expense' : 'Add Expense' }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeModal()">Cancel</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-input label="Name" [(ngModel)]="form.name" placeholder="e.g. Jollibee lunch" />
+        </ion-item>
+        <ion-item>
+          <ion-select label="Category" [(ngModel)]="form.category" placeholder="Select category">
+            @if (categories$ | async; as cats) {
+              @for (c of cats; track c.id) {
+                <ion-select-option [value]="c.name">{{ c.name }}</ion-select-option>
+              }
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-input [label]="'Amount (' + currencyCode + ')'" type="number" [(ngModel)]="form.amount" placeholder="0.00" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Date" type="date" [(ngModel)]="form.date" />
+        </ion-item>
+        <ion-item>
+          <ion-select label="Payment Method" [(ngModel)]="form.paymentMethod">
+            @for (m of methods; track m) {
+              <ion-select-option [value]="m">{{ m }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-label>Recurring</ion-label>
+          <ion-toggle [(ngModel)]="form.recurring" slot="end" />
+        </ion-item>
+        <ion-item>
+          <ion-textarea label="Notes" [(ngModel)]="form.notes" placeholder="Optional notes" />
+        </ion-item>
+        <ion-button expand="block" class="ion-margin-top" (click)="save()">
+          {{ editingExpense ? 'Update Expense' : 'Save Expense' }}
+        </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Manage Categories Modal -->
+  <ion-modal [isOpen]="isCategoryModalOpen" (didDismiss)="closeCategoryModal()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ editingCategory ? 'Edit Category' : 'Manage Categories' }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeCategoryModal()">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+
+        @if (!editingCategory) {
+          <!-- Category list -->
+          @if (categories$ | async; as cats) {
+            <ion-list>
+              @for (c of cats; track c.id) {
+                <ion-item>
+                  <div class="cat-icon-wrap" [style.background-color]="c.color + '33'" slot="start">
+                    <ion-icon [name]="c.icon" [style.color]="c.color" />
+                  </div>
+                  <ion-label>{{ c.name }}</ion-label>
+                  <ion-button fill="clear" slot="end" (click)="openEditCategory(c)">
+                    <ion-icon name="create-outline" slot="icon-only" color="primary" />
+                  </ion-button>
+                  <ion-button fill="clear" slot="end" (click)="deleteCategory(c.id)">
+                    <ion-icon name="trash-outline" slot="icon-only" color="danger" />
+                  </ion-button>
+                </ion-item>
+              }
+            </ion-list>
+          }
+          <ion-button expand="block" class="ion-margin-top" (click)="editingCategory = null; categoryForm = { name: '', icon: 'pricetag-outline', color: '#94a3b8' }; editingCategory = null;">
+            Add New Category
+          </ion-button>
+          <!-- Inline add form always visible at bottom -->
+          <ion-item class="ion-margin-top">
+            <ion-input label="Category Name" [(ngModel)]="categoryForm.name" placeholder="e.g. Gym" />
+          </ion-item>
+          <!-- Icon picker -->
+          <p class="picker-label">Icon</p>
+          <div class="icon-grid">
+            @for (ico of iconOptions; track ico) {
+              <div
+                class="icon-option"
+                [class.selected]="categoryForm.icon === ico"
+                (click)="categoryForm.icon = ico"
+                [style.color]="categoryForm.color || '#94a3b8'"
+              >
+                <ion-icon [name]="ico" />
+              </div>
+            }
+          </div>
+          <!-- Color picker -->
+          <p class="picker-label">Color</p>
+          <div class="color-grid">
+            @for (col of colorSwatches; track col) {
+              <div
+                class="color-swatch"
+                [style.background-color]="col"
+                [class.selected]="categoryForm.color === col"
+                (click)="categoryForm.color = col"
+              ></div>
+            }
+          </div>
+          <ion-button expand="block" class="ion-margin-top" (click)="saveCategory()">Save Category</ion-button>
+        } @else {
+          <!-- Edit mode -->
+          <ion-item>
+            <ion-input label="Category Name" [(ngModel)]="categoryForm.name" />
+          </ion-item>
+          <p class="picker-label">Icon</p>
+          <div class="icon-grid">
+            @for (ico of iconOptions; track ico) {
+              <div
+                class="icon-option"
+                [class.selected]="categoryForm.icon === ico"
+                (click)="categoryForm.icon = ico"
+                [style.color]="categoryForm.color || '#94a3b8'"
+              >
+                <ion-icon [name]="ico" />
+              </div>
+            }
+          </div>
+          <p class="picker-label">Color</p>
+          <div class="color-grid">
+            @for (col of colorSwatches; track col) {
+              <div
+                class="color-swatch"
+                [style.background-color]="col"
+                [class.selected]="categoryForm.color === col"
+                (click)="categoryForm.color = col"
+              ></div>
+            }
+          </div>
+          <ion-button expand="block" class="ion-margin-top" (click)="saveCategory()">Update Category</ion-button>
+          <ion-button expand="block" fill="outline" color="medium" class="ion-margin-top" (click)="editingCategory = null">Back to List</ion-button>
+        }
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Pay Modal -->
+  <app-pay-modal
+    [isOpen]="isPayModalOpen"
+    [amount]="payingExpense?.amount || 0"
+    [itemName]="payingExpense ? displayName(payingExpense) : 'Expense'"
+    [currencyCode]="currencyCode"
+    (dismissed)="closePayModal()"
+    (paid)="onPayResult($event)"
+  />
+</ion-content>
+

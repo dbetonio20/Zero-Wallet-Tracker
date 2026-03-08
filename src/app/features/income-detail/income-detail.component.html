@@ -1,0 +1,81 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline" slot="icon-only" color="medium"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Income Details</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  @if (income) {
+    <!-- Income Header Card -->
+    <div class="hero-section">
+      <div class="income-detail-header">
+        <div class="income-detail-source">{{ income.source }}</div>
+        <div class="income-detail-date">{{ income.date | date:'MMMM d, y' }}@if (income.recurring) { <span class="recurring-badge">Recurring</span>}</div>
+      </div>
+      <div class="hero-amount positive">{{ income.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+
+      <!-- Usage Bar -->
+      <div class="income-usage-bar-container">
+        <div class="income-usage-bar">
+          <div class="income-usage-fill" [style.width.%]="usagePercent"></div>
+        </div>
+        <div class="income-usage-labels">
+          <span class="income-usage-used">Used: {{ usedAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+          <span class="income-usage-remaining" [class.success-text]="remainingAmount > 0" [class.danger-text]="remainingAmount <= 0">
+            Remaining: {{ remainingAmount | currency:currencyCode:'symbol':'1.0-0' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Linked Expenses -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-dot dot-success"></span> Paid from this income
+        </div>
+        <ion-badge color="medium">{{ linkedItems.length }}</ion-badge>
+      </div>
+
+      @if (linkedItems.length) {
+        <div class="card-glass">
+          @for (item of linkedItems; track item.allocationId) {
+            <ion-item-sliding>
+              <ion-item class="transaction-item-ionic">
+                <div class="transaction-icon" [class]="item.type === 'expense' ? 'warning-bg' : 'medium-bg'" slot="start">
+                  <ion-icon [name]="item.type === 'expense' ? 'pricetag-outline' : 'card-outline'"></ion-icon>
+                </div>
+                <ion-label>
+                  <div class="transaction-name">{{ item.name }}</div>
+                  <div class="transaction-date">{{ item.date | date:'MMM d, y' }} · {{ item.type === 'expense' ? 'Expense' : 'Installment' }}</div>
+                </ion-label>
+                <div slot="end" class="transaction-amount success-text">
+                  {{ item.allocatedAmount | currency:currencyCode:'symbol':'1.0-0' }}
+                </div>
+              </ion-item>
+              <ion-item-options side="end">
+                <ion-item-option color="danger" (click)="unlinkAllocation(item.allocationId)">
+                  <ion-icon name="close-outline" slot="icon-only" />
+                </ion-item-option>
+              </ion-item-options>
+            </ion-item-sliding>
+          }
+        </div>
+      } @else {
+        <div class="card-glass">
+          <div class="empty-state">
+            <ion-icon name="wallet-outline" class="empty-icon"></ion-icon>
+            <p>No expenses linked to this income yet</p>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <div style="height: 100px;"></div>
+</ion-content>

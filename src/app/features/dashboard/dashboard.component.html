@@ -1,0 +1,262 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <div class="page-header">
+      <div class="user-avatar">{{ userInitial }}</div>
+      <span class="page-title">Home</span>
+      <ion-button fill="clear" (click)="goToSettings()">
+        <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+@if (vm$ | async; as vm) {
+<ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Hero Balance Section -->
+  <div class="hero-section">
+    <div class="hero-label">Total Balance</div>
+    <div class="hero-amount" [class.negative]="vm.summary.balance < 0" [class.positive]="vm.summary.balance >= 0">
+      {{ vm.summary.balance | currency:currencyCode:'symbol':'1.0-0' }}
+    </div>
+    @if (vm.summary.balance < 0) {
+      <div class="negative-warning">
+        <ion-icon name="warning-outline"></ion-icon> Payments exceed income
+      </div>
+    }
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-icon income-icon">
+          <ion-icon name="arrow-down-outline"></ion-icon>
+        </div>
+        <div class="hero-stat-info">
+          <span class="hero-stat-label">Income</span>
+          <span class="hero-stat-value income-value">{{ vm.summary.totalIncome | currency:currencyCode:'symbol':'1.0-0' }}</span>
+        </div>
+      </div>
+      <div class="hero-stat-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-icon expense-icon">
+          <ion-icon name="arrow-up-outline"></ion-icon>
+        </div>
+        <div class="hero-stat-info">
+          <span class="hero-stat-label">Expenses</span>
+          <span class="hero-stat-value expense-value">{{ vm.summary.totalExpenses | currency:currencyCode:'symbol':'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card stat-overdue">
+      <div class="stat-card-icon">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+      </div>
+      <div class="stat-card-value">{{ vm.summary.overdueAmount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      <div class="stat-card-label">Overdue</div>
+    </div>
+    <div class="stat-card stat-upcoming">
+      <div class="stat-card-icon">
+        <ion-icon name="time-outline"></ion-icon>
+      </div>
+      <div class="stat-card-value">{{ vm.summary.upcomingAmount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      <div class="stat-card-label">Upcoming 7d</div>
+    </div>
+    <div class="stat-card stat-installment">
+      <div class="stat-card-icon">
+        <ion-icon name="repeat-outline"></ion-icon>
+      </div>
+      <div class="stat-card-value">{{ vm.summary.totalInstallments | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      <div class="stat-card-label">Installments</div>
+    </div>
+  </div>
+
+  <!-- Overdue Payments -->
+  @if (vm.overdueExpenses.length || vm.overduePayments.length) {
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-dot dot-danger"></span> Overdue
+        </div>
+        <ion-badge color="danger">{{ vm.overdueExpenses.length + vm.overduePayments.length }}</ion-badge>
+      </div>
+      <div class="card-glass">
+        @for (e of vm.overdueExpenses; track e.id) {
+          <div class="transaction-item">
+            <div class="transaction-icon danger-bg">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+            </div>
+            <div class="transaction-info">
+              <div class="transaction-name">{{ e.category }}</div>
+              <div class="transaction-date">{{ e.date | date:'MMM d, y' }} · {{ e.paymentMethod }}</div>
+            </div>
+            <div class="transaction-amount danger-text">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+          </div>
+        }
+        @for (p of vm.overduePayments; track p.id) {
+          <div class="transaction-item">
+            <div class="transaction-icon danger-bg">
+              <ion-icon name="card-outline"></ion-icon>
+            </div>
+            <div class="transaction-info">
+              <div class="transaction-name">Installment Payment</div>
+              <div class="transaction-date">Due: {{ p.dueDate | date:'MMM d, y' }}</div>
+            </div>
+            <div class="transaction-amount danger-text">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Upcoming Payments -->
+  @if (vm.upcomingExpenses.length || vm.upcomingPayments.length || vm.upcomingCardDues.length) {
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-dot dot-warning"></span> Upcoming
+        </div>
+        <ion-badge color="warning">{{ vm.upcomingExpenses.length + vm.upcomingPayments.length + vm.upcomingCardDues.length }}</ion-badge>
+      </div>
+      <div class="card-glass">
+        @for (e of vm.upcomingExpenses; track e.id) {
+          <div class="transaction-item">
+            <div class="transaction-icon warning-bg">
+              <ion-icon name="time-outline"></ion-icon>
+            </div>
+            <div class="transaction-info">
+              <div class="transaction-name">{{ e.category }}</div>
+              <div class="transaction-date">{{ e.date | date:'MMM d, y' }}</div>
+            </div>
+            <div class="transaction-amount warning-text">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+          </div>
+        }
+        @for (p of vm.upcomingPayments; track p.id) {
+          <div class="transaction-item">
+            <div class="transaction-icon warning-bg">
+              <ion-icon name="card-outline"></ion-icon>
+            </div>
+            <div class="transaction-info">
+              <div class="transaction-name">Installment Payment</div>
+              <div class="transaction-date">Due: {{ p.dueDate | date:'MMM d, y' }}</div>
+            </div>
+            <div class="transaction-amount warning-text">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+          </div>
+        }
+        @for (c of vm.upcomingCardDues; track c.id) {
+          <div class="transaction-item">
+            <div class="transaction-icon medium-bg">
+              <ion-icon name="card-outline"></ion-icon>
+            </div>
+            <div class="transaction-info">
+              <div class="transaction-name">{{ c.bank }} – {{ c.name }}</div>
+              <div class="transaction-date">Due on {{ c.dueDate }}th of month</div>
+            </div>
+            <div class="transaction-amount">Card Due</div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Income Section -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <span class="section-dot dot-success"></span> Income
+      </div>
+      <ion-button fill="clear" size="small" class="add-btn" (click)="openAddIncome()">
+        <ion-icon name="add-outline" slot="icon-only" />
+      </ion-button>
+    </div>
+    <div class="card-glass">
+      @if (!vm.incomes.length) {
+        <div class="empty-state">
+          <ion-icon name="wallet-outline" class="empty-icon"></ion-icon>
+          <p>No income recorded yet</p>
+          <ion-button fill="outline" size="small" (click)="openAddIncome()">Add Income</ion-button>
+        </div>
+      } @else {
+        <ion-list lines="none" class="transparent-list">
+          @for (i of vm.incomes; track i.id) {
+            <ion-item-sliding>
+              <ion-item class="transaction-item-ionic" (click)="goToIncomeDetail(i.id)" button="true" detail="false">
+                <div class="transaction-icon success-bg" slot="start">
+                  <ion-icon name="arrow-down-outline"></ion-icon>
+                </div>
+                <ion-label>
+                  <div class="transaction-name">{{ i.source }}</div>
+                  <div class="transaction-date">{{ i.date | date:'MMM d, y' }}@if (i.recurring) {<span class="recurring-badge">Recurring</span>}</div>
+                  <div class="income-usage-inline">
+                    <div class="income-usage-bar-mini">
+                      <div class="income-usage-fill" [style.width.%]="i.usagePercent"></div>
+                    </div>
+                    <span class="income-usage-text">{{ i.usedAmount | currency:currencyCode:'symbol':'1.0-0' }} used</span>
+                  </div>
+                </ion-label>
+                <div slot="end" class="income-end-slot">
+                  <div class="transaction-amount success-text">{{ i.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                  <div class="income-remaining-small" [class.danger-text]="i.remainingAmount <= 0">{{ i.remainingAmount | currency:currencyCode:'symbol':'1.0-0' }} left</div>
+                </div>
+              </ion-item>
+              <ion-item-options side="end">
+                <ion-item-option color="primary" (click)="openEditIncome(i)">
+                  <ion-icon name="create-outline" slot="icon-only" />
+                </ion-item-option>
+                <ion-item-option color="danger" (click)="deleteIncome(i.id)">
+                  <ion-icon name="trash-outline" slot="icon-only" />
+                </ion-item-option>
+              </ion-item-options>
+            </ion-item-sliding>
+          }
+        </ion-list>
+      }
+    </div>
+  </div>
+
+  <div style="height: 100px;"></div>
+
+  <!-- Income Add / Edit Modal -->
+  <ion-modal [isOpen]="isIncomeModalOpen" (didDismiss)="closeIncomeModal()" [breakpoints]="[0, 0.65]" [initialBreakpoint]="0.65">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar class="modal-toolbar">
+          <ion-title>{{ editingIncome ? 'Edit Income' : 'Add Income' }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeIncomeModal()" class="modal-close-btn">
+              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding modal-content">
+        <ion-item class="form-item">
+          <ion-select label="Source" [(ngModel)]="incomeForm.source" placeholder="Select source" interface="action-sheet">
+            @for (s of incomeSources; track s) {
+              <ion-select-option [value]="s">{{ s }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item class="form-item">
+          <ion-input label="Amount (PHP)" type="number" [(ngModel)]="incomeForm.amount" placeholder="0.00" />
+        </ion-item>
+        <ion-item class="form-item">
+          <ion-input label="Date" type="date" [(ngModel)]="incomeForm.date" />
+        </ion-item>
+        <ion-item class="form-item">
+          <ion-toggle [(ngModel)]="incomeForm.recurring" labelPlacement="start">Recurring monthly</ion-toggle>
+        </ion-item>
+        <ion-button expand="block" class="save-btn" (click)="saveIncome()">
+          {{ editingIncome ? 'Update Income' : 'Save Income' }}
+        </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+</ion-content>
+}
