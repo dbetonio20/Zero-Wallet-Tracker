@@ -1,0 +1,171 @@
+{
+  "expenses": [],
+  "incomes": [],
+  "credit_cards": [
+    {
+      "id": "cc-1",
+      "bank": "RCBC",
+      "name": "Flex Visa",
+      "dueDate": 30,
+      "cutoffDate": 3,
+      "creditLimit": 220000
+    },
+    {
+      "id": "cc-2",
+      "bank": "Metrobank",
+      "name": "Mastercard Platinum",
+      "dueDate": 25,
+      "cutoffDate": 1,
+      "creditLimit": 108000
+    },
+    {
+      "id": "cc-3",
+      "bank": "EastWest",
+      "name": "Visa Privilege Gold",
+      "dueDate": 6,
+      "cutoffDate": 11,
+      "creditLimit": 232000
+    },
+    {
+      "id": "cc-4",
+      "bank": "Unionbank",
+      "name": "Cashback Platinum Mastercard",
+      "dueDate": 23,
+      "cutoffDate": 7,
+      "creditLimit": 246000
+    }
+  ],
+  "installments": [
+    {
+      "id": "inst-1",
+      "cardId": "cc-1",
+      "transaction": "Mandaue Foam",
+      "monthlyAmount": 772,
+      "startDate": "2026-03-09",
+      "months": 3
+    },
+    {
+      "id": "inst-2",
+      "cardId": "cc-4",
+      "transaction": "Buds 4",
+      "monthlyAmount": 1204,
+      "startDate": "2026-03-09",
+      "months": 3
+    },
+    {
+      "id": "inst-3",
+      "cardId": "cc-3",
+      "transaction": "HK Installment",
+      "monthlyAmount": 2953,
+      "startDate": "2026-03-09",
+      "months": 4
+    },
+    {
+      "id": "inst-4",
+      "cardId": "",
+      "transaction": "One Pluss",
+      "monthlyAmount": 2729,
+      "startDate": "2026-03-09",
+      "months": 6
+    },
+    {
+      "id": "inst-5",
+      "cardId": "cc-4",
+      "transaction": "McBook Air",
+      "monthlyAmount": 1770,
+      "startDate": "2026-03-09",
+      "months": 8
+    },
+    {
+      "id": "inst-6",
+      "cardId": "cc-2",
+      "transaction": "Honda ADV - MB",
+      "monthlyAmount": 3554,
+      "startDate": "2026-03-09",
+      "months": 9
+    },
+    {
+      "id": "inst-7",
+      "cardId": "cc-3",
+      "transaction": "Honda ADV - EW",
+      "monthlyAmount": 3752,
+      "startDate": "2026-03-09",
+      "months": 9
+    },
+    {
+      "id": "inst-8",
+      "cardId": "cc-3",
+      "transaction": "USJR",
+      "monthlyAmount": 4924,
+      "startDate": "2026-03-09",
+      "months": 10
+    }
+  ],
+  "installmentPayments": [
+    { "id": "ip-1-1", "installmentId": "inst-1", "dueDate": "2026-03-09", "amount": 772, "status": "pending" },
+    { "id": "ip-1-2", "installmentId": "inst-1", "dueDate": "2026-04-09", "amount": 772, "status": "pending" },
+    { "id": "ip-1-3", "installmentId": "inst-1", "dueDate": "2026-05-09", "amount": 772, "status": "pending" },
+
+    { "id": "ip-2-1", "installmentId": "inst-2", "dueDate": "2026-03-09", "amount": 1204, "status": "pending" },
+    { "id": "ip-2-2", "installmentId": "inst-2", "dueDate": "2026-04-09", "amount": 1204, "status": "pending" },
+    { "id": "ip-2-3", "installmentId": "inst-2", "dueDate": "2026-05-09", "amount": 1204, "status": "pending" },
+
+    { "id": "ip-3-1", "installmentId": "inst-3", "dueDate": "2026-03-09", "amount": 2953, "status": "pending" },
+    { "id": "ip-3-2", "installmentId": "inst-3", "dueDate": "2026-04-09", "amount": 2953, "status": "pending" },
+    { "id": "ip-3-3", "installmentId": "inst-3", "dueDate": "2026-05-09", "amount": 2953, "status": "pending" },
+    { "id": "ip-3-4", "installmentId": "inst-3", "dueDate": "2026-06-09", "amount": 2953, "status": "pending" },
+
+    { "id": "ip-4-1", "installmentId": "inst-4", "dueDate": "2026-03-09", "amount": 2729, "status": "pending" },
+    { "id": "ip-4-2", "installmentId": "inst-4", "dueDate": "2026-04-09", "amount": 2729, "status": "pending" },
+    { "id": "ip-4-3", "installmentId": "inst-4", "dueDate": "2026-05-09", "amount": 2729, "status": "pending" },
+    { "id": "ip-4-4", "installmentId": "inst-4", "dueDate": "2026-06-09", "amount": 2729, "status": "pending" },
+    { "id": "ip-4-5", "installmentId": "inst-4", "dueDate": "2026-07-09", "amount": 2729, "status": "pending" },
+    { "id": "ip-4-6", "installmentId": "inst-4", "dueDate": "2026-08-09", "amount": 2729, "status": "pending" },
+
+    { "id": "ip-5-1", "installmentId": "inst-5", "dueDate": "2026-03-09", "amount": 1770, "status": "pending" },
+    { "id": "ip-5-2", "installmentId": "inst-5", "dueDate": "2026-04-09", "amount": 1770, "status": "pending" },
+    { "id": "ip-5-3", "installmentId": "inst-5", "dueDate": "2026-05-09", "amount": 1770, "status": "pending" },
+    { "id": "ip-5-4", "installmentId": "inst-5", "dueDate": "2026-06-09", "amount": 1770, "status": "pending" },
+    { "id": "ip-5-5", "installmentId": "inst-5", "dueDate": "2026-07-09", "amount": 1770, "status": "pending" },
+    { "id": "ip-5-6", "installmentId": "inst-5", "dueDate": "2026-08-09", "amount": 1770, "status": "pending" },
+    { "id": "ip-5-7", "installmentId": "inst-5", "dueDate": "2026-09-09", "amount": 1770, "status": "pending" },
+    { "id": "ip-5-8", "installmentId": "inst-5", "dueDate": "2026-10-09", "amount": 1770, "status": "pending" },
+
+    { "id": "ip-6-1", "installmentId": "inst-6", "dueDate": "2026-03-09", "amount": 3554, "status": "pending" },
+    { "id": "ip-6-2", "installmentId": "inst-6", "dueDate": "2026-04-09", "amount": 3554, "status": "pending" },
+    { "id": "ip-6-3", "installmentId": "inst-6", "dueDate": "2026-05-09", "amount": 3554, "status": "pending" },
+    { "id": "ip-6-4", "installmentId": "inst-6", "dueDate": "2026-06-09", "amount": 3554, "status": "pending" },
+    { "id": "ip-6-5", "installmentId": "inst-6", "dueDate": "2026-07-09", "amount": 3554, "status": "pending" },
+    { "id": "ip-6-6", "installmentId": "inst-6", "dueDate": "2026-08-09", "amount": 3554, "status": "pending" },
+    { "id": "ip-6-7", "installmentId": "inst-6", "dueDate": "2026-09-09", "amount": 3554, "status": "pending" },
+    { "id": "ip-6-8", "installmentId": "inst-6", "dueDate": "2026-10-09", "amount": 3554, "status": "pending" },
+    { "id": "ip-6-9", "installmentId": "inst-6", "dueDate": "2026-11-09", "amount": 3554, "status": "pending" },
+
+    { "id": "ip-7-1", "installmentId": "inst-7", "dueDate": "2026-03-09", "amount": 3752, "status": "pending" },
+    { "id": "ip-7-2", "installmentId": "inst-7", "dueDate": "2026-04-09", "amount": 3752, "status": "pending" },
+    { "id": "ip-7-3", "installmentId": "inst-7", "dueDate": "2026-05-09", "amount": 3752, "status": "pending" },
+    { "id": "ip-7-4", "installmentId": "inst-7", "dueDate": "2026-06-09", "amount": 3752, "status": "pending" },
+    { "id": "ip-7-5", "installmentId": "inst-7", "dueDate": "2026-07-09", "amount": 3752, "status": "pending" },
+    { "id": "ip-7-6", "installmentId": "inst-7", "dueDate": "2026-08-09", "amount": 3752, "status": "pending" },
+    { "id": "ip-7-7", "installmentId": "inst-7", "dueDate": "2026-09-09", "amount": 3752, "status": "pending" },
+    { "id": "ip-7-8", "installmentId": "inst-7", "dueDate": "2026-10-09", "amount": 3752, "status": "pending" },
+    { "id": "ip-7-9", "installmentId": "inst-7", "dueDate": "2026-11-09", "amount": 3752, "status": "pending" },
+
+    { "id": "ip-8-1", "installmentId": "inst-8", "dueDate": "2026-03-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-2", "installmentId": "inst-8", "dueDate": "2026-04-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-3", "installmentId": "inst-8", "dueDate": "2026-05-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-4", "installmentId": "inst-8", "dueDate": "2026-06-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-5", "installmentId": "inst-8", "dueDate": "2026-07-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-6", "installmentId": "inst-8", "dueDate": "2026-08-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-7", "installmentId": "inst-8", "dueDate": "2026-09-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-8", "installmentId": "inst-8", "dueDate": "2026-10-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-9", "installmentId": "inst-8", "dueDate": "2026-11-09", "amount": 4924, "status": "pending" },
+    { "id": "ip-8-10", "installmentId": "inst-8", "dueDate": "2026-12-09", "amount": 4924, "status": "pending" }
+  ],
+  "preferences": {
+    "userName": "Dominique",
+    "theme": "dark",
+    "currencySymbol": "₱",
+    "currencyCode": "PHP"
+  }
+}

@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 import { PreferencesService } from './core/services/preferences.service';
+import { NotificationService } from './core/services/notification.service';
 
 @Component({
   selector: 'app-root',
@@ -9,10 +10,12 @@ import { PreferencesService } from './core/services/preferences.service';
 })
 export class App implements OnInit {
   private prefs = inject(PreferencesService);
+  private notifications = inject(NotificationService);
 
   async ngOnInit(): Promise<void> {
     const theme = await this.prefs.getTheme();
     this.applyTheme(theme);
+    await this.notifications.init();
   }
 
   private applyTheme(theme: string): void {

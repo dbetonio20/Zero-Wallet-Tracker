@@ -23,6 +23,7 @@
 
   <!-- Segment Navigation -->
   <ion-segment [(ngModel)]="activeSegment" [scrollable]="true" class="report-segment">
+    <ion-segment-button value="summary"><ion-label>Summary</ion-label></ion-segment-button>
     <ion-segment-button value="expenses"><ion-label>Expenses</ion-label></ion-segment-button>
     <ion-segment-button value="income"><ion-label>Income</ion-label></ion-segment-button>
     <ion-segment-button value="comparison"><ion-label>Comparison</ion-label></ion-segment-button>
@@ -31,6 +32,120 @@
     <ion-segment-button value="pay-methods"><ion-label>By Method</ion-label></ion-segment-button>
     <ion-segment-button value="cards"><ion-label>Cards</ion-label></ion-segment-button>
   </ion-segment>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SUMMARY TAB                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'summary') {
+
+    <!-- Financial Snapshot -->
+    <div class="summary-snapshot">
+      <div class="snapshot-row">
+        <div class="snapshot-item">
+          <div class="snapshot-label">Income</div>
+          <div class="snapshot-value income-value">{{ incomeTotal | currency:currencyCode:'symbol':'1.0-0' }}</div>
+        </div>
+        <div class="snapshot-divider"></div>
+        <div class="snapshot-item">
+          <div class="snapshot-label">Expenses</div>
+          <div class="snapshot-value danger-text">{{ totalForMonth | currency:currencyCode:'symbol':'1.0-0' }}</div>
+        </div>
+        <div class="snapshot-divider"></div>
+        <div class="snapshot-item">
+          <div class="snapshot-label">Installments</div>
+          <div class="snapshot-value warning-text">{{ summaryMonthInstallments | currency:currencyCode:'symbol':'1.0-0' }}</div>
+        </div>
+      </div>
+      <div class="snapshot-net" [class.positive]="summaryNet >= 0" [class.negative]="summaryNet < 0">
+        <span class="snapshot-net-label">Net Balance</span>
+        <span class="snapshot-net-value">{{ summaryNet >= 0 ? '+' : '' }}{{ summaryNet | currency:currencyCode:'symbol':'1.0-0' }}</span>
+      </div>
+      @if (incomeTotal > 0) {
+        <div class="snapshot-savings">
+          <div class="snapshot-savings-row">
+            <span class="snapshot-savings-label">Savings Rate</span>
+            <span class="snapshot-savings-pct" [class.positive]="summarySavingsRate >= 20" [class.warning-text]="summarySavingsRate > 0 && summarySavingsRate < 20" [class.danger-text]="summarySavingsRate <= 0">{{ summarySavingsRate | number:'1.0-0' }}%</span>
+          </div>
+          <div class="snapshot-savings-bar">
+            <div class="snapshot-savings-fill" [style.width.%]="summarySavingsRate" [class.fill-good]="summarySavingsRate >= 20" [class.fill-warn]="summarySavingsRate > 0 && summarySavingsRate < 20" [class.fill-bad]="summarySavingsRate <= 0"></div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Income vs Expenses Bar Chart -->
+    <div class="report-section-block">
+      <div class="rpt-section-title">Income vs Expenses</div>
+      <p class="report-section-subtitle" style="margin-top:0">Last 6 months</p>
+      <div class="bar-chart-container">
+        <canvas baseChart [data]="incomeVsExpensesData" type="bar" [options]="incomeVsExpensesOptions"></canvas>
+      </div>
+    </div>
+
+    <!-- Expense Breakdown Donut -->
+    @if (categories.length) {
+      <div class="report-section-block">
+        <div class="rpt-section-title">Spending Breakdown</div>
+        <p class="report-section-subtitle" style="margin-top:0">{{ months[selectedMonth] }} {{ selectedYear }}</p>
+        <div class="chart-container">
+          <canvas baseChart [data]="donutData" type="doughnut" [options]="donutOptions"></canvas>
+        </div>
+        <!-- Top Categories ranked list -->
+        <div class="top-categories">
+          @for (c of topCategories; track c.category) {
+            <div class="top-cat-row">
+              <div class="top-cat-dot" [style.background]="c.color"></div>
+              <div class="top-cat-info">
+                <div class="top-cat-name-row">
+                  <span class="top-cat-name">{{ c.category }}</span>
+                  <span class="top-cat-amount">{{ c.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                </div>
+                <div class="top-cat-bar-track">
+                  <div class="top-cat-bar-fill" [style.width.%]="totalForMonth > 0 ? (c.amount / totalForMonth * 100) : 0" [style.background]="c.color"></div>
+                </div>
+                <span class="top-cat-pct">{{ totalForMonth > 0 ? (c.amount / totalForMonth * 100 | number:'1.0-0') : 0 }}% of expenses</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="report-section-block">
+        <div class="rpt-section-title">Spending Breakdown</div>
+        <div class="empty-state"><p>No expenses for {{ months[selectedMonth] }} {{ selectedYear }}</p></div>
+      </div>
+    }
+
+    <!-- Cash Flow Line Chart -->
+    <div class="report-section-block">
+      <div class="rpt-section-title">Balance Trend</div>
+      <p class="report-section-subtitle" style="margin-top:0">Last 6 months</p>
+      <div class="bar-chart-container">
+        <canvas baseChart [data]="cashFlowData" type="line" [options]="cashFlowOptions"></canvas>
+      </div>
+    </div>
+
+    <!-- Credit Card Utilization -->
+    @if (cardUtilization.length) {
+      <div class="report-section-block">
+        <div class="rpt-section-title">Credit Card Utilization</div>
+        @for (card of cardUtilization; track card.id) {
+          <div class="summary-card-util">
+            <div class="summary-card-util-header">
+              <span class="summary-card-util-name">{{ card.bank }} – {{ card.name }}</span>
+              <span class="summary-card-util-pct" [class.danger-text]="card.isHigh" [class.success-text]="!card.isHigh">{{ (card.utilizationPercent * 100) | number:'1.0-0' }}%</span>
+            </div>
+            <ion-progress-bar
+              [value]="card.utilizationPercent"
+              [color]="card.isHigh ? 'danger' : card.utilizationPercent > 0.5 ? 'warning' : 'success'">
+            </ion-progress-bar>
+            <div class="summary-card-util-meta">{{ card.unpaidBalance | currency:currencyCode:'symbol':'1.0-0' }} used of {{ card.creditLimit | currency:currencyCode:'symbol':'1.0-0' }}</div>
+          </div>
+        }
+      </div>
+    }
+
+  }
 
   <!-- ═══════════════════════════════════════════════════════════ -->
   <!-- EXPENSES TAB                                                -->

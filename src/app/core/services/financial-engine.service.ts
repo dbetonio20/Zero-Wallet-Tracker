@@ -43,13 +43,72 @@ export class FinancialEngineService {
   }
 
   async loadAll(): Promise<void> {
-    const [expenses, incomes, installments, payments, allocations] = await Promise.all([
+    let [expenses, incomes, installments, payments, allocations] = await Promise.all([
       this.storage.getList<Expense>(KEYS.EXPENSES),
       this.storage.getList<Income>(KEYS.INCOMES),
       this.storage.getList<Installment>(KEYS.INSTALLMENTS),
       this.storage.getList<InstallmentPayment>(KEYS.INSTALLMENT_PAYMENTS),
       this.storage.getList<PaymentAllocation>(KEYS.ALLOCATIONS),
     ]);
+
+    // Auto-generate current-month entries for recurring expenses
+    const today = new Date();
+    const curYear = today.getFullYear();
+    const curMonth = today.getMonth();
+    const generated: Expense[] = [];
+    for (const e of expenses) {
+      if (!e.recurring) continue;
+      const eDate = new Date(e.date);
+      // Only seed from past months' recurring items
+      if (eDate.getFullYear() === curYear && eDate.getMonth() === curMonth) continue;
+      // Check if this month's copy already exists (same name + category + recurring)
+      const exists = expenses.some(x =>
+        x.recurring &&
+        x.name === e.name &&
+        x.category === e.category &&
+        (() => { const d = new Date(x.date); return d.getFullYear() === curYear && d.getMonth() === curMonth; })()
+      );
+      if (!exists) {
+        const newDate = new Date(curYear, curMonth, Math.min(eDate.getDate(), new Date(curYear, curMonth + 1, 0).getDate()));
+        const seeded: Expense = {
+          ...e,
+          id: this.uuid(),
+          date: newDate.toISOString().split('T')[0],
+          status: 'pending',
+        };
+        generated.push(seeded);
+      }
+    }
+    if (generated.length) {
+      expenses = [...expenses, ...generated];
+      await this.storage.saveList(KEYS.EXPENSES, expenses);
+    }
+
+    // Auto-generate current-month income for recurring incomes
+    const generatedIncomes: Income[] = [];
+    for (const i of incomes) {
+      if (!i.recurring) continue;
+      const iDate = new Date(i.date);
+      if (iDate.getFullYear() === curYear && iDate.getMonth() === curMonth) continue;
+      const exists = incomes.some(x =>
+        x.recurring &&
+        x.source === i.source &&
+        (() => { const d = new Date(x.date); return d.getFullYear() === curYear && d.getMonth() === curMonth; })()
+      );
+      if (!exists) {
+        const newDate = new Date(curYear, curMonth, Math.min(iDate.getDate(), new Date(curYear, curMonth + 1, 0).getDate()));
+        generatedIncomes.push({
+          ...i,
+          id: this.uuid(),
+          date: newDate.toISOString().split('T')[0],
+        });
+      }
+    }
+    if (generatedIncomes.length) {
+      incomes = [...incomes, ...generatedIncomes];
+      await this.storage.saveList(KEYS.INCOMES, incomes);
+    }
+
     this.updateStatuses(expenses, payments);
     this.expenses$.next(expenses);
     this.incomes$.next(incomes);
@@ -374,10 +433,11 @@ export class FinancialEngineService {
       .reduce((s, p) => s + p.amount, 0);
     const upcomingAmount = upcomingExpenses + upcomingPayments;
 
-    const balance = totalIncome - totalExpenses - totalInstallments;
-
     const allocatedIncome = allocations.reduce((s, a) => s + a.amount, 0);
     const availableIncome = totalIncome - allocatedIncome;
+    // Balance = income minus all outstanding (unpaid) expenses and installments
+    // When an item is paid, it's excluded from totalExpenses/totalInstallments → balance improves
+    const balance = totalIncome - totalExpenses - totalInstallments;
 
     return {
       totalIncome,

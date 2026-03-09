@@ -7,6 +7,9 @@ import {
 } from '@ionic/angular/standalone';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { Router } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 @Component({
   selector: 'app-settings',
@@ -117,15 +120,82 @@ export class SettingsComponent implements OnInit {
     await alert.present();
   }
 
+  importData(): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const json = e.target?.result as string;
+          JSON.parse(json); // validate before importing
+          const confirm = await this.alertCtrl.create({
+            header: 'Import Data',
+            message: 'This will overwrite all existing data with the backup. Continue?',
+            buttons: [
+              { text: 'Cancel', role: 'cancel' },
+              {
+                text: 'Import',
+                handler: async () => {
+                  await this.prefs.importAllData(json);
+                  window.location.reload();
+                },
+              },
+            ],
+          });
+          await confirm.present();
+        } catch {
+          const alert = await this.alertCtrl.create({
+            header: 'Invalid File',
+            message: 'The selected file is not a valid Zero Wallet backup.',
+            buttons: ['OK'],
+          });
+          await alert.present();
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
   async downloadData(): Promise<void> {
     const data = await this.prefs.exportAllData();
-    const blob = new Blob([data], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'zero-wallet-backup.json';
-    a.click();
-    URL.revokeObjectURL(url);
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const fileName = `zero-wallet-backup-${Date.now()}.json`;
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8,
+        });
+        await Share.share({
+          title: 'Zero Wallet Backup',
+          text: 'Your Zero Wallet data export.',
+          url: result.uri,
+          dialogTitle: 'Save or share your backup',
+        });
+      } catch (e) {
+        const alert = await this.alertCtrl.create({
+          header: 'Export Failed',
+          message: 'Could not export your data. Please try again.',
+          buttons: ['OK'],
+        });
+        await alert.present();
+      }
+    } else {
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'zero-wallet-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   }
 
   private applyTheme(theme: string): void {

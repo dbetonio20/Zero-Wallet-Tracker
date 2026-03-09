@@ -5,6 +5,18 @@ export interface Category {
   name: string;
   icon: string;   // Ionicons icon name, e.g. 'fast-food-outline'
   color: string;  // hex color string, e.g. '#4ade80'
+  budget?: number; // optional monthly budget limit
+}
+
+export interface SavingsGoal {
+  id: string;
+  name: string;
+  icon: string;        // Ionicons icon name
+  color: string;       // hex color
+  targetAmount: number;
+  currentAmount: number;
+  deadline?: string;   // ISO date string (optional target date)
+  notes?: string;
 }
 
 export const DEFAULT_CATEGORIES: Omit<Category, 'id'>[] = [

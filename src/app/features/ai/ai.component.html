@@ -1,0 +1,145 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <div class="ai-header">
+      <div class="ai-header-left">
+        <div class="ai-header-avatar">
+          <ion-icon name="sparkles-outline"></ion-icon>
+        </div>
+        <div class="ai-header-info">
+          <span class="ai-header-title">AI Assistant</span>
+          @if (deviceLabel) {
+            <span class="ai-header-badge">{{ deviceLabel }} · Offline</span>
+          }
+        </div>
+      </div>
+      <ion-buttons slot="end">
+        @if (messages.length) {
+          <ion-button (click)="clearChat()" class="ai-header-btn">
+            <ion-icon name="trash-outline" slot="icon-only" color="medium"></ion-icon>
+          </ion-button>
+        }
+        <ion-button (click)="goToSettings()" class="ai-header-btn">
+          <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ai-page-content">
+
+  <!-- Loading Screen -->
+  @if (isLoading) {
+    <div class="ai-center-screen">
+      <div class="ai-load-card">
+        <div class="ai-load-glow">
+          <ion-icon name="hardware-chip-outline" class="ai-load-chip"></ion-icon>
+        </div>
+        <h2 class="ai-load-title">Setting up AI</h2>
+        <p class="ai-load-status">{{ statusLabel }}</p>
+        <div class="ai-load-bar-wrap">
+          <ion-progress-bar [value]="downloadPercent / 100" color="success" class="ai-load-bar"></ion-progress-bar>
+        </div>
+        <p class="ai-load-note">
+          Downloads a ~1 GB model once.<br>
+          After that, everything works fully offline.
+        </p>
+      </div>
+    </div>
+  }
+
+  <!-- Error Screen -->
+  @if (aiState === 'error') {
+    <div class="ai-center-screen">
+      <div class="ai-load-card ai-error-card">
+        <div class="ai-load-glow ai-error-glow">
+          <ion-icon name="alert-circle-outline" class="ai-load-chip ai-err-icon"></ion-icon>
+        </div>
+        <h2 class="ai-load-title">Failed to Load</h2>
+        <p class="ai-load-status">{{ errorMessage || 'Something went wrong.' }}</p>
+        <ion-button expand="block" (click)="retryLoad()" fill="outline" color="success" class="ai-retry-btn">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Try Again
+        </ion-button>
+      </div>
+    </div>
+  }
+
+  <!-- Chat Area -->
+  @if (isReady || isGenerating) {
+    <div class="ai-chat-wrap">
+
+      @if (!messages.length) {
+        <!-- Welcome -->
+        <div class="ai-welcome">
+          <div class="ai-welcome-glow">
+            <ion-icon name="sparkles-outline" class="ai-welcome-icon"></ion-icon>
+          </div>
+          <h2 class="ai-welcome-title">How can I help?</h2>
+          <p class="ai-welcome-sub">Ask anything about your finances — spending, budgets, debts, or savings. All AI runs privately on your device.</p>
+
+          <div class="ai-chips">
+            @for (s of suggestions; track s.text) {
+              <button class="ai-chip" (click)="sendSuggestion(s.text)">
+                <ion-icon [name]="s.icon" class="ai-chip-icon"></ion-icon>
+                <span>{{ s.text }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Messages -->
+      @for (msg of messages; track $index) {
+        <div class="ai-row" [class.ai-row-user]="msg.role === 'user'" [class.ai-row-ai]="msg.role === 'assistant'">
+          @if (msg.role === 'assistant') {
+            <div class="ai-avatar">
+              <ion-icon name="sparkles-outline"></ion-icon>
+            </div>
+          }
+          <div class="ai-bubble-wrap">
+            <div class="ai-bubble" [class.ai-bubble-user]="msg.role === 'user'" [class.ai-bubble-ai]="msg.role === 'assistant'">
+              @if (msg.streaming && !msg.content) {
+                <div class="ai-typing">
+                  <span class="ai-dot"></span>
+                  <span class="ai-dot"></span>
+                  <span class="ai-dot"></span>
+                </div>
+              } @else {
+                <div class="ai-text" [class.ai-streaming]="msg.streaming">{{ msg.content }}<span class="ai-cursor" [class.ai-cursor-active]="!!msg.streaming">▍</span></div>
+              }
+            </div>
+            <span class="ai-time" [class.ai-time-right]="msg.role === 'user'">{{ msg.time }}</span>
+          </div>
+        </div>
+      }
+
+      <div style="height: 24px;"></div>
+    </div>
+  }
+
+</ion-content>
+
+<!-- Footer Input -->
+@if (isReady || isGenerating) {
+  <ion-footer class="ion-no-border ai-footer">
+    <div class="ai-input-bar">
+      <input
+        class="ai-input"
+        [(ngModel)]="userInput"
+        placeholder="Ask about your finances..."
+        [disabled]="isGenerating"
+        (keydown.enter)="sendMessage()"
+      />
+      @if (isGenerating) {
+        <button class="ai-send ai-send-stop" (click)="abortGeneration()">
+          <ion-icon name="stop-circle-outline"></ion-icon>
+        </button>
+      } @else {
+        <button class="ai-send" [disabled]="!userInput.trim()" (click)="sendMessage()">
+          <ion-icon name="send-outline"></ion-icon>
+        </button>
+      }
+    </div>
+  </ion-footer>
+}

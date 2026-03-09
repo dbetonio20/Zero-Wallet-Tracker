@@ -195,6 +195,10 @@ export class DebtsComponent implements OnInit {
 
   async savePayment(): Promise<void> {
     if (!this.editingPayment || !this.paymentForm.amount || !this.paymentForm.dueDate) return;
+    // If status is changing away from 'paid', remove income allocations so income is freed
+    if (this.editingPayment.status === 'paid' && this.paymentForm.status !== 'paid') {
+      await this.engine.removeAllocationsForPayment(this.editingPayment.id);
+    }
     await this.engine.updateInstallmentPayment({
       ...this.editingPayment,
       amount: +this.paymentForm.amount,

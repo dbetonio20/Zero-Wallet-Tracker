@@ -77,8 +77,19 @@
             <ion-icon [name]="group.icon" [style.color]="group.color" />
           </div>
           <span class="group-title">{{ group.category }}</span>
-          <span class="group-total">{{ group.total | currency:currencyCode:'symbol':'1.0-0' }}</span>
+          <span class="group-total">{{ group.total | currency:currencyCode:'symbol':'1.0-0' }}
+            @if (group.budget) { <span class="group-budget-label"> / {{ group.budget | currency:currencyCode:'symbol':'1.0-0' }}</span> }
+          </span>
         </div>
+        @if (group.budget && group.budgetPercent !== undefined) {
+          <div class="group-budget-bar">
+            <ion-progress-bar
+              [value]="group.budgetPercent / 100"
+              [color]="group.budgetPercent >= 100 ? 'danger' : group.budgetPercent >= 80 ? 'warning' : 'success'">
+            </ion-progress-bar>
+            <span class="group-budget-pct" [class.pct-over]="group.budgetPercent >= 100">{{ group.budgetPercent | number:'1.0-0' }}%</span>
+          </div>
+        }
       </ion-list-header>
 
       <ion-list lines="full" class="group-list">
@@ -222,6 +233,9 @@
           <ion-item class="ion-margin-top">
             <ion-input label="Category Name" [(ngModel)]="categoryForm.name" placeholder="e.g. Gym" />
           </ion-item>
+          <ion-item>
+            <ion-input label="Monthly Budget (optional)" type="number" [(ngModel)]="categoryForm.budget" placeholder="0.00" />
+          </ion-item>
           <!-- Icon picker -->
           <p class="picker-label">Icon</p>
           <div class="icon-grid">
@@ -253,6 +267,9 @@
           <!-- Edit mode -->
           <ion-item>
             <ion-input label="Category Name" [(ngModel)]="categoryForm.name" />
+          </ion-item>
+          <ion-item>
+            <ion-input label="Monthly Budget (optional)" type="number" [(ngModel)]="categoryForm.budget" placeholder="0.00" />
           </ion-item>
           <p class="picker-label">Icon</p>
           <div class="icon-grid">

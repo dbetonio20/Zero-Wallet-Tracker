@@ -45,6 +45,12 @@
         <p>You can import this data in a new device</p>
       </ion-label>
     </ion-item>
+    <ion-item button (click)="importData()" [detail]="false">
+      <ion-label>
+        <h3>Import your data</h3>
+        <p>Restore from a previous backup file</p>
+      </ion-label>
+    </ion-item>
     <ion-item button (click)="deleteAllData()" [detail]="false">
       <ion-label>
         <h3>Delete all data</h3>

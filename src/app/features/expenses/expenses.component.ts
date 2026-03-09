@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, OnDestroy } from '@angular/core';
-import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
+import { AsyncPipe, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
@@ -7,7 +7,7 @@ import {
   IonInput, IonSelect, IonSelectOption, IonTextarea,
   IonItemSliding, IonItemOptions, IonItemOption, IonNote,
   IonSearchbar, IonSegment, IonSegmentButton, IonToggle,
-  IonListHeader, IonChip,
+  IonListHeader, IonChip, IonProgressBar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -19,10 +19,11 @@ import {
 } from 'ionicons/icons';
 import { Router } from '@angular/router';
 import { Subject, combineLatest, BehaviorSubject } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, takeUntil } from 'rxjs/operators';
 import { FinancialEngineService } from '../../core/services/financial-engine.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { CategoryService } from '../../core/services/category.service';
+import { QuickAddService } from '../../core/services/quick-add.service';
 import { Expense, PaymentStatus, Income, Category } from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
 
@@ -34,6 +35,8 @@ export interface ExpenseGroup {
   color: string;
   expenses: Expense[];
   total: number;
+  budget?: number;
+  budgetPercent?: number;
 }
 
 const METHODS = ['Cash', 'GCash', 'Credit Card', 'Debit Card', 'Bank Transfer'];
@@ -42,13 +45,13 @@ const METHODS = ['Cash', 'GCash', 'Credit Card', 'Debit Card', 'Bank Transfer'];
   selector: 'app-expenses',
   standalone: true,
   imports: [
-    AsyncPipe, CurrencyPipe, DatePipe, FormsModule,
+    AsyncPipe, CurrencyPipe, DatePipe, DecimalPipe, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
     IonBadge, IonFab, IonFabButton, IonIcon, IonModal, IonButton, IonButtons,
     IonInput, IonSelect, IonSelectOption, IonTextarea,
     IonItemSliding, IonItemOptions, IonItemOption, IonNote,
     IonSearchbar, IonSegment, IonSegmentButton, IonToggle,
-    IonListHeader, IonChip,
+    IonListHeader, IonChip, IonProgressBar,
     PayModalComponent,
   ],
   templateUrl: './expenses.component.html',
@@ -58,6 +61,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   private prefs = inject(PreferencesService);
   private router = inject(Router);
   categoryService = inject(CategoryService);
+  private quickAdd = inject(QuickAddService);
 
   // ── UI state ─────────────────────────────────────────────────────────
   isModalOpen = false;
@@ -109,12 +113,17 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       return [...groupMap.entries()]
         .map(([catName, items]): ExpenseGroup => {
           const cat = cats.find(c => c.name === catName);
+          const total = items.reduce((s, x) => s + x.amount, 0);
+          const budget = cat?.budget;
+          const budgetPercent = budget && budget > 0 ? Math.min(100, (total / budget) * 100) : undefined;
           return {
             category: catName,
             icon: cat?.icon ?? 'pricetag-outline',
             color: cat?.color ?? '#94a3b8',
             expenses: items,
-            total: items.reduce((s, x) => s + x.amount, 0),
+            total,
+            budget,
+            budgetPercent,
           };
         })
         .sort((a, b) => a.category.localeCompare(b.category));
@@ -158,6 +167,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.userName = await this.prefs.getUserName();
     this.userInitial = this.prefs.getUserInitial(this.userName);
     this.currencyCode = this.prefs.currentCurrencyCode;
+
+    // Open add-expense modal when Quick-Log FAB is tapped from Dashboard
+    this.quickAdd.onTrigger$.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      setTimeout(() => this.openModal(), 120);
+    });
   }
 
   ngOnDestroy(): void {
@@ -270,6 +284,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       name: this.categoryForm.name!.trim(),
       icon: this.categoryForm.icon || 'pricetag-outline',
       color: this.categoryForm.color || '#94a3b8',
+      budget: this.categoryForm.budget ? +this.categoryForm.budget : undefined,
     };
     if (this.editingCategory) {
       await this.categoryService.updateCategory({ ...this.editingCategory, ...partial });
@@ -296,6 +311,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   private blankCategoryForm(): Partial<Category> {
-    return { name: '', icon: 'pricetag-outline', color: '#94a3b8' };
+    return { name: '', icon: 'pricetag-outline', color: '#94a3b8', budget: undefined };
   }
 }

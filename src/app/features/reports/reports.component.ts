@@ -101,7 +101,7 @@ export class ReportsComponent implements OnInit {
   selectedMonth: number;
   years: number[] = [];
   months = MONTH_NAMES;
-  activeSegment = 'expenses';
+  activeSegment = 'summary';
 
   allExpenses: Expense[] = [];
   allIncomes: Income[] = [];
@@ -171,6 +171,25 @@ export class ReportsComponent implements OnInit {
     return m ? m.expenses + m.installments : 0;
   }
   get currentMonthBalance(): number { return this.cashFlowMonths[this.cashFlowMonths.length - 1]?.balance ?? 0; }
+
+  get summaryMonthInstallments(): number {
+    return this.allInstallmentPayments
+      .filter(p => this.inMonth(p.dueDate, this.selectedYear, this.selectedMonth))
+      .reduce((s, p) => s + p.amount, 0);
+  }
+
+  get summaryNet(): number {
+    return this.incomeTotal - this.totalForMonth - this.summaryMonthInstallments;
+  }
+
+  get summarySavingsRate(): number {
+    if (this.incomeTotal <= 0) return 0;
+    return Math.max(0, (this.summaryNet / this.incomeTotal) * 100);
+  }
+
+  get topCategories(): CategoryBreakdown[] {
+    return [...this.categories].sort((a, b) => b.amount - a.amount).slice(0, 6);
+  }
 
   constructor(
     private engine: FinancialEngineService,

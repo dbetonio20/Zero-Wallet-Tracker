@@ -90,4 +90,22 @@ export class PreferencesService {
     };
     return JSON.stringify(data, null, 2);
   }
+
+  async importAllData(json: string): Promise<void> {
+    const data = JSON.parse(json);
+    const listKeys = ['expenses', 'incomes', 'installments', 'installmentPayments', 'credit_cards'];
+    for (const key of listKeys) {
+      if (Array.isArray(data[key])) {
+        await this.storage.set(key, data[key]);
+      }
+    }
+    if (data['preferences']) {
+      const p = data['preferences'];
+      if (p.userName) await this.setUserName(p.userName);
+      if (p.theme) await this.setTheme(p.theme);
+      if (p.currencySymbol && p.currencyCode) {
+        await this.setCurrency(p.currencySymbol, p.currencyCode);
+      }
+    }
+  }
 }
