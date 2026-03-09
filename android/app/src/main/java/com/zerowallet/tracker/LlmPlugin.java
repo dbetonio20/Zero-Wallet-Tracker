@@ -75,13 +75,18 @@ public class LlmPlugin extends Plugin {
 
                 URL url = new URL(MODEL_URL);
                 HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
                 connection.setConnectTimeout(30_000);
-                connection.setReadTimeout(60_000);
+                connection.setReadTimeout(120_000); // 2 min per read op for slow connections
+                connection.setInstanceFollowRedirects(true);
+                connection.setRequestProperty("User-Agent", "okhttp/4.12.0");
+                connection.setRequestProperty("Accept", "*/*");
                 connection.connect();
 
                 int responseCode = connection.getResponseCode();
+                Log.d(TAG, "Download response: HTTP " + responseCode + " url=" + MODEL_URL);
                 if (responseCode != HttpURLConnection.HTTP_OK) {
-                    call.reject("Download failed with HTTP " + responseCode);
+                    call.reject("Download failed: HTTP " + responseCode + " — url: " + MODEL_URL);
                     return;
                 }
 
