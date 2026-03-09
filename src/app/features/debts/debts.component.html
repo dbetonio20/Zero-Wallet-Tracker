@@ -105,34 +105,61 @@
 
   <!-- Credit Cards Tab -->
   @if (activeSegment === 'cards') {
-    @if (cards$ | async; as cards) {
-      @if (!cards.length) {
+    @if (cardsWithExpenses$ | async; as cardItems) {
+      @if (!cardItems.length) {
         <p class="empty-state">No cards yet. Tap + to add one.</p>
       }
-      @for (c of cards; track c.id) {
+      @for (item of cardItems; track item.card.id) {
         <ion-card class="card-item">
           <ion-card-header>
-            <ion-card-subtitle>{{ c.bank }}</ion-card-subtitle>
+            <ion-card-subtitle>{{ item.card.bank }}</ion-card-subtitle>
             <ion-card-title>
-              <ion-icon name="card-outline" /> {{ c.name }}
+              <ion-icon name="card-outline" /> {{ item.card.name }}
             </ion-card-title>
           </ion-card-header>
           <ion-card-content>
             <ion-list lines="none">
               <ion-item>
                 <ion-label>
-                  <p>Due Date: <strong>{{ c.dueDate }}{{ ordinal(c.dueDate) }} of every month</strong></p>
-                  <p>Cutoff: <strong>{{ c.cutoffDate }}{{ ordinal(c.cutoffDate) }} of every month</strong></p>
-                  <p>Credit Limit: <strong>{{ c.creditLimit | currency:currencyCode:'symbol':'1.0-0' }}</strong></p>
-                  <p>Next Due: <strong>{{ nextDueDate(c) | date:'MMM d, y' }}</strong></p>
+                  <p>Due Date: <strong>{{ item.card.dueDate }}{{ ordinal(item.card.dueDate) }} of every month</strong></p>
+                  <p>Cutoff: <strong>{{ item.card.cutoffDate }}{{ ordinal(item.card.cutoffDate) }} of every month</strong></p>
+                  <p>Credit Limit: <strong>{{ item.card.creditLimit | currency:currencyCode:'symbol':'1.0-0' }}</strong></p>
+                  <p>Next Due: <strong>{{ nextDueDate(item.card) | date:'MMM d, y' }}</strong></p>
                 </ion-label>
               </ion-item>
             </ion-list>
-            <ion-button fill="outline" color="primary" size="small" (click)="openEditCard(c)">
+
+            <!-- Linked Expenses -->
+            @if (item.expenses.length) {
+              <div class="cc-expenses-header">
+                <span>Charged Expenses</span>
+                <span class="cc-expenses-total">{{ item.total | currency:currencyCode:'symbol':'1.0-0' }}</span>
+              </div>
+              <ion-list lines="full" class="cc-expenses-list">
+                @for (e of item.expenses; track e.id) {
+                  <ion-item>
+                    <ion-label>
+                      <h3>{{ e.name || e.category }}</h3>
+                      <p>{{ e.date | date:'MMM d, y' }} · {{ e.category }}</p>
+                    </ion-label>
+                    <ion-note slot="end" [color]="e.status === 'paid' ? 'success' : e.status === 'overdue' ? 'danger' : 'warning'">
+                      {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
+                    </ion-note>
+                    <ion-badge slot="end" [color]="e.status === 'paid' ? 'success' : e.status === 'overdue' ? 'danger' : 'warning'">
+                      {{ e.status }}
+                    </ion-badge>
+                  </ion-item>
+                }
+              </ion-list>
+            } @else {
+              <p class="cc-no-expenses">No expenses charged to this card yet.</p>
+            }
+
+            <ion-button fill="outline" color="primary" size="small" (click)="openEditCard(item.card)">
               <ion-icon name="create-outline" slot="start" />
               Edit Card
             </ion-button>
-            <ion-button fill="outline" color="danger" size="small" (click)="deleteCard(c.id, c.bank + ' – ' + c.name)">
+            <ion-button fill="outline" color="danger" size="small" (click)="deleteCard(item.card.id, item.card.bank + ' – ' + item.card.name)">
               <ion-icon name="trash-outline" slot="start" />
               Remove Card
             </ion-button>

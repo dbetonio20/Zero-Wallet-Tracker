@@ -98,7 +98,7 @@
             <ion-item>
               <ion-label>
                 <h3>{{ displayName(e) }}</h3>
-                <p>{{ e.date | date:'MMM d, y' }} · {{ e.paymentMethod }}</p>
+                <p>{{ e.date | date:'MMM d, y' }} · {{ e.paymentMethod }}{{ e.creditCardId ? ' (' + (creditCardService.getById(e.creditCardId)?.bank + ' – ' + creditCardService.getById(e.creditCardId)?.name) + ')' : '' }}</p>
                 @if (e.recurring) {
                   <ion-badge color="tertiary" class="recurring-badge">
                     <ion-icon name="repeat-outline" /> Recurring
@@ -179,6 +179,17 @@
             }
           </ion-select>
         </ion-item>
+        @if (form.paymentMethod === 'Credit Card') {
+          <ion-item>
+            <ion-select label="Credit Card" [(ngModel)]="form.creditCardId" placeholder="Select card">
+              @if (cards$ | async; as cards) {
+                @for (c of cards; track c.id) {
+                  <ion-select-option [value]="c.id">{{ c.bank }} – {{ c.name }}</ion-select-option>
+                }
+              }
+            </ion-select>
+          </ion-item>
+        }
         <ion-item>
           <ion-label>Recurring</ion-label>
           <ion-toggle [(ngModel)]="form.recurring" slot="end" />

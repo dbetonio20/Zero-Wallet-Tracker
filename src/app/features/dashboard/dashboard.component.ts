@@ -17,6 +17,7 @@ import {
   settingsOutline, chevronForwardOutline, chevronDownOutline, checkmarkCircleOutline,
   trendingUpOutline, trendingDownOutline, saveOutline, bulbOutline,
   barbellOutline, leafOutline, ribbonOutline, flagOutline, removeOutline, addCircleOutline,
+  receiptOutline,
 } from 'ionicons/icons';
 import { Observable, combineLatest } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -60,6 +61,12 @@ interface OverduePaymentVM extends InstallmentPayment {
   transaction: string;
 }
 
+interface CardChargesVM {
+  card: CreditCard;
+  expenses: Expense[];
+  total: number;
+}
+
 interface InsightItem {
   icon: string;
   color: string;
@@ -86,12 +93,13 @@ interface DashboardVM {
   overdueTotal: number;
   insights: InsightItem[];
   savingsGoals: SavingsGoalVM[];
+  cardCharges: CardChargesVM[];
 }
 
 type PayTarget =
   | { kind: 'expense'; item: Expense }
   | { kind: 'installment'; paymentId: string; transaction: string; amount: number }
-  | { kind: 'card'; lines: { paymentId: string; transaction: string; amount: number }[]; cardName: string; totalAmount: number };
+  | { kind: 'card'; lines: { paymentId: string; transaction: string; amount: number }[]; cardExpenses: Expense[]; cardName: string; totalAmount: number };
 
 @Component({
   selector: 'app-dashboard',
@@ -209,9 +217,16 @@ export class DashboardComponent implements OnInit {
     this.openPayWithIncome({ kind: 'installment', paymentId, transaction, amount });
   }
 
-  markAllCardPaid(lines: { paymentId: string; transaction: string; amount: number }[], cardName: string, totalAmount: number, event: Event): void {
+  markAllCardPaid(
+    lines: { paymentId: string; transaction: string; amount: number }[],
+    cardName: string,
+    totalAmount: number,
+    event: Event,
+    cardExpenses: Expense[] = [],
+  ): void {
     event.stopPropagation();
-    this.openPayWithIncome({ kind: 'card', lines, cardName, totalAmount });
+    const expensesTotal = cardExpenses.reduce((s, e) => s + e.amount, 0);
+    this.openPayWithIncome({ kind: 'card', lines, cardExpenses, cardName, totalAmount: totalAmount + expensesTotal });
   }
 
   openPayWithIncome(target: PayTarget): void {
@@ -239,7 +254,7 @@ export class DashboardComponent implements OnInit {
     const t = this.payWithIncomeTarget;
     if (t.kind === 'expense') return t.item.amount;
     if (t.kind === 'installment') return t.amount;
-    return t.totalAmount;
+    return t.totalAmount; // already includes cardExpenses total
   }
 
   async confirmPayWithIncome(): Promise<void> {
@@ -254,10 +269,17 @@ export class DashboardComponent implements OnInit {
         await this.engine.addAllocations([{ incomeId, installmentPaymentId: t.paymentId, amount: t.amount }]);
         await this.engine.markPayment(t.paymentId, 'paid');
       } else {
-        const allocs = t.lines.map(l => ({ incomeId, installmentPaymentId: l.paymentId, amount: l.amount }));
-        await this.engine.addAllocations(allocs);
-        for (const line of t.lines) {
-          await this.engine.markPayment(line.paymentId, 'paid');
+        // Pay installment lines
+        if (t.lines.length) {
+          const allocs = t.lines.map(l => ({ incomeId, installmentPaymentId: l.paymentId, amount: l.amount }));
+          await this.engine.addAllocations(allocs);
+          for (const line of t.lines) {
+            await this.engine.markPayment(line.paymentId, 'paid');
+          }
+        }
+        // Also mark CC-charged expenses as paid
+        for (const e of t.cardExpenses) {
+          await this.engine.payExpenseWithIncomes(e, [{ incomeId, amount: e.amount }]);
         }
       }
       this.notifs.scheduleAll().catch(() => {});
@@ -284,6 +306,7 @@ export class DashboardComponent implements OnInit {
       settingsOutline, chevronForwardOutline, chevronDownOutline, checkmarkCircleOutline,
       trendingUpOutline, trendingDownOutline, saveOutline, bulbOutline,
       barbellOutline, leafOutline, ribbonOutline, flagOutline, removeOutline, addCircleOutline,
+      receiptOutline,
     });
   }
 
@@ -423,6 +446,15 @@ export class DashboardComponent implements OnInit {
             return { ...p, transaction: inst?.transaction ?? 'Installment Payment' };
           });
 
+        // ─── Credit Card Charges ─────────────────────────────────────
+        const cardCharges: CardChargesVM[] = cards
+          .map(card => {
+            const linked = expenses.filter(e => e.creditCardId === card.id && e.status !== 'paid');
+            const total = linked.reduce((s, e) => s + e.amount, 0);
+            return { card, expenses: linked, total };
+          })
+          .filter(cc => cc.expenses.length > 0);
+
         // ─── Savings Goals VM ──────────────────────────────────────────
         const savingsGoals: SavingsGoalVM[] = goals.map(g => {
           const progressPercent = g.targetAmount > 0 ? Math.min(100, (g.currentAmount / g.targetAmount) * 100) : 0;
@@ -510,8 +542,9 @@ export class DashboardComponent implements OnInit {
         return {
           summary,
           incomes: incomeVMs,
-          overdueExpenses: expenses.filter(e => e.status === 'overdue'),
-          upcomingExpenses: expenses.filter(e => e.status === 'pending' && new Date(e.date) <= in7),
+          // Exclude CC-charged expenses — they are paid via the card bill, not individually
+          overdueExpenses: expenses.filter(e => e.status === 'overdue' && !e.creditCardId),
+          upcomingExpenses: expenses.filter(e => e.status === 'pending' && new Date(e.date) <= in7 && !e.creditCardId),
           overduePayments: payments.filter(p => {
             if (p.status !== 'overdue') return false;
             const inst = installments.find((i: Installment) => i.id === p.installmentId);
@@ -527,6 +560,7 @@ export class DashboardComponent implements OnInit {
           overdueTotal,
           insights,
           savingsGoals,
+          cardCharges,
         };
       })
     );

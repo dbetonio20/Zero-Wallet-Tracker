@@ -24,6 +24,7 @@ import { FinancialEngineService } from '../../core/services/financial-engine.ser
 import { PreferencesService } from '../../core/services/preferences.service';
 import { CategoryService } from '../../core/services/category.service';
 import { QuickAddService } from '../../core/services/quick-add.service';
+import { CreditCardService } from '../../core/services/credit-card.service';
 import { Expense, PaymentStatus, Income, Category } from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
 
@@ -62,6 +63,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   categoryService = inject(CategoryService);
   private quickAdd = inject(QuickAddService);
+  creditCardService = inject(CreditCardService);
 
   // ── UI state ─────────────────────────────────────────────────────────
   isModalOpen = false;
@@ -131,6 +133,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   );
 
   categories$ = this.categoryService.getCategories();
+  cards$ = this.creditCardService.getCards();
   methods = METHODS;
   userName = 'U';
   userInitial = 'U';
@@ -208,12 +211,14 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   async save(): Promise<void> {
     if (!this.form.category || !this.form.amount || !this.form.date) return;
+    const isCreditCard = this.form.paymentMethod === 'Credit Card';
     const base = {
       name: this.form.name || '',
       category: this.form.category!,
       amount: +this.form.amount!,
       date: this.form.date!,
       paymentMethod: this.form.paymentMethod || 'Cash',
+      creditCardId: isCreditCard ? (this.form.creditCardId || undefined) : undefined,
       notes: this.form.notes || '',
       recurring: this.form.recurring ?? false,
     };
@@ -305,6 +310,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       amount: undefined,
       date: new Date().toISOString().split('T')[0],
       paymentMethod: 'Cash',
+      creditCardId: undefined,
       notes: '',
       recurring: false,
     };

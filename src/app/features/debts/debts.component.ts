@@ -20,7 +20,7 @@ import { Router } from '@angular/router';
 import { FinancialEngineService } from '../../core/services/financial-engine.service';
 import { CreditCardService } from '../../core/services/credit-card.service';
 import { PreferencesService } from '../../core/services/preferences.service';
-import { Installment, InstallmentPayment, CreditCard, PaymentStatus, Income } from '../../core/models';
+import { Installment, InstallmentPayment, CreditCard, PaymentStatus, Income, Expense } from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
 
 interface InstallmentVM extends Installment {
@@ -56,6 +56,7 @@ export class DebtsComponent implements OnInit {
 
   vm$!: Observable<InstallmentVM[]>;
   cards$!: Observable<CreditCard[]>;
+  cardsWithExpenses$!: Observable<{ card: CreditCard; expenses: Expense[]; total: number }[]>;
   isInstallmentModalOpen = false;
   isCardModalOpen = false;
   isPayModalOpen = false;
@@ -86,6 +87,18 @@ export class DebtsComponent implements OnInit {
     this.currencyCode = this.prefs.currentCurrencyCode;
 
     this.cards$ = this.cardService.getCards();
+    this.cardsWithExpenses$ = combineLatest([
+      this.cardService.getCards(),
+      this.engine.getExpenses(),
+    ]).pipe(
+      map(([cards, expenses]) =>
+        cards.map(card => {
+          const linked = expenses.filter(e => e.creditCardId === card.id);
+          const total = linked.reduce((s, e) => s + e.amount, 0);
+          return { card, expenses: linked, total };
+        })
+      )
+    );
     this.vm$ = combineLatest([
       this.engine.getInstallments(),
       this.engine.getInstallmentPayments(),

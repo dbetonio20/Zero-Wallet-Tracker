@@ -38,6 +38,7 @@ export interface Expense {
   amount: number;
   date: string; // ISO date string
   paymentMethod: string;
+  creditCardId?: string; // set when paymentMethod is 'Credit Card'
   status: PaymentStatus;
   recurring: boolean; // marks a monthly repeating expense
   notes: string;

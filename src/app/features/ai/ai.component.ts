@@ -10,7 +10,7 @@ import {
   sendOutline, sparklesOutline, trashOutline, stopCircleOutline,
   cloudDownloadOutline, alertCircleOutline, refreshOutline, settingsOutline,
   walletOutline, trendingUpOutline, cardOutline, helpCircleOutline,
-  bulbOutline, hardwareChipOutline,
+  bulbOutline, hardwareChipOutline, bugOutline, copyOutline, closeCircleOutline,
 } from 'ionicons/icons';
 import { Subject, Subscription, takeUntil } from 'rxjs';
 import { Router } from '@angular/router';
@@ -44,6 +44,10 @@ export class AiComponent implements OnInit, OnDestroy {
   errorMessage = '';
   inferenceDevice = '';
 
+  // Debug log panel
+  logLines: string[] = [];
+  showLogs = false;
+
   private systemPrompt = '';
   private contextSub?: Subscription;
   private destroy$ = new Subject<void>();
@@ -59,7 +63,7 @@ export class AiComponent implements OnInit, OnDestroy {
       sendOutline, sparklesOutline, trashOutline, stopCircleOutline,
       cloudDownloadOutline, alertCircleOutline, refreshOutline, settingsOutline,
       walletOutline, trendingUpOutline, cardOutline, helpCircleOutline,
-      bulbOutline, hardwareChipOutline,
+      bulbOutline, hardwareChipOutline, bugOutline, copyOutline, closeCircleOutline,
     });
   }
 
@@ -80,6 +84,15 @@ export class AiComponent implements OnInit, OnDestroy {
       this.inferenceDevice = d;
     });
 
+    this.ai.debugLog$.pipe(takeUntil(this.destroy$)).subscribe(line => {
+      this.logLines.push(line);
+      // Cap at 500 lines to avoid memory bloat
+      if (this.logLines.length > 500) this.logLines.shift();
+    });
+
+    // Add an initial boot entry
+    this.logLines.push(`[boot] AI component initialised at ${new Date().toISOString()}`);
+
     this.contextSub = this.context.getContext$().pipe(takeUntil(this.destroy$)).subscribe(ctx => {
       this.systemPrompt = ctx;
     });
@@ -96,6 +109,19 @@ export class AiComponent implements OnInit, OnDestroy {
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
+  }
+
+  toggleLogs(): void {
+    this.showLogs = !this.showLogs;
+  }
+
+  copyLogs(): void {
+    const text = this.logLines.join('\n');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+    // Also log the copy event itself so it shows in future pastes
+    this.logLines.push(`[${new Date().toISOString().slice(11,23)}] --- logs copied to clipboard ---`);
   }
 
   get isReady(): boolean {
@@ -125,6 +151,7 @@ export class AiComponent implements OnInit, OnDestroy {
   }
 
   get deviceLabel(): string {
+    if (this.inferenceDevice === 'native') return 'On-Device · Offline';
     if (this.inferenceDevice === 'webgpu') return 'WebGPU';
     if (this.inferenceDevice === 'wasm') return 'WASM';
     return '';
