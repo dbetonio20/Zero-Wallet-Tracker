@@ -209,8 +209,13 @@ export class AiComponent implements OnInit, OnDestroy {
       if (!assistantMsg.content && fullResponse) {
         assistantMsg.content = fullResponse;
       }
-    } catch {
-      assistantMsg.content = 'Sorry, something went wrong. Please try again.';
+    } catch (err: any) {
+      const msg = err?.message ?? '';
+      if (msg.includes('too long') || msg.includes('Prompt too long')) {
+        assistantMsg.content = 'Your data is too large for a single prompt. Try clearing the chat and asking a shorter question.';
+      } else {
+        assistantMsg.content = 'Sorry, something went wrong. Please try again.';
+      }
     } finally {
       assistantMsg.streaming = false;
       tokenSub.unsubscribe();

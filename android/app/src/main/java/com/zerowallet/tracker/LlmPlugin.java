@@ -16,8 +16,10 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Capacitor plugin wrapping MediaPipe LlmInference for on-device AI.
@@ -30,7 +32,11 @@ public class LlmPlugin extends Plugin {
     private static final String MODEL_URL =
             "https://d3q489kjw0f759.cloudfront.net/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task";
     private static final String MODEL_FILE_NAME = "qwen2.5-1.5b-instruct.task";
-    private static final int MAX_TOKENS = 1280;
+    // Must match the model's KV cache size (ekv4096 in the .task filename).
+    // Too low → prompt exceeds limit → native crash.
+    private static final int MAX_TOKENS = 4096;
+    // Rough chars-per-token ratio (conservative). Used for a pre-flight guard.
+    private static final double CHARS_PER_TOKEN = 3.2;
 
     private LlmInference llmInference = null;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -205,18 +211,32 @@ public class LlmPlugin extends Plugin {
             return;
         }
 
+        // Pre-flight prompt length guard: reject prompts that would certainly
+        // exceed the model's context window, instead of crashing natively.
+        int estimatedTokens = (int) (prompt.length() / CHARS_PER_TOKEN);
+        // Reserve at least 256 tokens for the response
+        int maxInputTokens = MAX_TOKENS - 256;
+        if (estimatedTokens > maxInputTokens) {
+            Log.w(TAG, "Prompt too long: ~" + estimatedTokens + " tokens (max " + maxInputTokens + ")");
+            call.reject("Prompt too long (" + estimatedTokens + " tokens). Try a shorter question or clear the chat.");
+            return;
+        }
+
         isGenerating = true;
 
         executor.execute(() -> {
             try {
-                Log.d(TAG, "Generating (" + prompt.length() + " chars)");
+                Log.d(TAG, "Generating (" + prompt.length() + " chars, ~" + estimatedTokens + " tokens)");
                 long startMs = System.currentTimeMillis();
 
                 // Clear the streaming buffer for this generation
                 streamBuffer.setLength(0);
 
-                // Use async generation with ProgressListener for real-time
-                // token streaming — user sees text appearing immediately.
+                // CountDownLatch signals completion from the ProgressListener
+                // callback thread — avoids blocking the single-thread executor
+                // with ListenableFuture.get() which can deadlock.
+                CountDownLatch latch = new CountDownLatch(1);
+
                 ProgressListener<String> tokenListener = (partialResult, done) -> {
                     if (partialResult != null && !partialResult.isEmpty()) {
                         streamBuffer.append(partialResult);
@@ -230,12 +250,18 @@ public class LlmPlugin extends Plugin {
                         doneEvent.put("token", "");
                         doneEvent.put("done", true);
                         notifyListeners("onToken", doneEvent);
+                        latch.countDown(); // signal completion
                     }
                 };
 
-                // .get() blocks until generation completes, while tokens
-                // stream live through the ProgressListener above.
-                llmInference.generateResponseAsync(prompt, tokenListener).get();
+                // Start async generation — tokens stream via listener above.
+                llmInference.generateResponseAsync(prompt, tokenListener);
+
+                // Wait up to 3 minutes for generation to complete.
+                boolean finished = latch.await(180, TimeUnit.SECONDS);
+                if (!finished) {
+                    throw new Exception("Generation timed out after 3 minutes");
+                }
 
                 String response = streamBuffer.toString();
 
