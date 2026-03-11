@@ -71,6 +71,8 @@ export class PreferencesService {
     await this.storage.remove('installments');
     await this.storage.remove('installmentPayments');
     await this.storage.remove('credit_cards');
+    await this.storage.remove('paymentAllocations');
+    await this.storage.remove('savingsGoals');
     await this.storage.remove(KEYS.USER_NAME);
     await this.storage.remove(KEYS.THEME);
     await this.storage.remove(KEYS.CURRENCY_SYMBOL);
@@ -79,7 +81,7 @@ export class PreferencesService {
 
   async exportAllData(): Promise<string> {
     const data: Record<string, unknown> = {};
-    for (const key of ['expenses', 'incomes', 'installments', 'installmentPayments', 'credit_cards']) {
+    for (const key of ['expenses', 'incomes', 'installments', 'installmentPayments', 'credit_cards', 'paymentAllocations']) {
       data[key] = await this.storage.get(key) ?? [];
     }
     data['preferences'] = {
@@ -93,11 +95,11 @@ export class PreferencesService {
 
   async importAllData(json: string): Promise<void> {
     const data = JSON.parse(json);
-    const listKeys = ['expenses', 'incomes', 'installments', 'installmentPayments', 'credit_cards'];
+    const listKeys = ['expenses', 'incomes', 'installments', 'installmentPayments', 'credit_cards', 'paymentAllocations', 'savingsGoals'];
     for (const key of listKeys) {
-      if (Array.isArray(data[key])) {
-        await this.storage.set(key, data[key]);
-      }
+      // Always write — use the backup value if it's a valid array, otherwise
+      // reset to [] so stale storage data from a previous session is cleared.
+      await this.storage.set(key, Array.isArray(data[key]) ? data[key] : []);
     }
     if (data['preferences']) {
       const p = data['preferences'];

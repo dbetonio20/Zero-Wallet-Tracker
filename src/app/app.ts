@@ -15,7 +15,9 @@ export class App implements OnInit {
   async ngOnInit(): Promise<void> {
     const theme = await this.prefs.getTheme();
     this.applyTheme(theme);
-    await this.notifications.init();
+    // Notification errors (permission denied, scheduling failure, plugin not
+    // available on web) must never crash the root component.
+    this.notifications.init().catch(() => {});
   }
 
   private applyTheme(theme: string): void {

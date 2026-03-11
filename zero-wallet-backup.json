@@ -1,170 +1,569 @@
 {
   "expenses": [],
   "incomes": [],
-  "credit_cards": [
-    {
-      "id": "cc-1",
-      "bank": "RCBC",
-      "name": "Flex Visa",
-      "dueDate": 30,
-      "cutoffDate": 3,
-      "creditLimit": 220000
-    },
-    {
-      "id": "cc-2",
-      "bank": "Metrobank",
-      "name": "Mastercard Platinum",
-      "dueDate": 25,
-      "cutoffDate": 1,
-      "creditLimit": 108000
-    },
-    {
-      "id": "cc-3",
-      "bank": "EastWest",
-      "name": "Visa Privilege Gold",
-      "dueDate": 6,
-      "cutoffDate": 11,
-      "creditLimit": 232000
-    },
-    {
-      "id": "cc-4",
-      "bank": "Unionbank",
-      "name": "Cashback Platinum Mastercard",
-      "dueDate": 23,
-      "cutoffDate": 7,
-      "creditLimit": 246000
-    }
-  ],
   "installments": [
     {
-      "id": "inst-1",
-      "cardId": "cc-1",
+      "cardId": "f10b72b3-af7a-4443-b4ae-30914c3bc665",
       "transaction": "Mandaue Foam",
       "monthlyAmount": 772,
-      "startDate": "2026-03-09",
-      "months": 3
+      "startDate": "2026-03-15",
+      "months": 3,
+      "id": "2d7fc580-6f83-4a3f-9aa1-eb07a31efa14"
     },
     {
-      "id": "inst-2",
-      "cardId": "cc-4",
+      "cardId": "c2c06adc-ebba-4246-b305-6c7f4bc2e85e",
       "transaction": "Buds 4",
       "monthlyAmount": 1204,
-      "startDate": "2026-03-09",
-      "months": 3
+      "startDate": "2026-03-11",
+      "months": 3,
+      "id": "aa3cbefa-9db7-42f0-abaf-13863b013187"
     },
     {
-      "id": "inst-3",
-      "cardId": "cc-3",
-      "transaction": "HK Installment",
+      "cardId": "f1f45c0f-0d70-4611-9e8a-eb5afccee638",
+      "transaction": "HK Installment ",
       "monthlyAmount": 2953,
-      "startDate": "2026-03-09",
-      "months": 4
+      "startDate": "2026-03-11",
+      "months": 4,
+      "id": "d722b515-b9e8-43e3-9b1f-8176b149c904"
     },
     {
-      "id": "inst-4",
-      "cardId": "",
-      "transaction": "One Pluss",
+      "cardId": "7faa8269-cced-4d19-83df-66ef13e334a3",
+      "transaction": "OnePlus 11",
       "monthlyAmount": 2729,
-      "startDate": "2026-03-09",
-      "months": 6
+      "startDate": "2026-04-10",
+      "months": 6,
+      "id": "c09b9ccf-5d43-47ed-a748-2ec8545d59b0"
     },
     {
-      "id": "inst-5",
-      "cardId": "cc-4",
-      "transaction": "McBook Air",
+      "cardId": "c2c06adc-ebba-4246-b305-6c7f4bc2e85e",
+      "transaction": "Macbook Air",
       "monthlyAmount": 1770,
-      "startDate": "2026-03-09",
-      "months": 8
+      "startDate": "2026-03-11",
+      "months": 8,
+      "id": "c0ead703-bd39-413e-a94f-f0a35e08cb5b"
     },
     {
-      "id": "inst-6",
-      "cardId": "cc-2",
+      "cardId": "f99b3588-01b9-4386-bedb-b0df9dd6a0a7",
       "transaction": "Honda ADV - MB",
       "monthlyAmount": 3554,
-      "startDate": "2026-03-09",
-      "months": 9
+      "startDate": "2026-03-11",
+      "months": 9,
+      "id": "35c0170a-9c10-4563-8501-9ee7c8742bf1"
     },
     {
-      "id": "inst-7",
-      "cardId": "cc-3",
+      "cardId": "f1f45c0f-0d70-4611-9e8a-eb5afccee638",
       "transaction": "Honda ADV - EW",
       "monthlyAmount": 3752,
-      "startDate": "2026-03-09",
-      "months": 9
+      "startDate": "2026-03-25",
+      "months": 9,
+      "id": "135ffd5a-2d68-417b-b1c7-574d21b2d13b"
     },
     {
-      "id": "inst-8",
-      "cardId": "cc-3",
+      "cardId": "f1f45c0f-0d70-4611-9e8a-eb5afccee638",
       "transaction": "USJR",
       "monthlyAmount": 4924,
-      "startDate": "2026-03-09",
-      "months": 10
+      "startDate": "2026-03-11",
+      "months": 10,
+      "id": "620e13d3-dd95-4a17-82b7-2ec2b5721061"
+    },
+    {
+      "cardId": "f1f45c0f-0d70-4611-9e8a-eb5afccee638",
+      "transaction": "iPhone 16",
+      "monthlyAmount": 2416,
+      "startDate": "2026-03-25",
+      "months": 11,
+      "id": "976e2207-6ec8-41c2-b95f-2779272f584d"
     }
   ],
   "installmentPayments": [
-    { "id": "ip-1-1", "installmentId": "inst-1", "dueDate": "2026-03-09", "amount": 772, "status": "pending" },
-    { "id": "ip-1-2", "installmentId": "inst-1", "dueDate": "2026-04-09", "amount": 772, "status": "pending" },
-    { "id": "ip-1-3", "installmentId": "inst-1", "dueDate": "2026-05-09", "amount": 772, "status": "pending" },
-
-    { "id": "ip-2-1", "installmentId": "inst-2", "dueDate": "2026-03-09", "amount": 1204, "status": "pending" },
-    { "id": "ip-2-2", "installmentId": "inst-2", "dueDate": "2026-04-09", "amount": 1204, "status": "pending" },
-    { "id": "ip-2-3", "installmentId": "inst-2", "dueDate": "2026-05-09", "amount": 1204, "status": "pending" },
-
-    { "id": "ip-3-1", "installmentId": "inst-3", "dueDate": "2026-03-09", "amount": 2953, "status": "pending" },
-    { "id": "ip-3-2", "installmentId": "inst-3", "dueDate": "2026-04-09", "amount": 2953, "status": "pending" },
-    { "id": "ip-3-3", "installmentId": "inst-3", "dueDate": "2026-05-09", "amount": 2953, "status": "pending" },
-    { "id": "ip-3-4", "installmentId": "inst-3", "dueDate": "2026-06-09", "amount": 2953, "status": "pending" },
-
-    { "id": "ip-4-1", "installmentId": "inst-4", "dueDate": "2026-03-09", "amount": 2729, "status": "pending" },
-    { "id": "ip-4-2", "installmentId": "inst-4", "dueDate": "2026-04-09", "amount": 2729, "status": "pending" },
-    { "id": "ip-4-3", "installmentId": "inst-4", "dueDate": "2026-05-09", "amount": 2729, "status": "pending" },
-    { "id": "ip-4-4", "installmentId": "inst-4", "dueDate": "2026-06-09", "amount": 2729, "status": "pending" },
-    { "id": "ip-4-5", "installmentId": "inst-4", "dueDate": "2026-07-09", "amount": 2729, "status": "pending" },
-    { "id": "ip-4-6", "installmentId": "inst-4", "dueDate": "2026-08-09", "amount": 2729, "status": "pending" },
-
-    { "id": "ip-5-1", "installmentId": "inst-5", "dueDate": "2026-03-09", "amount": 1770, "status": "pending" },
-    { "id": "ip-5-2", "installmentId": "inst-5", "dueDate": "2026-04-09", "amount": 1770, "status": "pending" },
-    { "id": "ip-5-3", "installmentId": "inst-5", "dueDate": "2026-05-09", "amount": 1770, "status": "pending" },
-    { "id": "ip-5-4", "installmentId": "inst-5", "dueDate": "2026-06-09", "amount": 1770, "status": "pending" },
-    { "id": "ip-5-5", "installmentId": "inst-5", "dueDate": "2026-07-09", "amount": 1770, "status": "pending" },
-    { "id": "ip-5-6", "installmentId": "inst-5", "dueDate": "2026-08-09", "amount": 1770, "status": "pending" },
-    { "id": "ip-5-7", "installmentId": "inst-5", "dueDate": "2026-09-09", "amount": 1770, "status": "pending" },
-    { "id": "ip-5-8", "installmentId": "inst-5", "dueDate": "2026-10-09", "amount": 1770, "status": "pending" },
-
-    { "id": "ip-6-1", "installmentId": "inst-6", "dueDate": "2026-03-09", "amount": 3554, "status": "pending" },
-    { "id": "ip-6-2", "installmentId": "inst-6", "dueDate": "2026-04-09", "amount": 3554, "status": "pending" },
-    { "id": "ip-6-3", "installmentId": "inst-6", "dueDate": "2026-05-09", "amount": 3554, "status": "pending" },
-    { "id": "ip-6-4", "installmentId": "inst-6", "dueDate": "2026-06-09", "amount": 3554, "status": "pending" },
-    { "id": "ip-6-5", "installmentId": "inst-6", "dueDate": "2026-07-09", "amount": 3554, "status": "pending" },
-    { "id": "ip-6-6", "installmentId": "inst-6", "dueDate": "2026-08-09", "amount": 3554, "status": "pending" },
-    { "id": "ip-6-7", "installmentId": "inst-6", "dueDate": "2026-09-09", "amount": 3554, "status": "pending" },
-    { "id": "ip-6-8", "installmentId": "inst-6", "dueDate": "2026-10-09", "amount": 3554, "status": "pending" },
-    { "id": "ip-6-9", "installmentId": "inst-6", "dueDate": "2026-11-09", "amount": 3554, "status": "pending" },
-
-    { "id": "ip-7-1", "installmentId": "inst-7", "dueDate": "2026-03-09", "amount": 3752, "status": "pending" },
-    { "id": "ip-7-2", "installmentId": "inst-7", "dueDate": "2026-04-09", "amount": 3752, "status": "pending" },
-    { "id": "ip-7-3", "installmentId": "inst-7", "dueDate": "2026-05-09", "amount": 3752, "status": "pending" },
-    { "id": "ip-7-4", "installmentId": "inst-7", "dueDate": "2026-06-09", "amount": 3752, "status": "pending" },
-    { "id": "ip-7-5", "installmentId": "inst-7", "dueDate": "2026-07-09", "amount": 3752, "status": "pending" },
-    { "id": "ip-7-6", "installmentId": "inst-7", "dueDate": "2026-08-09", "amount": 3752, "status": "pending" },
-    { "id": "ip-7-7", "installmentId": "inst-7", "dueDate": "2026-09-09", "amount": 3752, "status": "pending" },
-    { "id": "ip-7-8", "installmentId": "inst-7", "dueDate": "2026-10-09", "amount": 3752, "status": "pending" },
-    { "id": "ip-7-9", "installmentId": "inst-7", "dueDate": "2026-11-09", "amount": 3752, "status": "pending" },
-
-    { "id": "ip-8-1", "installmentId": "inst-8", "dueDate": "2026-03-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-2", "installmentId": "inst-8", "dueDate": "2026-04-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-3", "installmentId": "inst-8", "dueDate": "2026-05-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-4", "installmentId": "inst-8", "dueDate": "2026-06-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-5", "installmentId": "inst-8", "dueDate": "2026-07-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-6", "installmentId": "inst-8", "dueDate": "2026-08-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-7", "installmentId": "inst-8", "dueDate": "2026-09-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-8", "installmentId": "inst-8", "dueDate": "2026-10-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-9", "installmentId": "inst-8", "dueDate": "2026-11-09", "amount": 4924, "status": "pending" },
-    { "id": "ip-8-10", "installmentId": "inst-8", "dueDate": "2026-12-09", "amount": 4924, "status": "pending" }
+    {
+      "id": "9e6563d2-2332-4ea4-8716-b5ff004596c3",
+      "installmentId": "2d7fc580-6f83-4a3f-9aa1-eb07a31efa14",
+      "dueDate": "2026-03-15",
+      "amount": 772,
+      "status": "pending"
+    },
+    {
+      "id": "2fa73bc1-5680-444f-a3f4-0f39fd4c5331",
+      "installmentId": "2d7fc580-6f83-4a3f-9aa1-eb07a31efa14",
+      "dueDate": "2026-04-15",
+      "amount": 772,
+      "status": "pending"
+    },
+    {
+      "id": "8bc07c64-1deb-4e0f-ab60-b11be12c5fac",
+      "installmentId": "2d7fc580-6f83-4a3f-9aa1-eb07a31efa14",
+      "dueDate": "2026-05-15",
+      "amount": 772,
+      "status": "pending"
+    },
+    {
+      "id": "fab47bd4-1966-4a74-9fcb-425fdbe15ba1",
+      "installmentId": "aa3cbefa-9db7-42f0-abaf-13863b013187",
+      "dueDate": "2026-03-11",
+      "amount": 1204,
+      "status": "pending"
+    },
+    {
+      "id": "81c414b1-6e28-4a6c-ba52-a0350c71ebd3",
+      "installmentId": "aa3cbefa-9db7-42f0-abaf-13863b013187",
+      "dueDate": "2026-04-11",
+      "amount": 1204,
+      "status": "pending"
+    },
+    {
+      "id": "64bc4423-ddaf-48ef-9de1-28f9996e63ce",
+      "installmentId": "aa3cbefa-9db7-42f0-abaf-13863b013187",
+      "dueDate": "2026-05-11",
+      "amount": 1204,
+      "status": "pending"
+    },
+    {
+      "id": "dab54533-d70e-46dc-b2c3-f40930f160ca",
+      "installmentId": "d722b515-b9e8-43e3-9b1f-8176b149c904",
+      "dueDate": "2026-03-11",
+      "amount": 2953,
+      "status": "pending"
+    },
+    {
+      "id": "a3e0c47e-df1e-4f3f-99e9-5d902685b70b",
+      "installmentId": "d722b515-b9e8-43e3-9b1f-8176b149c904",
+      "dueDate": "2026-04-11",
+      "amount": 2953,
+      "status": "pending"
+    },
+    {
+      "id": "0f957b9a-712c-4156-8e08-2a998a08cbb5",
+      "installmentId": "d722b515-b9e8-43e3-9b1f-8176b149c904",
+      "dueDate": "2026-05-11",
+      "amount": 2953,
+      "status": "pending"
+    },
+    {
+      "id": "216972fb-4ec8-40fa-b006-b508fde8b0fb",
+      "installmentId": "d722b515-b9e8-43e3-9b1f-8176b149c904",
+      "dueDate": "2026-06-11",
+      "amount": 2953,
+      "status": "pending"
+    },
+    {
+      "id": "01e1d044-f6d6-4778-8145-8d4e93a5e67c",
+      "installmentId": "c09b9ccf-5d43-47ed-a748-2ec8545d59b0",
+      "dueDate": "2026-04-10",
+      "amount": 2729,
+      "status": "pending"
+    },
+    {
+      "id": "5c0bc6c9-4bd3-49b8-a54f-8b3a288f51e4",
+      "installmentId": "c09b9ccf-5d43-47ed-a748-2ec8545d59b0",
+      "dueDate": "2026-05-10",
+      "amount": 2729,
+      "status": "pending"
+    },
+    {
+      "id": "c56431dd-9f52-4f63-8b98-1a6f3b8c3c11",
+      "installmentId": "c09b9ccf-5d43-47ed-a748-2ec8545d59b0",
+      "dueDate": "2026-06-10",
+      "amount": 2729,
+      "status": "pending"
+    },
+    {
+      "id": "48b0bf81-590f-4e84-ad9e-40f9305861b9",
+      "installmentId": "c09b9ccf-5d43-47ed-a748-2ec8545d59b0",
+      "dueDate": "2026-07-10",
+      "amount": 2729,
+      "status": "pending"
+    },
+    {
+      "id": "6b8eaf90-6fe9-4fde-ab63-3a1d7586679c",
+      "installmentId": "c09b9ccf-5d43-47ed-a748-2ec8545d59b0",
+      "dueDate": "2026-08-10",
+      "amount": 2729,
+      "status": "pending"
+    },
+    {
+      "id": "5ef4b455-08a6-4027-b5fb-3126a8ee2ce1",
+      "installmentId": "c09b9ccf-5d43-47ed-a748-2ec8545d59b0",
+      "dueDate": "2026-09-10",
+      "amount": 2729,
+      "status": "pending"
+    },
+    {
+      "id": "c82f0c67-d197-4c4b-9728-ecd34fb8ed8b",
+      "installmentId": "c0ead703-bd39-413e-a94f-f0a35e08cb5b",
+      "dueDate": "2026-03-11",
+      "amount": 1770,
+      "status": "pending"
+    },
+    {
+      "id": "fcf64373-a50c-4c03-88a4-11bf27ffb0fb",
+      "installmentId": "c0ead703-bd39-413e-a94f-f0a35e08cb5b",
+      "dueDate": "2026-04-11",
+      "amount": 1770,
+      "status": "pending"
+    },
+    {
+      "id": "c72f728b-715f-4da0-9899-0013c5a854cf",
+      "installmentId": "c0ead703-bd39-413e-a94f-f0a35e08cb5b",
+      "dueDate": "2026-05-11",
+      "amount": 1770,
+      "status": "pending"
+    },
+    {
+      "id": "f4db6508-3ebc-4d60-a4a0-9aa3f6500011",
+      "installmentId": "c0ead703-bd39-413e-a94f-f0a35e08cb5b",
+      "dueDate": "2026-06-11",
+      "amount": 1770,
+      "status": "pending"
+    },
+    {
+      "id": "39735905-586c-46b3-ae87-1610fd147797",
+      "installmentId": "c0ead703-bd39-413e-a94f-f0a35e08cb5b",
+      "dueDate": "2026-07-11",
+      "amount": 1770,
+      "status": "pending"
+    },
+    {
+      "id": "f5860de2-ad7d-4c8d-bb64-3ff7579e1c30",
+      "installmentId": "c0ead703-bd39-413e-a94f-f0a35e08cb5b",
+      "dueDate": "2026-08-11",
+      "amount": 1770,
+      "status": "pending"
+    },
+    {
+      "id": "4bd0f377-0d80-40db-b586-75c2df03521d",
+      "installmentId": "c0ead703-bd39-413e-a94f-f0a35e08cb5b",
+      "dueDate": "2026-09-11",
+      "amount": 1770,
+      "status": "pending"
+    },
+    {
+      "id": "98167e1b-bdbf-4f56-ae9e-fe55a539fb1f",
+      "installmentId": "c0ead703-bd39-413e-a94f-f0a35e08cb5b",
+      "dueDate": "2026-10-11",
+      "amount": 1770,
+      "status": "pending"
+    },
+    {
+      "id": "ffe10387-c9c0-447e-ba54-aaa3273afc19",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-03-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "6ebbdcb4-5c66-4739-8264-cfb212423b65",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-04-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "bf7023d8-5566-4b46-87ff-cf199da7a4ff",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-05-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "e919e7e9-8353-44e0-9b65-e484254f0f64",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-06-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "bd8f0ca0-9ed4-4f9e-aadd-12e7edc46741",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-07-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "2e8ffd44-ca66-4070-b1a6-45748ec4bd80",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-08-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "49c745d0-a175-4d17-b954-cd7e6d2ed55b",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-09-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "500b6c6b-d269-4945-9a21-f1c781f4f0b7",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-10-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "88face75-315c-4685-bc80-dca592478b28",
+      "installmentId": "35c0170a-9c10-4563-8501-9ee7c8742bf1",
+      "dueDate": "2026-11-11",
+      "amount": 3554,
+      "status": "pending"
+    },
+    {
+      "id": "3a2cbdc0-6bbf-4c67-85f6-258ec4d69bea",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-03-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "739e7d2b-f145-420a-9930-3be8d2456cf5",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-04-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "cc9eab7a-46d1-4405-95f7-8802314d00c8",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-05-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "0836048b-4c70-4f41-946d-21e199503573",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-06-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "f2f40cc5-aace-4924-8505-ab308d79e887",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-07-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "408b2ae6-4528-4dfc-b491-016349864a70",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-08-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "a771cacf-ad87-408a-b3fc-769779ebdf97",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-09-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "52a1c057-017f-47a6-b058-0210e009e85a",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-10-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "65982a10-014b-46a0-8b4c-f238685a752d",
+      "installmentId": "135ffd5a-2d68-417b-b1c7-574d21b2d13b",
+      "dueDate": "2026-11-25",
+      "amount": 3752,
+      "status": "pending"
+    },
+    {
+      "id": "5437ea72-eabb-4168-908b-90f0a9be18cf",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-03-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "c2533885-993c-4c19-a964-662702d1f06a",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-04-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "1f14251d-f8f1-4970-a4a1-f4f6cdf381da",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-05-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "12182587-9405-4c69-9799-911e6f53f96c",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-06-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "5ed6a0ed-7fc8-41db-abc6-87dba63291f2",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-07-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "5a1c8eb4-84d7-490f-8f71-03e8ad4cc718",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-08-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "342b0dbd-1934-4f81-b5e7-1f6e73e955e7",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-09-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "5b5d9c26-28aa-4f3f-89c7-dffa93f365f5",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-10-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "beed7f39-ddfe-4c18-96e8-f2a5a29ff3f3",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-11-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "10de1a98-3910-41d0-aa6b-8940a0da9fe7",
+      "installmentId": "620e13d3-dd95-4a17-82b7-2ec2b5721061",
+      "dueDate": "2026-12-11",
+      "amount": 4924,
+      "status": "pending"
+    },
+    {
+      "id": "5a94dd0b-d892-4769-8d5f-00fe7ed024f7",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-03-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "bc870f9f-bdd2-4717-bd90-9e26e14dc683",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-04-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "ed07308b-a519-404a-9aca-5fb196f4b034",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-05-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "a2dd880a-031e-4379-8e78-c2d02c9995ee",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-06-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "f4309dfb-266f-48d2-b857-f91622749db6",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-07-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "7de6b3c4-44f3-40cf-b002-f4fd274f7cc0",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-08-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "f94f74ad-f346-4af3-99e1-2f25a2b70766",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-09-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "58441928-e5dd-46f6-932e-6bec800ca986",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-10-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "17954225-b8c7-4eef-8aa4-0184273cbec4",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-11-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "06a96119-9168-4a40-a631-8c78d3ca9d81",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2026-12-25",
+      "amount": 2416,
+      "status": "pending"
+    },
+    {
+      "id": "364c6c66-e003-4adb-bd25-6dfb2a4c17c5",
+      "installmentId": "976e2207-6ec8-41c2-b95f-2779272f584d",
+      "dueDate": "2027-01-25",
+      "amount": 2416,
+      "status": "pending"
+    }
   ],
+  "credit_cards": [
+    {
+      "bank": "RCBC ",
+      "name": "Flex Visa",
+      "dueDate": 15,
+      "cutoffDate": 10,
+      "creditLimit": 220000,
+      "id": "f10b72b3-af7a-4443-b4ae-30914c3bc665"
+    },
+    {
+      "bank": "Metrobank",
+      "name": "Platinum Mastercard ",
+      "dueDate": 15,
+      "cutoffDate": 10,
+      "creditLimit": 108000,
+      "id": "f99b3588-01b9-4386-bedb-b0df9dd6a0a7"
+    },
+    {
+      "bank": "Eastwest",
+      "name": "Privilege Gold Visa",
+      "dueDate": 30,
+      "cutoffDate": 25,
+      "creditLimit": 232000,
+      "id": "f1f45c0f-0d70-4611-9e8a-eb5afccee638"
+    },
+    {
+      "bank": "Unionbank",
+      "name": "Cashback Platinum Mastercard",
+      "dueDate": 15,
+      "cutoffDate": 10,
+      "creditLimit": 246000,
+      "id": "c2c06adc-ebba-4246-b305-6c7f4bc2e85e"
+    },
+    {
+      "bank": "Shopee ",
+      "name": "Spay Later",
+      "dueDate": 10,
+      "cutoffDate": 15,
+      "creditLimit": 85000,
+      "id": "7faa8269-cced-4d19-83df-66ef13e334a3"
+    }
+  ],
+  "paymentAllocations": [],
   "preferences": {
-    "userName": "Dominique",
-    "theme": "dark",
+    "userName": "User",
+    "theme": "system",
     "currencySymbol": "₱",
     "currencyCode": "PHP"
   }
