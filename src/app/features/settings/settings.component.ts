@@ -6,6 +6,7 @@ import {
   AlertController,
 } from '@ionic/angular/standalone';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { AiService } from '../../core/services/ai.service';
 import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -31,6 +32,7 @@ export class SettingsComponent implements OnInit {
     private prefs: PreferencesService,
     private alertCtrl: AlertController,
     private router: Router,
+    private ai: AiService,
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -141,6 +143,9 @@ export class SettingsComponent implements OnInit {
                 text: 'Import',
                 handler: async () => {
                   await this.prefs.importAllData(json);
+                  // Shut down the native AI plugin cleanly before reload to
+                  // prevent MediaPipe double-init crash on next session.
+                  await this.ai.shutdown();
                   window.location.reload();
                 },
               },

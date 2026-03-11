@@ -105,7 +105,11 @@ export class AiService {
   // ─── Load model ─────────────────────────────────────────────────────
   /** Download + initialize model. Safe to call multiple times. */
   async loadModel(): Promise<void> {
-    if (this.state$.value === 'ready' || this.state$.value === 'loading') {
+    if (
+      this.state$.value === 'ready' ||
+      this.state$.value === 'loading' ||
+      this.state$.value === 'generating'
+    ) {
       this.log(`loadModel() skipped — already "${this.state$.value}"`);
       return;
     }
@@ -211,6 +215,24 @@ export class AiService {
       this.log(`abort() error: ${e?.message}`);
       this.state$.next('error');
       this.error$.next('Failed to reset model');
+    }
+  }
+
+  /**
+   * Cleanly shuts down the native inference engine before an app reload.
+   * Call this before `window.location.reload()` to avoid double-init crashes
+   * caused by the Android LlmPlugin persisting across WebView reloads.
+   */
+  async shutdown(): Promise<void> {
+    if (!this.isNative) return;
+    this.log('shutdown() — releasing native model for app reload');
+    try {
+      await LlmPlugin.reset();
+      this.state$.next('idle');
+      this.log('shutdown() complete — plugin reset, state→idle');
+    } catch (e: any) {
+      // Non-fatal — log and continue; reload will proceed regardless
+      this.log(`shutdown() error (non-fatal): ${e?.message}`);
     }
   }
 

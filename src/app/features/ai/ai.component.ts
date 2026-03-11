@@ -188,9 +188,12 @@ export class AiComponent implements OnInit, OnDestroy {
 
     const chatMessages: ChatMessage[] = [
       { role: 'system', content: this.systemPrompt },
+      // Keep only the last 6 messages (3 user/assistant exchanges) to avoid
+      // prompt size growing past the model's context window on long chats.
       ...this.messages
         .filter(m => !m.streaming || m.content.length > 0)
         .slice(0, -1)
+        .slice(-6)
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       { role: 'user' as const, content: text },
     ];

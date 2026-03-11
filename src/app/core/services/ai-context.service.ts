@@ -42,9 +42,8 @@ export class AiContextService {
         const fmt = (n: number) => `${currency} ${n.toLocaleString('en', { maximumFractionDigits: 0 })}`;
 
         const lines: string[] = [];
-        lines.push(`You are a helpful financial assistant. Today: ${today.toISOString().split('T')[0]}. Currency: ${currency}.`);
-        lines.push('Answer questions using ONLY the data below. Be concise and practical.');
-        lines.push('When asked about a specific month, use the "Upcoming Payments by Month" section.');
+        lines.push(`Financial assistant. Date: ${today.toISOString().split('T')[0]}. Currency: ${currency}.`);
+        lines.push('Use ONLY data below. Be concise.');
         lines.push('');
 
         // ── Summary ──
@@ -223,7 +222,18 @@ export class AiContextService {
 
         lines.push('Use ONLY this data. Be concise.');
 
-        return lines.join('\n');
+        // ── Context size guard ──────────────────────────────────────────
+        // MediaPipe on-device models have a hard token limit (~1024–4096 depending
+        // on build config). Sections above are already ordered most-important first
+        // (Summary → Overdue → This Month → Upcoming → History → Installments →
+        // Cards → Goals), so slicing the tail is safe — critical data is preserved.
+        const MAX_CHARS = 4000;
+        const full = lines.join('\n');
+        if (full.length > MAX_CHARS) {
+          return full.slice(0, MAX_CHARS) +
+            '\n\n[Context truncated to fit model limits — older history omitted]';
+        }
+        return full;
       }),
     );
   }

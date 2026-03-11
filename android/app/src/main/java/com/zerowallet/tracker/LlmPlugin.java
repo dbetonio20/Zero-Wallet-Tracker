@@ -9,6 +9,7 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.google.mediapipe.tasks.genai.llminference.LlmInference;
+import com.google.mediapipe.tasks.genai.llminference.ProgressListener;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -34,6 +35,7 @@ public class LlmPlugin extends Plugin {
     private LlmInference llmInference = null;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private volatile boolean isGenerating = false;
+    private final StringBuilder streamBuffer = new StringBuilder();
 
     // ─── Model status ───────────────────────────────────────────────────
 
@@ -210,31 +212,40 @@ public class LlmPlugin extends Plugin {
                 Log.d(TAG, "Generating (" + prompt.length() + " chars)");
                 long startMs = System.currentTimeMillis();
 
-                // Use synchronous generateResponse on background thread.
-                // Token streaming will be added once we confirm the correct async API.
-                String response = llmInference.generateResponse(prompt);
+                // Clear the streaming buffer for this generation
+                streamBuffer.setLength(0);
+
+                // Use async generation with ProgressListener for real-time
+                // token streaming — user sees text appearing immediately.
+                ProgressListener<String> tokenListener = (partialResult, done) -> {
+                    if (partialResult != null && !partialResult.isEmpty()) {
+                        streamBuffer.append(partialResult);
+                        JSObject tokenEvent = new JSObject();
+                        tokenEvent.put("token", partialResult);
+                        tokenEvent.put("done", false);
+                        notifyListeners("onToken", tokenEvent);
+                    }
+                    if (done) {
+                        JSObject doneEvent = new JSObject();
+                        doneEvent.put("token", "");
+                        doneEvent.put("done", true);
+                        notifyListeners("onToken", doneEvent);
+                    }
+                };
+
+                // .get() blocks until generation completes, while tokens
+                // stream live through the ProgressListener above.
+                llmInference.generateResponseAsync(prompt, tokenListener).get();
+
+                String response = streamBuffer.toString();
 
                 long elapsed = System.currentTimeMillis() - startMs;
                 isGenerating = false;
-                Log.d(TAG, "Generated " + (response != null ? response.length() : 0)
+                Log.d(TAG, "Generated " + response.length()
                         + " chars in " + elapsed + "ms");
 
-                // Send the full response as a single token event
-                if (response != null && !response.isEmpty()) {
-                    JSObject tokenEvent = new JSObject();
-                    tokenEvent.put("token", response);
-                    tokenEvent.put("done", false);
-                    notifyListeners("onToken", tokenEvent);
-                }
-
-                // Send done event
-                JSObject doneEvent = new JSObject();
-                doneEvent.put("token", "");
-                doneEvent.put("done", true);
-                notifyListeners("onToken", doneEvent);
-
                 JSObject result = new JSObject();
-                result.put("response", response != null ? response : "");
+                result.put("response", response);
                 call.resolve(result);
             } catch (Exception e) {
                 isGenerating = false;
