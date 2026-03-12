@@ -235,6 +235,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.isPayModalOpen = true;
   }
 
+  async markUnpaid(e: Expense): Promise<void> {
+    await this.engine.removeAllocationsForExpense(e.id);
+    await this.engine.updateExpense({ ...e, status: 'pending' });
+  }
+
   closePayModal(): void { this.isPayModalOpen = false; this.payingExpense = null; }
 
   async onPayResult(result: PayModalResult): Promise<void> {

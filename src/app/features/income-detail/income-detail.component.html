@@ -6,6 +6,17 @@
       </ion-button>
     </ion-buttons>
     <ion-title>Income Details</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openAllocPlanner()" title="Allocate income">
+        <ion-icon name="save-outline" slot="icon-only" color="success"></ion-icon>
+      </ion-button>
+      <ion-button (click)="openEdit()" title="Edit income">
+        <ion-icon name="create-outline" slot="icon-only" color="primary"></ion-icon>
+      </ion-button>
+      <ion-button (click)="deleteIncome()" title="Delete income">
+        <ion-icon name="trash-outline" slot="icon-only" color="danger"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -78,4 +89,113 @@
   }
 
   <div style="height: 100px;"></div>
+
+  <!-- Edit Income Modal -->
+  <ion-modal [isOpen]="isEditModalOpen" (didDismiss)="closeEditModal()" [breakpoints]="[0, 0.65]" [initialBreakpoint]="0.65">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar class="modal-toolbar">
+          <ion-title>Edit Income</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeEditModal()" class="modal-close-btn">
+              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding modal-content">
+        <ion-item class="form-item">
+          <ion-select label="Source" [(ngModel)]="incomeForm.source" placeholder="Select source" interface="action-sheet">
+            @for (s of incomeSources; track s) {
+              <ion-select-option [value]="s">{{ s }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item class="form-item">
+          <ion-input label="Amount" type="number" [(ngModel)]="incomeForm.amount" placeholder="0.00" />
+        </ion-item>
+        <ion-item class="form-item">
+          <ion-input label="Date" type="date" [(ngModel)]="incomeForm.date" />
+        </ion-item>
+        <ion-item class="form-item">
+          <ion-toggle [(ngModel)]="incomeForm.recurring" labelPlacement="start">Recurring monthly</ion-toggle>
+        </ion-item>
+        <ion-button expand="block" class="save-btn" (click)="saveIncome()">Update Income</ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Alloc Planner Modal -->
+  <ion-modal [isOpen]="isAllocPlannerOpen" (didDismiss)="closeAllocPlanner()" [breakpoints]="[0, 0.92]" [initialBreakpoint]="0.92">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar class="modal-toolbar">
+          <ion-title>Allocate Income</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeAllocPlanner()" class="modal-close-btn">
+              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding modal-content">
+        @if (income) {
+          <div class="pay-target-info">
+            <div class="pay-target-label">{{ income.source }}</div>
+            <div class="pay-target-amount success-text">{{ remainingAmount | currency:currencyCode:'symbol':'1.0-0' }} available</div>
+          </div>
+        }
+        <div class="pay-income-section-title">Select expenses to pay</div>
+        @if (!allocPlannerExpenses.length) {
+          <div class="empty-state">
+            <ion-icon name="checkmark-circle-outline" class="empty-icon success-text"></ion-icon>
+            <p>No pending expenses — you're all caught up!</p>
+          </div>
+        } @else {
+          <div class="pay-income-list">
+            @for (e of allocPlannerExpenses; track e.id) {
+              <div class="pay-income-item" [class.selected]="e.selected" (click)="toggleAllocExpense(e.id)">
+                <div class="pay-income-radio">
+                  @if (e.selected) {
+                    <ion-icon name="checkmark-circle-outline" class="radio-checked"></ion-icon>
+                  } @else {
+                    <div class="radio-unchecked"></div>
+                  }
+                </div>
+                <div class="pay-income-details">
+                  <div class="pay-income-source">{{ e.name || e.category }}</div>
+                  <div class="pay-income-meta">{{ e.category }} · {{ e.date | date:'MMM d' }} · <span [class]="'status-' + e.status">{{ e.status }}</span></div>
+                </div>
+                <div class="pay-income-amounts">
+                  <div class="pay-income-remaining" [class.low-balance]="remainingAmount < e.amount">
+                    {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+          <div class="alloc-planner-summary">
+            <span>Selected total:</span>
+            <span [class.danger-text]="allocPlannerSelectedTotal > remainingAmount">
+              {{ allocPlannerSelectedTotal | currency:currencyCode:'symbol':'1.0-0' }}
+            </span>
+          </div>
+          @if (allocPlannerSelectedTotal > remainingAmount) {
+            <div class="pay-income-warning">
+              <ion-icon name="warning-outline"></ion-icon>
+              Total exceeds available balance by {{ (allocPlannerSelectedTotal - remainingAmount) | currency:currencyCode:'symbol':'1.0-0' }}
+            </div>
+          }
+        }
+        <ion-button
+          expand="block"
+          class="save-btn"
+          [disabled]="!allocPlannerExpenses.some(e => e.selected) || allocPlannerInProgress || allocPlannerSelectedTotal > remainingAmount"
+          (click)="confirmAllocPlan()">
+          {{ allocPlannerInProgress ? 'Allocating...' : 'Mark Selected as Paid' }}
+        </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
 </ion-content>

@@ -88,12 +88,15 @@ export interface PaymentAllocation {
 
 export interface FinancialSummary {
   totalIncome: number;
-  totalExpenses: number;
-  totalInstallments: number;
+  totalExpenses: number;       // sum of UNPAID (pending + overdue) expenses
+  totalInstallments: number;   // sum of UNPAID installment payments
   totalCreditDues: number;
-  balance: number;
+  totalObligations: number;    // totalExpenses + totalInstallments (all unpaid)
+  paidExpenses: number;        // sum of paid expenses
+  paidInstallments: number;    // sum of paid installment payments
+  balance: number;             // totalIncome - totalExpenses - totalInstallments
   overdueAmount: number;
   upcomingAmount: number;
-  allocatedIncome: number;   // sum of all payment allocation amounts
-  availableIncome: number;   // totalIncome - allocatedIncome
+  allocatedIncome: number;     // sum of all payment allocation amounts
+  availableIncome: number;     // totalIncome - allocatedIncome
 }

@@ -124,6 +124,10 @@
                 <ion-item-option color="success" (click)="markPaid(e)">
                   <ion-icon name="checkmark-outline" slot="icon-only" />
                 </ion-item-option>
+              } @else {
+                <ion-item-option color="warning" (click)="markUnpaid(e)">
+                  <ion-icon name="refresh-outline" slot="icon-only" />
+                </ion-item-option>
               }
               <ion-item-option color="danger" (click)="delete(e.id)">
                 <ion-icon name="trash-outline" slot="icon-only" />
@@ -197,7 +201,8 @@
         <ion-item>
           <ion-textarea label="Notes" [(ngModel)]="form.notes" placeholder="Optional notes" />
         </ion-item>
-        <ion-button expand="block" class="ion-margin-top" (click)="save()">
+        <ion-button expand="block" class="ion-margin-top" (click)="save()"
+          [disabled]="!form.category || !form.amount || !form.date">
           {{ editingExpense ? 'Update Expense' : 'Save Expense' }}
         </ion-button>
       </ion-content>

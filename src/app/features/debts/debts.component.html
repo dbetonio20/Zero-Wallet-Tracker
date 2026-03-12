@@ -129,28 +129,35 @@
               </ion-item>
             </ion-list>
 
-            <!-- Linked Expenses -->
-            @if (item.expenses.length) {
+            <!-- Linked Expenses — grouped by billing cycle -->
+            @if (item.cycles.length) {
               <div class="cc-expenses-header">
                 <span>Charged Expenses</span>
                 <span class="cc-expenses-total">{{ item.total | currency:currencyCode:'symbol':'1.0-0' }}</span>
               </div>
-              <ion-list lines="full" class="cc-expenses-list">
-                @for (e of item.expenses; track e.id) {
-                  <ion-item>
-                    <ion-label>
-                      <h3>{{ e.name || e.category }}</h3>
-                      <p>{{ e.date | date:'MMM d, y' }} · {{ e.category }}</p>
-                    </ion-label>
-                    <ion-note slot="end" [color]="e.status === 'paid' ? 'success' : e.status === 'overdue' ? 'danger' : 'warning'">
-                      {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
-                    </ion-note>
-                    <ion-badge slot="end" [color]="e.status === 'paid' ? 'success' : e.status === 'overdue' ? 'danger' : 'warning'">
-                      {{ e.status }}
-                    </ion-badge>
-                  </ion-item>
-                }
-              </ion-list>
+              @for (cycle of item.cycles; track cycle.label) {
+                <div class="cc-cycle-header">
+                  <span class="cc-cycle-label">{{ cycle.label }}</span>
+                  <span class="cc-cycle-total">{{ cycle.total | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                </div>
+                <ion-list lines="full" class="cc-expenses-list">
+                  @for (e of cycle.expenses; track e.id) {
+                    <ion-item>
+                      <ion-label>
+                        <h3>{{ e.name || e.category }}</h3>
+                        <p>{{ e.date | date:'MMM d, y' }} · {{ e.category }}</p>
+                        <p class="cc-billing-due">Payment due: {{ e.billingDueDate | date:'MMM d, y' }}</p>
+                      </ion-label>
+                      <ion-note slot="end" [color]="e.status === 'paid' ? 'success' : e.status === 'overdue' ? 'danger' : 'warning'">
+                        {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
+                      </ion-note>
+                      <ion-badge slot="end" [color]="e.status === 'paid' ? 'success' : e.status === 'overdue' ? 'danger' : 'warning'">
+                        {{ e.status }}
+                      </ion-badge>
+                    </ion-item>
+                  }
+                </ion-list>
+              }
             } @else {
               <p class="cc-no-expenses">No expenses charged to this card yet.</p>
             }

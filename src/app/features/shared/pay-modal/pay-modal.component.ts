@@ -55,8 +55,8 @@ interface IncomeOption {
             <div class="card-glass">
               @for (opt of incomeOptions; track opt.income.id) {
                 <div class="pay-income-row" [class.selected]="opt.selected" (click)="toggleIncome(opt)">
-                  <div class="pay-income-check">
-                    <ion-checkbox [checked]="opt.selected" (ionChange)="toggleIncome(opt, $event)" />
+                  <div class="pay-income-check" (click)="$event.stopPropagation()">
+                    <ion-checkbox [checked]="opt.selected" (ionChange)="toggleIncome(opt)" />
                   </div>
                   <div class="pay-income-info">
                     <div class="pay-income-name">{{ opt.income.source }}</div>
@@ -165,10 +165,7 @@ export class PayModalComponent implements OnInit, OnChanges {
     });
   }
 
-  toggleIncome(opt: IncomeOption, event?: any): void {
-    if (event) {
-      event.stopPropagation?.();
-    }
+  toggleIncome(opt: IncomeOption): void {
     opt.selected = !opt.selected;
     if (opt.selected) {
       // Auto-fill with the lesser of remaining income or remaining to pay

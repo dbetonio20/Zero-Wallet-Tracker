@@ -33,6 +33,20 @@ interface InstallmentVM extends Installment {
   remainingAmount: number;
 }
 
+interface BillingCycleGroup {
+  label: string;      // e.g. 'Due Apr 20, 2026'
+  dueDate: Date;
+  expenses: (Expense & { billingDueDate: Date })[];
+  total: number;
+}
+
+interface CardWithExpensesVM {
+  card: CreditCard;
+  cycles: BillingCycleGroup[];
+  expenses: Expense[];
+  total: number;
+}
+
 @Component({
   selector: 'app-debts',
   standalone: true,
@@ -56,7 +70,7 @@ export class DebtsComponent implements OnInit {
 
   vm$!: Observable<InstallmentVM[]>;
   cards$!: Observable<CreditCard[]>;
-  cardsWithExpenses$!: Observable<{ card: CreditCard; expenses: Expense[]; total: number }[]>;
+  cardsWithExpenses$!: Observable<CardWithExpensesVM[]>;
   isInstallmentModalOpen = false;
   isCardModalOpen = false;
   isPayModalOpen = false;
@@ -95,7 +109,27 @@ export class DebtsComponent implements OnInit {
         cards.map(card => {
           const linked = expenses.filter(e => e.creditCardId === card.id);
           const total = linked.reduce((s, e) => s + e.amount, 0);
-          return { card, expenses: linked, total };
+          // Annotate each expense with its billing-cycle due date
+          const annotated = linked.map(e => ({
+            ...e,
+            billingDueDate: this.cardService.getBillingCycleDueDate(e.date, card),
+          }));
+          // Group by billing-cycle due date
+          const cycleMap = new Map<string, (Expense & { billingDueDate: Date })[]>();
+          for (const e of annotated) {
+            const key = e.billingDueDate.toISOString().split('T')[0];
+            if (!cycleMap.has(key)) cycleMap.set(key, []);
+            cycleMap.get(key)!.push(e);
+          }
+          const cycles: BillingCycleGroup[] = Array.from(cycleMap.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([, exps]) => ({
+              label: `Due ${exps[0].billingDueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+              dueDate: exps[0].billingDueDate,
+              expenses: exps,
+              total: exps.reduce((s, e) => s + e.amount, 0),
+            }));
+          return { card, cycles, expenses: linked, total };
         })
       )
     );

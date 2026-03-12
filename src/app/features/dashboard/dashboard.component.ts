@@ -6,20 +6,20 @@ import {
   IonBadge, IonList, IonItem, IonLabel,
   IonRefresher, IonRefresherContent, IonIcon,
   IonModal, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption,
-  IonToggle, IonItemSliding, IonItemOptions, IonItemOption, IonProgressBar,
+  IonToggle, IonProgressBar,
   IonTextarea, IonFab, IonFabButton,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   addOutline, createOutline, trashOutline, warningOutline,
-  arrowDownOutline, arrowUpOutline, alertCircleOutline,
+  arrowDownOutline, arrowUpOutline, arrowBackOutline, alertCircleOutline,
   timeOutline, repeatOutline, cardOutline, walletOutline, closeOutline,
-  settingsOutline, chevronForwardOutline, chevronDownOutline, checkmarkCircleOutline,
+  settingsOutline, chevronBackOutline, chevronForwardOutline, chevronDownOutline, checkmarkCircleOutline,
   trendingUpOutline, trendingDownOutline, saveOutline, bulbOutline,
   barbellOutline, leafOutline, ribbonOutline, flagOutline, removeOutline, addCircleOutline,
-  receiptOutline,
+  receiptOutline, funnelOutline, calendarOutline,
 } from 'ionicons/icons';
-import { Observable, combineLatest } from 'rxjs';
+import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { FinancialEngineService } from '../../core/services/financial-engine.service';
@@ -53,17 +53,21 @@ interface UpcomingCardVM {
   lines: { transaction: string; amount: number; paymentId: string; dueDate: string }[];
 }
 
-interface UpcomingPaymentVM extends InstallmentPayment {
-  transaction: string;
-}
-
 interface OverduePaymentVM extends InstallmentPayment {
   transaction: string;
 }
 
+interface BillingCycleGroup {
+  label: string;       // e.g. 'Due Apr 20, 2026'
+  dueDate: Date;
+  expenses: (Expense & { billingDueDate: Date })[];
+  total: number;
+}
+
 interface CardChargesVM {
   card: CreditCard;
-  expenses: Expense[];
+  cycles: BillingCycleGroup[];
+  expenses: (Expense & { billingDueDate: Date })[]; // flat list for Pay-All
   total: number;
 }
 
@@ -80,15 +84,18 @@ interface SavingsGoalVM extends SavingsGoal {
   daysLeft?: number;
 }
 
+type MonthTransactionVM =
+  | { kind: 'expense';      statusLabel: 'overdue' | 'upcoming' | 'paid'; sortDate: string; item: Expense }
+  | { kind: 'payment';      statusLabel: 'overdue' | 'upcoming' | 'paid'; sortDate: string; item: OverduePaymentVM }
+  | { kind: 'overdueCard';  statusLabel: 'overdue';                        sortDate: string; item: OverdueCardVM }
+  | { kind: 'upcomingCard'; statusLabel: 'upcoming';                       sortDate: string; item: UpcomingCardVM };
+
 interface DashboardVM {
   summary: FinancialSummary;
   incomes: IncomeVM[];
-  overdueExpenses: Expense[];
-  upcomingExpenses: Expense[];
-  overduePayments: OverduePaymentVM[];
-  upcomingPayments: UpcomingPaymentVM[];
-  upcomingCards: UpcomingCardVM[];
-  overdueCards: OverdueCardVM[];
+  monthlyIncome: number;
+  unpaidTransactions: MonthTransactionVM[];
+  paidTransactions: MonthTransactionVM[];
   monthlyTotal: number;
   overdueTotal: number;
   insights: InsightItem[];
@@ -110,7 +117,7 @@ type PayTarget =
     IonBadge, IonList, IonItem, IonLabel,
     IonRefresher, IonRefresherContent, IonIcon,
     IonModal, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption,
-    IonToggle, IonItemSliding, IonItemOptions, IonItemOption,
+    IonToggle,
     IonProgressBar, IonTextarea, IonFab, IonFabButton,
   ],
   templateUrl: './dashboard.component.html',
@@ -301,12 +308,12 @@ export class DashboardComponent implements OnInit {
   ) {
     addIcons({
       addOutline, createOutline, trashOutline, warningOutline,
-      arrowDownOutline, arrowUpOutline, alertCircleOutline,
+      arrowDownOutline, arrowUpOutline, arrowBackOutline, alertCircleOutline,
       timeOutline, repeatOutline, cardOutline, walletOutline, closeOutline,
-      settingsOutline, chevronForwardOutline, chevronDownOutline, checkmarkCircleOutline,
+      settingsOutline, chevronBackOutline, chevronForwardOutline, chevronDownOutline, checkmarkCircleOutline,
       trendingUpOutline, trendingDownOutline, saveOutline, bulbOutline,
       barbellOutline, leafOutline, ribbonOutline, flagOutline, removeOutline, addCircleOutline,
-      receiptOutline,
+      receiptOutline, funnelOutline, calendarOutline,
     });
   }
 
@@ -341,9 +348,22 @@ export class DashboardComponent implements OnInit {
       this.engine.getAllocations(),
       this.engine.getInstallments(),
       this.goalService.getGoals(),
+      this._viewYear$,
+      this._viewMonth$,
+      this._txSortBy$,
     ]).pipe(
-      map(([summary, incomes, expenses, payments, cards, allocations, installments, goals]) => {
-        const incomeVMs: IncomeVM[] = incomes.map(income => {
+      map(([summary, incomes, expenses, payments, cards, allocations, installments, goals, selYear, selMonth, sortBy]) => {
+        // Total of all expenses + installment payments due in the current calendar month (any status)
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth();
+
+        // Filter incomes to current month only for display & totals
+        const monthIncomes = incomes.filter(i => {
+          const d = new Date(i.date);
+          return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+        });
+
+        const incomeVMs: IncomeVM[] = monthIncomes.map(income => {
           const used = allocations
             .filter(a => a.incomeId === income.id)
             .reduce((s, a) => s + a.amount, 0);
@@ -355,9 +375,7 @@ export class DashboardComponent implements OnInit {
           };
         });
 
-        // Total of all expenses + installment payments due in the current calendar month (any status)
-        const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth();
+        const monthlyIncome = monthIncomes.reduce((s, i) => s + i.amount, 0);
 
         // Credit cards that are overdue: due day has passed this month AND have unpaid linked installments
         const overdueCards: OverdueCardVM[] = cards
@@ -399,10 +417,10 @@ export class DashboardComponent implements OnInit {
 
         const monthlyTotal =
           expenses
-            .filter(e => { const d = new Date(e.date); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; })
+            .filter(e => { const d = new Date(e.date); return d.getFullYear() === selYear && d.getMonth() === selMonth; })
             .reduce((s, e) => s + e.amount, 0) +
           payments
-            .filter(p => { const d = new Date(p.dueDate); return d.getFullYear() === currentYear && d.getMonth() === currentMonth; })
+            .filter(p => { const d = new Date(p.dueDate); return d.getFullYear() === selYear && d.getMonth() === selMonth; })
             .reduce((s, p) => s + p.amount, 0);
 
         // Card-linked installment IDs — separates card-grouped vs standalone payments
@@ -438,22 +456,38 @@ export class DashboardComponent implements OnInit {
           return { card: c, dueDate: due, pendingAmount, lines };
         });
 
-        // Standalone upcoming payments (not card-linked) enriched with transaction name
-        const upcomingPayments: UpcomingPaymentVM[] = payments
-          .filter(p => p.status === 'pending' && new Date(p.dueDate) <= in7 && !cardLinkedInstallmentIds.has(p.installmentId))
-          .map(p => {
-            const inst = installments.find((i: Installment) => i.id === p.installmentId);
-            return { ...p, transaction: inst?.transaction ?? 'Installment Payment' };
-          });
-
         // ─── Credit Card Charges ─────────────────────────────────────
         const cardCharges: CardChargesVM[] = cards
           .map(card => {
-            const linked = expenses.filter(e => e.creditCardId === card.id && e.status !== 'paid');
-            const total = linked.reduce((s, e) => s + e.amount, 0);
-            return { card, expenses: linked, total };
+            // Filter CC expenses whose billing-cycle due date falls in the selected month
+            const linked = expenses.filter(e => {
+              if (e.creditCardId !== card.id || e.status === 'paid') return false;
+              const due = this.cardService.getBillingCycleDueDate(e.date, card);
+              return due.getFullYear() === selYear && due.getMonth() === selMonth;
+            });
+            const annotated = linked.map(e => ({
+              ...e,
+              billingDueDate: this.cardService.getBillingCycleDueDate(e.date, card),
+            }));
+            // Group by billing-cycle due date
+            const cycleMap = new Map<string, (Expense & { billingDueDate: Date })[]>();
+            for (const e of annotated) {
+              const key = e.billingDueDate.toISOString().split('T')[0];
+              if (!cycleMap.has(key)) cycleMap.set(key, []);
+              cycleMap.get(key)!.push(e);
+            }
+            const cycles: BillingCycleGroup[] = Array.from(cycleMap.entries())
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([, exps]) => ({
+                label: `Due ${exps[0].billingDueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`,
+                dueDate: exps[0].billingDueDate,
+                expenses: exps,
+                total: exps.reduce((s, e) => s + e.amount, 0),
+              }));
+            const total = annotated.reduce((s, e) => s + e.amount, 0);
+            return { card, cycles, expenses: annotated, total };
           })
-          .filter(cc => cc.expenses.length > 0);
+          .filter(cc => cc.cycles.length > 0);
 
         // ─── Savings Goals VM ──────────────────────────────────────────
         const savingsGoals: SavingsGoalVM[] = goals.map(g => {
@@ -496,9 +530,9 @@ export class DashboardComponent implements OnInit {
         // Biggest single expense this month
         const biggestExpense = expensesThisMonth.reduce<Expense | null>((max, e) => !max || e.amount > max.amount ? e : max, null);
 
-        // Savings rate: (totalIncome - totalThisMonth) / totalIncome
-        const savingsRate = summary.totalIncome > 0
-          ? Math.max(0, (summary.totalIncome - totalThisMonth) / summary.totalIncome)
+        // Savings rate: (monthlyIncome - totalThisMonth) / monthlyIncome
+        const savingsRate = monthlyIncome > 0
+          ? Math.max(0, (monthlyIncome - totalThisMonth) / monthlyIncome)
           : 0;
 
         const insights: InsightItem[] = [];
@@ -529,7 +563,7 @@ export class DashboardComponent implements OnInit {
             sub: this.formatCurrency(biggestExpense.amount),
           });
         }
-        if (summary.totalIncome > 0) {
+        if (monthlyIncome > 0) {
           insights.push({
             icon: 'leaf-outline',
             color: savingsRate >= 0.2 ? '#4ade80' : '#f97316',
@@ -539,23 +573,82 @@ export class DashboardComponent implements OnInit {
           });
         }
 
+        // ─── Unified Monthly Transactions ─────────────────────────────────────
+        const statusOrder: Record<string, number> = { overdue: 0, upcoming: 1, paid: 2 };
+
+        const monthlyExpenseItems: MonthTransactionVM[] = expenses
+          .filter(e => {
+            const d = new Date(e.date);
+            return d.getFullYear() === selYear && d.getMonth() === selMonth && !e.creditCardId;
+          })
+          .map(e => ({
+            kind: 'expense' as const,
+            statusLabel: (e.status === 'pending' ? 'upcoming' : e.status) as 'overdue' | 'upcoming' | 'paid',
+            sortDate: e.date,
+            item: e,
+          }));
+
+        const monthlyPaymentItems: MonthTransactionVM[] = payments
+          .filter(p => {
+            const d = new Date(p.dueDate);
+            return d.getFullYear() === selYear && d.getMonth() === selMonth && !cardLinkedInstallmentIds.has(p.installmentId);
+          })
+          .map(p => {
+            const inst = installments.find((i: Installment) => i.id === p.installmentId);
+            const pm: OverduePaymentVM = { ...p, transaction: inst?.transaction ?? 'Installment Payment' };
+            return {
+              kind: 'payment' as const,
+              statusLabel: (p.status === 'pending' ? 'upcoming' : p.status) as 'overdue' | 'upcoming' | 'paid',
+              sortDate: p.dueDate,
+              item: pm,
+            };
+          });
+
+        const overdueCardItems: MonthTransactionVM[] = overdueCards.map(occ => ({
+          kind: 'overdueCard' as const,
+          statusLabel: 'overdue' as const,
+          sortDate: occ.dueDate.toISOString(),
+          item: occ,
+        }));
+
+        const upcomingCardItems: MonthTransactionVM[] = upcomingCards.map(uc => ({
+          kind: 'upcomingCard' as const,
+          statusLabel: 'upcoming' as const,
+          sortDate: uc.dueDate.toISOString(),
+          item: uc,
+        }));
+
+        const getAmount = (t: MonthTransactionVM): number => {
+          if (t.kind === 'expense')      return t.item.amount;
+          if (t.kind === 'payment')      return t.item.amount;
+          if (t.kind === 'overdueCard')  return t.item.unpaidAmount;
+          return (t.item as UpcomingCardVM).pendingAmount;
+        };
+
+        const allMonthTransactions: MonthTransactionVM[] = [
+          ...monthlyExpenseItems,
+          ...monthlyPaymentItems,
+          ...overdueCardItems,
+          ...upcomingCardItems,
+        ].sort((a, b) => {
+          if (sortBy === 'date-desc')   return new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime();
+          if (sortBy === 'date-asc')    return new Date(a.sortDate).getTime() - new Date(b.sortDate).getTime();
+          if (sortBy === 'amount-desc') return getAmount(b) - getAmount(a);
+          if (sortBy === 'amount-asc')  return getAmount(a) - getAmount(b);
+          // Default 'status': overdue → upcoming → paid, then date asc
+          const so = statusOrder[a.statusLabel] - statusOrder[b.statusLabel];
+          return so !== 0 ? so : new Date(a.sortDate).getTime() - new Date(b.sortDate).getTime();
+        });
+
+        const unpaidTransactions = allMonthTransactions.filter(t => t.statusLabel !== 'paid');
+        const paidTransactions   = allMonthTransactions.filter(t => t.statusLabel === 'paid');
+
         return {
           summary,
           incomes: incomeVMs,
-          // Exclude CC-charged expenses — they are paid via the card bill, not individually
-          overdueExpenses: expenses.filter(e => e.status === 'overdue' && !e.creditCardId),
-          upcomingExpenses: expenses.filter(e => e.status === 'pending' && new Date(e.date) <= in7 && !e.creditCardId),
-          overduePayments: payments.filter(p => {
-            if (p.status !== 'overdue') return false;
-            const inst = installments.find((i: Installment) => i.id === p.installmentId);
-            return !inst?.cardId;
-          }).map(p => {
-            const inst = installments.find((i: Installment) => i.id === p.installmentId);
-            return { ...p, transaction: inst?.transaction ?? 'Installment Payment' };
-          }),
-          upcomingPayments,
-          upcomingCards,
-          overdueCards,
+          monthlyIncome,
+          unpaidTransactions,
+          paidTransactions,
           monthlyTotal,
           overdueTotal,
           insights,
@@ -677,6 +770,39 @@ export class DashboardComponent implements OnInit {
   private blankGoal(): Partial<SavingsGoal> {
     return { name: '', targetAmount: undefined, icon: 'flag-outline', color: '#4ade80', deadline: '', notes: '' };
   }
+
+  // ─── Month / Sort Filter ──────────────────────────────────────────────
+  readonly MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  private _viewYear$  = new BehaviorSubject<number>(new Date().getFullYear());
+  private _viewMonth$ = new BehaviorSubject<number>(new Date().getMonth());
+  private _txSortBy$  = new BehaviorSubject<string>('status');
+
+  get viewYear(): number  { return this._viewYear$.value; }
+  get viewMonth(): number { return this._viewMonth$.value; }
+  get txSortBy(): string  { return this._txSortBy$.value; }
+  get isCurrentMonth(): boolean {
+    const n = new Date();
+    return this.viewYear === n.getFullYear() && this.viewMonth === n.getMonth();
+  }
+
+  prevMonth(): void {
+    let y = this._viewYear$.value, m = this._viewMonth$.value - 1;
+    if (m < 0) { m = 11; y -= 1; }
+    this._viewYear$.next(y); this._viewMonth$.next(m);
+  }
+  nextMonth(): void {
+    let y = this._viewYear$.value, m = this._viewMonth$.value + 1;
+    if (m > 11) { m = 0; y += 1; }
+    this._viewYear$.next(y); this._viewMonth$.next(m);
+  }
+  goToCurrentMonth(): void {
+    const n = new Date();
+    this._viewYear$.next(n.getFullYear()); this._viewMonth$.next(n.getMonth());
+  }
+  setSortBy(v: string): void { this._txSortBy$.next(v); }
 
   private formatCurrency(amount: number): string {
     return new Intl.NumberFormat('en-PH', { style: 'currency', currency: this.currencyCode, maximumFractionDigits: 0 }).format(amount);

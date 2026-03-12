@@ -4,7 +4,7 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  homeOutline, barChartOutline, receiptOutline, walletOutline, sparklesOutline,
+  homeOutline, barChartOutline, receiptOutline, walletOutline,
 } from 'ionicons/icons';
 
 @Component({
@@ -30,16 +30,12 @@ import {
           <ion-icon name="wallet-outline" />
           <ion-label>Debts</ion-label>
         </ion-tab-button>
-        <ion-tab-button tab="ai">
-          <ion-icon name="sparkles-outline" />
-          <ion-label>AI</ion-label>
-        </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
   `,
 })
 export class TabsComponent {
   constructor() {
-    addIcons({ homeOutline, barChartOutline, receiptOutline, walletOutline, sparklesOutline });
+    addIcons({ homeOutline, barChartOutline, receiptOutline, walletOutline });
   }
 }

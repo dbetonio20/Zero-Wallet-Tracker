@@ -52,4 +52,43 @@ export class CreditCardService {
       return diff <= days;
     });
   }
+
+  /**
+   * Given an expense date string and a credit card, returns the Date on which
+   * that expense is actually due for payment, based on the card's billing cycle.
+   *
+   * Rule:
+   *   - If expenseDay > card.cutoffDate  → expense falls into the NEXT billing cycle
+   *   - If expenseDay <= card.cutoffDate → expense falls into the CURRENT billing cycle
+   *
+   *   The due date is then:
+   *   - Same month as the cutoff month     if card.dueDate > card.cutoffDate
+   *   - Month AFTER the cutoff month       if card.dueDate <= card.cutoffDate
+   *
+   * Example: cutoff=5, due=20, expense March 7
+   *   → expDay 7 > cutoff 5 → NEXT cycle → cutoffMonth = April
+   *   → dueDate 20 > cutoffDate 5 → due in same month → April 20  ✓
+   */
+  getBillingCycleDueDate(expenseDate: string, card: CreditCard): Date {
+    const d = new Date(expenseDate);
+    const expDay   = d.getDate();
+    let cutoffMonth = d.getMonth();
+    let cutoffYear  = d.getFullYear();
+
+    // Expense after cutoff → rolls to next billing cycle
+    if (expDay > card.cutoffDate) {
+      cutoffMonth += 1;
+      if (cutoffMonth > 11) { cutoffMonth = 0; cutoffYear += 1; }
+    }
+
+    // Due date position relative to cutoff determines due month
+    let dueMonth = cutoffMonth;
+    let dueYear  = cutoffYear;
+    if (card.dueDate <= card.cutoffDate) {
+      dueMonth += 1;
+      if (dueMonth > 11) { dueMonth = 0; dueYear += 1; }
+    }
+
+    return new Date(dueYear, dueMonth, card.dueDate);
+  }
 }

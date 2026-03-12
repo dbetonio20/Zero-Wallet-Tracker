@@ -1,16 +1,23 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
   IonIcon, IonLabel, IonBadge, IonItem, IonItemSliding, IonItemOptions, IonItemOption,
+  IonModal, IonInput, IonSelect, IonSelectOption, IonToggle,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { arrowBackOutline, walletOutline, pricetagOutline, cardOutline, closeOutline } from 'ionicons/icons';
+import {
+  arrowBackOutline, walletOutline, pricetagOutline, cardOutline, closeOutline,
+  trashOutline, createOutline, saveOutline, checkmarkCircleOutline, warningOutline,
+} from 'ionicons/icons';
 import { Subscription, combineLatest } from 'rxjs';
 import { FinancialEngineService } from '../../core/services/financial-engine.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { Income, PaymentAllocation, Expense, InstallmentPayment, Installment } from '../../core/models';
+
+const INCOME_SOURCES = ['Salary', 'Freelance', 'Business', 'Investment', 'Bonus', 'Other'];
 
 interface LinkedItem {
   allocationId: string;
@@ -24,9 +31,10 @@ interface LinkedItem {
   selector: 'app-income-detail',
   standalone: true,
   imports: [
-    CommonModule, CurrencyPipe, DatePipe,
+    CommonModule, CurrencyPipe, DatePipe, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
     IonIcon, IonLabel, IonBadge, IonItem, IonItemSliding, IonItemOptions, IonItemOption,
+    IonModal, IonInput, IonSelect, IonSelectOption, IonToggle,
   ],
   templateUrl: './income-detail.component.html',
 })
@@ -38,6 +46,20 @@ export class IncomeDetailComponent implements OnInit, OnDestroy {
   usagePercent = 0;
   currencyCode = 'PHP';
 
+  // Edit modal
+  isEditModalOpen = false;
+  incomeSources = INCOME_SOURCES;
+  incomeForm: Partial<Income> = {};
+
+  // Alloc planner
+  isAllocPlannerOpen = false;
+  allocPlannerExpenses: Array<Expense & { selected: boolean }> = [];
+  allocPlannerInProgress = false;
+
+  get allocPlannerSelectedTotal(): number {
+    return this.allocPlannerExpenses.filter(e => e.selected).reduce((s, e) => s + e.amount, 0);
+  }
+
   private sub?: Subscription;
 
   constructor(
@@ -46,7 +68,10 @@ export class IncomeDetailComponent implements OnInit, OnDestroy {
     private engine: FinancialEngineService,
     private prefs: PreferencesService,
   ) {
-    addIcons({ arrowBackOutline, walletOutline, pricetagOutline, cardOutline, closeOutline });
+    addIcons({
+      arrowBackOutline, walletOutline, pricetagOutline, cardOutline, closeOutline,
+      trashOutline, createOutline, saveOutline, checkmarkCircleOutline, warningOutline,
+    });
   }
 
   ngOnInit(): void {
@@ -106,6 +131,64 @@ export class IncomeDetailComponent implements OnInit, OnDestroy {
 
   async unlinkAllocation(allocationId: string): Promise<void> {
     await this.engine.removeAllocation(allocationId);
+  }
+
+  openEdit(): void {
+    if (!this.income) return;
+    this.incomeForm = { ...this.income };
+    this.isEditModalOpen = true;
+  }
+
+  closeEditModal(): void {
+    this.isEditModalOpen = false;
+  }
+
+  async saveIncome(): Promise<void> {
+    if (!this.income) return;
+    const { source, amount, date, recurring } = this.incomeForm;
+    if (!source || !amount || !date) return;
+    await this.engine.updateIncome({ ...this.income, source, amount: +amount, date, recurring: !!recurring });
+    this.closeEditModal();
+  }
+
+  async deleteIncome(): Promise<void> {
+    if (!this.income) return;
+    await this.engine.deleteIncome(this.income.id);
+    this.goBack();
+  }
+
+  openAllocPlanner(): void {
+    let snapshot: Expense[] = [];
+    this.engine.getExpenses().subscribe(list => snapshot = list).unsubscribe();
+    this.allocPlannerExpenses = snapshot
+      .filter(e => e.status !== 'paid')
+      .map(e => ({ ...e, selected: false }));
+    this.isAllocPlannerOpen = true;
+  }
+
+  closeAllocPlanner(): void {
+    this.isAllocPlannerOpen = false;
+    this.allocPlannerExpenses = [];
+  }
+
+  toggleAllocExpense(id: string): void {
+    const e = this.allocPlannerExpenses.find(x => x.id === id);
+    if (e) e.selected = !e.selected;
+  }
+
+  async confirmAllocPlan(): Promise<void> {
+    if (!this.income || this.allocPlannerInProgress) return;
+    const selected = this.allocPlannerExpenses.filter(e => e.selected);
+    if (!selected.length) return;
+    this.allocPlannerInProgress = true;
+    try {
+      for (const e of selected) {
+        await this.engine.payExpenseWithIncomes(e, [{ incomeId: this.income.id, amount: e.amount }]);
+      }
+    } finally {
+      this.allocPlannerInProgress = false;
+      this.closeAllocPlanner();
+    }
   }
 
   goBack(): void {

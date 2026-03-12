@@ -22,11 +22,18 @@
     <div class="hero-amount" [class.negative]="vm.summary.balance < 0" [class.positive]="vm.summary.balance >= 0">
       {{ vm.summary.balance | currency:currencyCode:'symbol':'1.0-0' }}
     </div>
-    @if (vm.summary.balance < 0) {
-      <div class="negative-warning">
-        <ion-icon name="warning-outline"></ion-icon> Payments exceed income
-      </div>
-    }
+    <div class="hero-warnings">
+      @if (vm.summary.balance < 0) {
+        <div class="negative-warning">
+          <ion-icon name="warning-outline"></ion-icon> Payments exceed income
+        </div>
+      }
+      @if (vm.summary.totalObligations > vm.monthlyIncome) {
+        <div class="obligations-warning">
+          <ion-icon name="alert-circle-outline"></ion-icon> Obligations exceed income
+        </div>
+      }
+    </div>
 
     <div class="hero-stats">
       <div class="hero-stat">
@@ -35,7 +42,7 @@
         </div>
         <div class="hero-stat-info">
           <span class="hero-stat-label">Income</span>
-          <span class="hero-stat-value income-value">{{ vm.summary.totalIncome | currency:currencyCode:'symbol':'1.0-0' }}</span>
+          <span class="hero-stat-value income-value">{{ vm.monthlyIncome | currency:currencyCode:'symbol':'1.0-0' }}</span>
         </div>
       </div>
       <div class="hero-stat-divider"></div>
@@ -44,8 +51,18 @@
           <ion-icon name="arrow-up-outline"></ion-icon>
         </div>
         <div class="hero-stat-info">
-          <span class="hero-stat-label">Expenses</span>
-          <span class="hero-stat-value expense-value">{{ vm.summary.totalExpenses | currency:currencyCode:'symbol':'1.0-0' }}</span>
+          <span class="hero-stat-label">Spent</span>
+          <span class="hero-stat-value expense-value">{{ (vm.summary.paidExpenses + vm.summary.paidInstallments) | currency:currencyCode:'symbol':'1.0-0' }}</span>
+        </div>
+      </div>
+      <div class="hero-stat-divider"></div>
+      <div class="hero-stat">
+        <div class="hero-stat-icon pending-icon">
+          <ion-icon name="time-outline"></ion-icon>
+        </div>
+        <div class="hero-stat-info">
+          <span class="hero-stat-label">Pending</span>
+          <span class="hero-stat-value pending-value">{{ vm.summary.totalObligations | currency:currencyCode:'symbol':'1.0-0' }}</span>
         </div>
       </div>
     </div>
@@ -171,6 +188,50 @@
     }
   </div>
 
+  <!-- Month / Sort Filter Bar -->
+  <div class="tx-filter-bar">
+    <div class="tx-month-nav">
+      <button class="month-nav-btn" (click)="prevMonth()">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </button>
+      <div class="month-nav-center">
+        <span class="month-nav-label" [class.month-nav-today]="isCurrentMonth">
+          {{ MONTHS[viewMonth] }}
+        </span>
+        <span class="month-nav-year">{{ viewYear }}</span>
+      </div>
+      <button class="month-nav-btn" (click)="nextMonth()">
+        <ion-icon name="chevron-forward-outline"></ion-icon>
+      </button>
+    </div>
+    @if (!isCurrentMonth) {
+      <button class="month-today-chip" (click)="goToCurrentMonth()">
+        <ion-icon name="arrow-back-outline" class="today-chip-icon"></ion-icon>
+        Back to today
+      </button>
+    }
+    <div class="tx-sort-row">
+      <span class="sort-label">Sort by</span>
+      <div class="tx-sort-pills">
+        <button class="sort-pill" [class.active]="txSortBy === 'status'" (click)="setSortBy('status')">
+          <ion-icon name="alert-circle-outline" class="pill-icon"></ion-icon> Status
+        </button>
+        <button class="sort-pill" [class.active]="txSortBy === 'date-desc'" (click)="setSortBy('date-desc')">
+          <ion-icon name="calendar-outline" class="pill-icon"></ion-icon> Newest
+        </button>
+        <button class="sort-pill" [class.active]="txSortBy === 'date-asc'" (click)="setSortBy('date-asc')">
+          <ion-icon name="calendar-outline" class="pill-icon"></ion-icon> Oldest
+        </button>
+        <button class="sort-pill" [class.active]="txSortBy === 'amount-desc'" (click)="setSortBy('amount-desc')">
+          <ion-icon name="trending-down-outline" class="pill-icon"></ion-icon> Highest
+        </button>
+        <button class="sort-pill" [class.active]="txSortBy === 'amount-asc'" (click)="setSortBy('amount-asc')">
+          <ion-icon name="trending-up-outline" class="pill-icon"></ion-icon> Lowest
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Credit Card Charges -->
   @if (vm.cardCharges.length) {
     <div class="section">
@@ -188,7 +249,7 @@
             </div>
             <div class="transaction-info">
               <div class="transaction-name">{{ cc.card.bank }} – {{ cc.card.name }}</div>
-              <div class="transaction-date">{{ cc.expenses.length }} charge{{ cc.expenses.length !== 1 ? 's' : '' }} unpaid</div>
+              <div class="transaction-date">{{ cc.expenses.length }} charge{{ cc.expenses.length !== 1 ? 's' : '' }} · {{ cc.cycles.length }} cycle{{ cc.cycles.length !== 1 ? 's' : '' }}</div>
             </div>
             <div class="overdue-card-end">
               <span class="transaction-amount warning-text">{{ cc.total | currency:currencyCode:'symbol':'1.0-0' }}</span>
@@ -200,173 +261,212 @@
             </div>
           </div>
           @if (expandedCardIds.has('c-' + cc.card.id)) {
-            <div class="overdue-card-lines">
-              @for (e of cc.expenses; track e.id) {
-                <div class="overdue-card-line">
-                  <ion-icon name="receipt-outline" class="line-icon"></ion-icon>
-                  <div class="line-name-block">
-                    <span class="line-name">{{ e.name || e.category }}</span>
-                    <span class="line-sub">{{ e.date | date:'MMM d' }} · {{ e.category }}</span>
+            @for (cycle of cc.cycles; track cycle.label) {
+              <div class="cc-cycle-header">
+                <span class="cc-cycle-label">{{ cycle.label }}</span>
+                <span class="cc-cycle-total">{{ cycle.total | currency:currencyCode:'symbol':'1.0-0' }}</span>
+              </div>
+              <div class="overdue-card-lines">
+                @for (e of cycle.expenses; track e.id) {
+                  <div class="overdue-card-line">
+                    <ion-icon name="receipt-outline" class="line-icon"></ion-icon>
+                    <div class="line-name-block">
+                      <span class="line-name">{{ e.name || e.category }}</span>
+                      <span class="line-sub">{{ e.date | date:'MMM d' }} · {{ e.category }}</span>
+                    </div>
+                    <span class="line-amount" [class.danger-text]="e.status === 'overdue'" [class.warning-text]="e.status === 'pending'">
+                      {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
+                    </span>
                   </div>
-                  <span class="line-amount" [class.danger-text]="e.status === 'overdue'" [class.warning-text]="e.status === 'pending'">
-                    {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
-                  </span>
-                </div>
-              }
-            </div>
+                }
+              </div>
+            }
           }
         </div>
       }
     </div>
   }
 
-  <!-- Overdue Payments -->
-  @if (vm.overdueExpenses.length || vm.overduePayments.length || vm.overdueCards.length) {
-    <div class="section">
-      <div class="section-header">
-        <div class="section-title">
-          <span class="section-dot dot-danger"></span> Overdue
-        </div>
-        <ion-badge color="danger">{{ vm.overdueExpenses.length + vm.overduePayments.length + vm.overdueCards.length }}</ion-badge>
+  <!-- Transactions – Selected Month -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <span class="section-dot dot-warning"></span> Transactions
+        <span class="section-month-label">{{ MONTHS[viewMonth] }} {{ viewYear }}</span>
       </div>
-      <div class="card-glass">
-        @for (e of vm.overdueExpenses; track e.id) {
-          <div class="transaction-item">
-            <div class="transaction-icon danger-bg">
-              <ion-icon name="alert-circle-outline"></ion-icon>
-            </div>
-            <div class="transaction-info">
-              <div class="transaction-name">{{ e.category }}</div>
-              <div class="transaction-date">{{ e.date | date:'MMM d, y' }} · {{ e.paymentMethod }}</div>
-            </div>
-            <div class="transaction-amount danger-text">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
-            <button class="pay-btn" [class.paying]="payingIds.has(e.id)" (click)="markExpensePaid(e, $event)">Pay with Income</button>
-          </div>
-        }
-        @for (p of vm.overduePayments; track p.id) {
-          <div class="transaction-item">
-            <div class="transaction-icon danger-bg">
-              <ion-icon name="repeat-outline"></ion-icon>
-            </div>
-            <div class="transaction-info">
-              <div class="transaction-name">{{ p.transaction }}</div>
-              <div class="transaction-date">Due: {{ p.dueDate | date:'MMM d, y' }}</div>
-            </div>
-            <div class="transaction-amount danger-text">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
-            <button class="pay-btn" [class.paying]="payingIds.has(p.id)" (click)="markInstallmentPaid(p.id, p.transaction, p.amount, p.dueDate, $event)">Pay with Income</button>
-          </div>
-        }
-        @for (occ of vm.overdueCards; track occ.card.id) {
-          <div class="transaction-item overdue-card-header" (click)="toggleCardExpand(occ.card.id)">
-            <div class="transaction-icon danger-bg">
-              <ion-icon name="card-outline"></ion-icon>
-            </div>
-            <div class="transaction-info">
-              <div class="transaction-name-row">
-                <span class="transaction-name">{{ occ.card.bank }} – {{ occ.card.name }}</span>
-                <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + occ.lines[0]?.paymentId)" (click)="markAllCardPaid(occ.lines, occ.card.bank + ' – ' + occ.card.name, occ.unpaidAmount, $event, vm.cardCharges.find(cc => cc.card.id === occ.card.id)?.expenses ?? [])">Pay All with Income</button>
-              </div>
-              <div class="transaction-date">Card Due: {{ occ.dueDate | date:'MMM d, y' }} · {{ occ.lines.length }} item{{ occ.lines.length !== 1 ? 's' : '' }}</div>
-            </div>
-            <div class="overdue-card-end">
-              <span class="transaction-amount danger-text">{{ occ.unpaidAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
-              <ion-icon
-                [name]="expandedCardIds.has(occ.card.id) ? 'chevron-down-outline' : 'chevron-forward-outline'"
-                class="expand-chevron"
-                [class.expanded]="expandedCardIds.has(occ.card.id)">
-              </ion-icon>
-            </div>
-          </div>
-          @if (expandedCardIds.has(occ.card.id)) {
-            <div class="overdue-card-lines">
-              @for (line of occ.lines; track line.paymentId) {
-                <div class="overdue-card-line">
-                  <ion-icon name="repeat-outline" class="line-icon"></ion-icon>
-                  <span class="line-name">{{ line.transaction }}</span>
-                  <span class="line-amount danger-text">{{ line.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
-                  <button class="pay-btn pay-btn-sm" [class.paying]="payingIds.has(line.paymentId)" (click)="markInstallmentPaid(line.paymentId, line.transaction, line.amount, line.dueDate, $event)">Pay with Income</button>
-                </div>
-              }
-            </div>
-          }
-        }
-      </div>
+      <ion-badge [color]="vm.unpaidTransactions.length ? 'danger' : 'medium'">
+        {{ vm.unpaidTransactions.length }} unpaid
+      </ion-badge>
     </div>
-  }
 
-  <!-- Upcoming Payments -->
-  @if (vm.upcomingExpenses.length || vm.upcomingPayments.length || vm.upcomingCards.length) {
-    <div class="section">
-      <div class="section-header">
-        <div class="section-title">
-          <span class="section-dot dot-warning"></span> Upcoming
-        </div>
-        <ion-badge color="warning">{{ vm.upcomingExpenses.length + vm.upcomingPayments.length + vm.upcomingCards.length }}</ion-badge>
-      </div>
+    @if (!vm.unpaidTransactions.length && !vm.paidTransactions.length) {
       <div class="card-glass">
-        @for (e of vm.upcomingExpenses; track e.id) {
-          <div class="transaction-item">
-            <div class="transaction-icon warning-bg">
-              <ion-icon name="time-outline"></ion-icon>
-            </div>
-            <div class="transaction-info">
-              <div class="transaction-name">{{ e.category }}</div>
-              <div class="transaction-date">{{ e.date | date:'MMM d, y' }}</div>
-            </div>
-            <div class="transaction-amount warning-text">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
-            <button class="pay-btn" [class.paying]="payingIds.has(e.id)" (click)="markExpensePaid(e, $event)">Pay with Income</button>
-          </div>
-        }
-        @for (p of vm.upcomingPayments; track p.id) {
-          <div class="transaction-item">
-            <div class="transaction-icon warning-bg">
-              <ion-icon name="repeat-outline"></ion-icon>
-            </div>
-            <div class="transaction-info">
-              <div class="transaction-name">{{ p.transaction }}</div>
-              <div class="transaction-date">Due: {{ p.dueDate | date:'MMM d, y' }}</div>
-            </div>
-            <div class="transaction-amount warning-text">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
-            <button class="pay-btn" [class.paying]="payingIds.has(p.id)" (click)="markInstallmentPaid(p.id, p.transaction, p.amount, p.dueDate, $event)">Pay with Income</button>
-          </div>
-        }
-        @for (uc of vm.upcomingCards; track uc.card.id) {
-          <div class="transaction-item overdue-card-header" (click)="toggleCardExpand(uc.card.id)">
-            <div class="transaction-icon warning-bg">
-              <ion-icon name="card-outline"></ion-icon>
-            </div>
-            <div class="transaction-info">
-              <div class="transaction-name-row">
-                <span class="transaction-name">{{ uc.card.bank }} – {{ uc.card.name }}</span>
-                <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + uc.lines[0]?.paymentId)" (click)="markAllCardPaid(uc.lines, uc.card.bank + ' – ' + uc.card.name, uc.pendingAmount, $event, vm.cardCharges.find(cc => cc.card.id === uc.card.id)?.expenses ?? [])">Pay All with Income</button>
+        <div class="empty-state">
+          <ion-icon name="receipt-outline" class="empty-icon"></ion-icon>
+          <p>No transactions for {{ MONTHS[viewMonth] }} {{ viewYear }}</p>
+        </div>
+      </div>
+    }
+
+      <!-- Unpaid sub-list -->
+      @if (vm.unpaidTransactions.length) {
+        <div class="card-glass">
+          @for (t of vm.unpaidTransactions; track t.kind + '-' + (t.kind === 'expense' ? t.item.id : t.kind === 'payment' ? t.item.id : t.item.card.id)) {
+
+            @if (t.kind === 'expense') {
+              <div class="transaction-item">
+                <div class="transaction-icon" [class.danger-bg]="t.statusLabel === 'overdue'" [class.warning-bg]="t.statusLabel === 'upcoming'">
+                  <ion-icon [name]="t.statusLabel === 'overdue' ? 'alert-circle-outline' : 'time-outline'"></ion-icon>
+                </div>
+                <div class="transaction-info">
+                  <div class="transaction-name-row">
+                    <span class="transaction-name">{{ t.item.name || t.item.category }}</span>
+                    <span class="tx-status-badge" [class.badge-overdue]="t.statusLabel === 'overdue'" [class.badge-upcoming]="t.statusLabel === 'upcoming'">
+                      {{ t.statusLabel === 'overdue' ? 'Overdue' : 'Upcoming' }}
+                    </span>
+                  </div>
+                  <div class="transaction-date">{{ t.item.date | date:'MMM d, y' }} · {{ t.item.paymentMethod }}</div>
+                </div>
+                <div class="transaction-amount" [class.danger-text]="t.statusLabel === 'overdue'" [class.warning-text]="t.statusLabel === 'upcoming'">{{ t.item.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                <button class="pay-btn" [class.paying]="payingIds.has(t.item.id)" (click)="markExpensePaid(t.item, $event)">Pay</button>
               </div>
-              <div class="transaction-date">Card Due: {{ uc.dueDate | date:'MMM d, y' }} · {{ uc.lines.length }} item{{ uc.lines.length !== 1 ? 's' : '' }}</div>
-            </div>
-            <div class="overdue-card-end">
-              <span class="transaction-amount warning-text">{{ uc.pendingAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
-              <ion-icon
-                [name]="expandedCardIds.has(uc.card.id) ? 'chevron-down-outline' : 'chevron-forward-outline'"
-                class="expand-chevron"
-                [class.expanded]="expandedCardIds.has(uc.card.id)">
-              </ion-icon>
-            </div>
-          </div>
-          @if (expandedCardIds.has(uc.card.id)) {
-            <div class="overdue-card-lines upcoming-card-lines">
-              @for (line of uc.lines; track line.paymentId) {
-                <div class="overdue-card-line">
-                  <ion-icon name="repeat-outline" class="line-icon"></ion-icon>
-                  <span class="line-name">{{ line.transaction }}</span>
-                  <span class="line-amount warning-text">{{ line.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
-                  <button class="pay-btn pay-btn-sm" [class.paying]="payingIds.has(line.paymentId)" (click)="markInstallmentPaid(line.paymentId, line.transaction, line.amount, line.dueDate, $event)">Pay with Income</button>
+            }
+
+            @if (t.kind === 'payment') {
+              <div class="transaction-item">
+                <div class="transaction-icon" [class.danger-bg]="t.statusLabel === 'overdue'" [class.warning-bg]="t.statusLabel === 'upcoming'">
+                  <ion-icon name="repeat-outline"></ion-icon>
+                </div>
+                <div class="transaction-info">
+                  <div class="transaction-name-row">
+                    <span class="transaction-name">{{ t.item.transaction }}</span>
+                    <span class="tx-status-badge" [class.badge-overdue]="t.statusLabel === 'overdue'" [class.badge-upcoming]="t.statusLabel === 'upcoming'">
+                      {{ t.statusLabel === 'overdue' ? 'Overdue' : 'Upcoming' }}
+                    </span>
+                  </div>
+                  <div class="transaction-date">Due: {{ t.item.dueDate | date:'MMM d, y' }}</div>
+                </div>
+                <div class="transaction-amount" [class.danger-text]="t.statusLabel === 'overdue'" [class.warning-text]="t.statusLabel === 'upcoming'">{{ t.item.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                <button class="pay-btn" [class.paying]="payingIds.has(t.item.id)" (click)="markInstallmentPaid(t.item.id, t.item.transaction, t.item.amount, t.item.dueDate, $event)">Pay</button>
+              </div>
+            }
+
+            @if (t.kind === 'overdueCard') {
+              <div class="transaction-item overdue-card-header" (click)="toggleCardExpand(t.item.card.id)">
+                <div class="transaction-icon danger-bg">
+                  <ion-icon name="card-outline"></ion-icon>
+                </div>
+                <div class="transaction-info">
+                  <div class="transaction-name-row">
+                    <span class="transaction-name">{{ t.item.card.bank }} – {{ t.item.card.name }}</span>
+                    <span class="tx-status-badge badge-overdue">Overdue</span>
+                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + t.item.lines[0]?.paymentId)" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.unpaidAmount, $event, vm.cardCharges.find(cc => cc.card.id === t.item.card.id)?.expenses ?? [])">Pay All</button>
+                  </div>
+                  <div class="transaction-date">Card Due: {{ t.item.dueDate | date:'MMM d, y' }} · {{ t.item.lines.length }} item{{ t.item.lines.length !== 1 ? 's' : '' }}</div>
+                </div>
+                <div class="overdue-card-end">
+                  <span class="transaction-amount danger-text">{{ t.item.unpaidAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                  <ion-icon [name]="expandedCardIds.has(t.item.card.id) ? 'chevron-down-outline' : 'chevron-forward-outline'" class="expand-chevron" [class.expanded]="expandedCardIds.has(t.item.card.id)"></ion-icon>
+                </div>
+              </div>
+              @if (expandedCardIds.has(t.item.card.id)) {
+                <div class="overdue-card-lines">
+                  @for (line of t.item.lines; track line.paymentId) {
+                    <div class="overdue-card-line">
+                      <ion-icon name="repeat-outline" class="line-icon"></ion-icon>
+                      <span class="line-name">{{ line.transaction }}</span>
+                      <span class="line-amount danger-text">{{ line.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                      <button class="pay-btn pay-btn-sm" [class.paying]="payingIds.has(line.paymentId)" (click)="markInstallmentPaid(line.paymentId, line.transaction, line.amount, line.dueDate, $event)">Pay</button>
+                    </div>
+                  }
                 </div>
               }
-            </div>
+            }
+
+            @if (t.kind === 'upcomingCard') {
+              <div class="transaction-item overdue-card-header" (click)="toggleCardExpand(t.item.card.id)">
+                <div class="transaction-icon warning-bg">
+                  <ion-icon name="card-outline"></ion-icon>
+                </div>
+                <div class="transaction-info">
+                  <div class="transaction-name-row">
+                    <span class="transaction-name">{{ t.item.card.bank }} – {{ t.item.card.name }}</span>
+                    <span class="tx-status-badge badge-upcoming">Upcoming</span>
+                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + t.item.lines[0]?.paymentId)" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.pendingAmount, $event, vm.cardCharges.find(cc => cc.card.id === t.item.card.id)?.expenses ?? [])">Pay All</button>
+                  </div>
+                  <div class="transaction-date">Card Due: {{ t.item.dueDate | date:'MMM d, y' }} · {{ t.item.lines.length }} item{{ t.item.lines.length !== 1 ? 's' : '' }}</div>
+                </div>
+                <div class="overdue-card-end">
+                  <span class="transaction-amount warning-text">{{ t.item.pendingAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                  <ion-icon [name]="expandedCardIds.has(t.item.card.id) ? 'chevron-down-outline' : 'chevron-forward-outline'" class="expand-chevron" [class.expanded]="expandedCardIds.has(t.item.card.id)"></ion-icon>
+                </div>
+              </div>
+              @if (expandedCardIds.has(t.item.card.id)) {
+                <div class="overdue-card-lines upcoming-card-lines">
+                  @for (line of t.item.lines; track line.paymentId) {
+                    <div class="overdue-card-line">
+                      <ion-icon name="repeat-outline" class="line-icon"></ion-icon>
+                      <span class="line-name">{{ line.transaction }}</span>
+                      <span class="line-amount warning-text">{{ line.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                      <button class="pay-btn pay-btn-sm" [class.paying]="payingIds.has(line.paymentId)" (click)="markInstallmentPaid(line.paymentId, line.transaction, line.amount, line.dueDate, $event)">Pay</button>
+                    </div>
+                  }
+                </div>
+              }
+            }
+
           }
-        }
-      </div>
+        </div>
+      }
+
+      <!-- Paid sub-list -->
+      @if (vm.paidTransactions.length) {
+        <div class="paid-transactions-section">
+          <div class="paid-section-label">
+            <ion-icon name="checkmark-circle-outline"></ion-icon>
+            Paid this month ({{ vm.paidTransactions.length }})
+          </div>
+          <div class="card-glass">
+            @for (t of vm.paidTransactions; track t.kind + '-' + (t.kind === 'expense' ? t.item.id : t.kind === 'payment' ? t.item.id : t.item.card.id)) {
+
+              @if (t.kind === 'expense') {
+                <div class="transaction-item tx-paid">
+                  <div class="transaction-icon paid-bg">
+                    <ion-icon name="checkmark-circle-outline"></ion-icon>
+                  </div>
+                  <div class="transaction-info">
+                    <div class="transaction-name-row">
+                      <span class="transaction-name">{{ t.item.name || t.item.category }}</span>
+                      <span class="tx-status-badge badge-paid">Paid</span>
+                    </div>
+                    <div class="transaction-date">{{ t.item.date | date:'MMM d, y' }} · {{ t.item.paymentMethod }}</div>
+                  </div>
+                  <div class="transaction-amount paid-text">{{ t.item.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                </div>
+              }
+
+              @if (t.kind === 'payment') {
+                <div class="transaction-item tx-paid">
+                  <div class="transaction-icon paid-bg">
+                    <ion-icon name="checkmark-circle-outline"></ion-icon>
+                  </div>
+                  <div class="transaction-info">
+                    <div class="transaction-name-row">
+                      <span class="transaction-name">{{ t.item.transaction }}</span>
+                      <span class="tx-status-badge badge-paid">Paid</span>
+                    </div>
+                    <div class="transaction-date">Due: {{ t.item.dueDate | date:'MMM d, y' }}</div>
+                  </div>
+                  <div class="transaction-amount paid-text">{{ t.item.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                </div>
+              }
+
+            }
+          </div>
+        </div>
+      }
+
     </div>
-  }
 
   <!-- Income Section -->
   <div class="section">
@@ -388,38 +488,29 @@
       } @else {
         <ion-list lines="none" class="transparent-list">
           @for (i of vm.incomes; track i.id) {
-            <ion-item-sliding>
-              <ion-item class="transaction-item-ionic" (click)="goToIncomeDetail(i.id)" button="true" detail="false">
-                <div class="transaction-icon success-bg" slot="start">
-                  <ion-icon name="arrow-down-outline"></ion-icon>
-                </div>
-                <ion-label>
-                  <div class="transaction-name">{{ i.source }}</div>
-                  <div class="transaction-date">{{ i.date | date:'MMM d, y' }}@if (i.recurring) {<span class="recurring-badge">Recurring</span>}</div>
-                  <div class="income-usage-inline">
-                    <div class="income-usage-bar-mini">
-                      <div class="income-usage-fill" [style.width.%]="i.usagePercent"></div>
+            <ion-item class="transaction-item-ionic" (click)="goToIncomeDetail(i.id)" detail="false">
+              <div class="transaction-icon success-bg" slot="start">
+                <ion-icon name="arrow-down-outline"></ion-icon>
+              </div>
+              <ion-label>
+                <div class="income-label-row">
+                  <div>
+                    <div class="transaction-name">{{ i.source }}</div>
+                    <div class="transaction-date">{{ i.date | date:'MMM d, y' }}@if (i.recurring) {<span class="recurring-badge">Recurring</span>}</div>
+                    <div class="income-usage-inline">
+                      <div class="income-usage-bar-mini">
+                        <div class="income-usage-fill" [style.width.%]="i.usagePercent"></div>
+                      </div>
+                      <span class="income-usage-text">{{ i.usedAmount | currency:currencyCode:'symbol':'1.0-0' }} used</span>
                     </div>
-                    <span class="income-usage-text">{{ i.usedAmount | currency:currencyCode:'symbol':'1.0-0' }} used</span>
                   </div>
-                </ion-label>
-                <div slot="end" class="income-end-slot">
-                  <div class="transaction-amount success-text">{{ i.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
-                  <div class="income-remaining-small" [class.danger-text]="i.remainingAmount <= 0">{{ i.remainingAmount | currency:currencyCode:'symbol':'1.0-0' }} left</div>
+                  <div class="income-end-slot">
+                    <div class="transaction-amount success-text">{{ i.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                    <div class="income-remaining-small" [class.danger-text]="i.remainingAmount <= 0">{{ i.remainingAmount | currency:currencyCode:'symbol':'1.0-0' }} left</div>
+                  </div>
                 </div>
-              </ion-item>
-              <ion-item-options side="end">
-                <ion-item-option color="success" (click)="openAllocPlanner(i)">
-                  <ion-icon name="save-outline" slot="icon-only" />
-                </ion-item-option>
-                <ion-item-option color="primary" (click)="openEditIncome(i)">
-                  <ion-icon name="create-outline" slot="icon-only" />
-                </ion-item-option>
-                <ion-item-option color="danger" (click)="deleteIncome(i.id)">
-                  <ion-icon name="trash-outline" slot="icon-only" />
-                </ion-item-option>
-              </ion-item-options>
-            </ion-item-sliding>
+              </ion-label>
+            </ion-item>
           }
         </ion-list>
       }

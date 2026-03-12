@@ -43,12 +43,13 @@ export class FinancialEngineService {
   }
 
   async loadAll(): Promise<void> {
-    let [expenses, incomes, installments, payments, allocations] = await Promise.all([
+    let [expenses, incomes, installments, payments, allocations, ccCards] = await Promise.all([
       this.storage.getList<Expense>(KEYS.EXPENSES),
       this.storage.getList<Income>(KEYS.INCOMES),
       this.storage.getList<Installment>(KEYS.INSTALLMENTS),
       this.storage.getList<InstallmentPayment>(KEYS.INSTALLMENT_PAYMENTS),
       this.storage.getList<PaymentAllocation>(KEYS.ALLOCATIONS),
+      this.storage.getList<import('../models').CreditCard>('credit_cards'),
     ]);
 
     // Auto-generate current-month entries for recurring expenses
@@ -109,7 +110,7 @@ export class FinancialEngineService {
       await this.storage.saveList(KEYS.INCOMES, incomes);
     }
 
-    this.updateStatuses(expenses, payments);
+    this.updateStatuses(expenses, payments, ccCards);
     this.expenses$.next(expenses);
     this.incomes$.next(incomes);
     this.installments$.next(installments);
@@ -405,6 +406,13 @@ export class FinancialEngineService {
     const totalInstallments = payments
       .filter(p => p.status !== 'paid')
       .reduce((s, p) => s + p.amount, 0);
+    const paidExpenses = expenses
+      .filter(e => e.status === 'paid')
+      .reduce((s, e) => s + e.amount, 0);
+    const paidInstallments = payments
+      .filter(p => p.status === 'paid')
+      .reduce((s, p) => s + p.amount, 0);
+    const totalObligations = totalExpenses + totalInstallments;
 
     // Credit card dues: sum of unpaid installment payments linked to credit cards
     const cardIds = new Set(cards.map(c => c.id));
@@ -426,7 +434,14 @@ export class FinancialEngineService {
     const in7Days = new Date(today);
     in7Days.setDate(in7Days.getDate() + 7);
     const upcomingExpenses = expenses
-      .filter(e => e.status === 'pending' && new Date(e.date) <= in7Days)
+      .filter(e => {
+        if (e.status !== 'pending') return false;
+        if (e.paymentMethod === 'Credit Card' && e.creditCardId) {
+          const card = cards.find(c => c.id === e.creditCardId);
+          if (card) return this.cardService.getBillingCycleDueDate(e.date, card) <= in7Days;
+        }
+        return new Date(e.date) <= in7Days;
+      })
       .reduce((s, e) => s + e.amount, 0);
     const upcomingPayments = payments
       .filter(p => p.status === 'pending' && new Date(p.dueDate) <= in7Days)
@@ -435,8 +450,9 @@ export class FinancialEngineService {
 
     const allocatedIncome = allocations.reduce((s, a) => s + a.amount, 0);
     const availableIncome = totalIncome - allocatedIncome;
-    // Balance = income minus all outstanding (unpaid) expenses and installments
-    // When an item is paid, it's excluded from totalExpenses/totalInstallments → balance improves
+    // Balance = income minus all outstanding (unpaid) obligations.
+    // Adding an expense reduces balance immediately; marking it paid has no further effect on balance.
+    // This is the conservative/protective model: balance answers "how much can I still commit to?"
     const balance = totalIncome - totalExpenses - totalInstallments;
 
     return {
@@ -444,6 +460,9 @@ export class FinancialEngineService {
       totalExpenses,
       totalInstallments,
       totalCreditDues,
+      totalObligations,
+      paidExpenses,
+      paidInstallments,
       balance,
       overdueAmount,
       upcomingAmount,
@@ -469,13 +488,25 @@ export class FinancialEngineService {
     return payments;
   }
 
-  private updateStatuses(expenses: Expense[], payments: InstallmentPayment[]): void {
+  private updateStatuses(
+    expenses: Expense[],
+    payments: InstallmentPayment[],
+    cards: import('../models').CreditCard[] = [],
+  ): void {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     expenses.forEach(e => {
       if (e.status !== 'paid') {
-        const d = new Date(e.date);
-        e.status = d < today ? 'overdue' : 'pending';
+        let compareDate: Date;
+        if (e.paymentMethod === 'Credit Card' && e.creditCardId) {
+          const card = cards.find(c => c.id === e.creditCardId);
+          compareDate = card
+            ? this.cardService.getBillingCycleDueDate(e.date, card)
+            : new Date(e.date);
+        } else {
+          compareDate = new Date(e.date);
+        }
+        e.status = compareDate < today ? 'overdue' : 'pending';
       }
     });
     payments.forEach(p => {
