@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { StorageService } from './storage.service';
 
 const KEYS = {
@@ -11,8 +11,15 @@ const KEYS = {
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
-  private currencyCode$ = new BehaviorSubject<string>('PHP');
-  private currencySymbol$ = new BehaviorSubject<string>('₱');
+  /** Reactive signal for the active currency code (e.g. 'PHP'). */
+  readonly currencyCode = signal<string>('PHP');
+  /** Reactive signal for the active currency symbol (e.g. '₱'). */
+  readonly currencySymbol = signal<string>('₱');
+
+  /** Observable alias — use with async pipe or combineLatest. */
+  readonly currencyCode$ = toObservable(this.currencyCode);
+  /** Observable alias — use with async pipe or combineLatest. */
+  readonly currencySymbol$ = toObservable(this.currencySymbol);
 
   constructor(private storage: StorageService) {
     this.loadCurrency();
@@ -21,14 +28,16 @@ export class PreferencesService {
   private async loadCurrency(): Promise<void> {
     const code = (await this.storage.get<string>(KEYS.CURRENCY_CODE)) ?? 'PHP';
     const symbol = (await this.storage.get<string>(KEYS.CURRENCY_SYMBOL)) ?? '₱';
-    this.currencyCode$.next(code);
-    this.currencySymbol$.next(symbol);
+    this.currencyCode.set(code);
+    this.currencySymbol.set(symbol);
   }
 
-  getCurrencyCode$() { return this.currencyCode$.asObservable(); }
-  getCurrencySymbol$() { return this.currencySymbol$.asObservable(); }
-  get currentCurrencyCode() { return this.currencyCode$.value; }
-  get currentCurrencySymbol() { return this.currencySymbol$.value; }
+  /** @deprecated Use `currencyCode$` field directly. */
+  getCurrencyCode$() { return this.currencyCode$; }
+  /** @deprecated Use `currencySymbol$` field directly. */
+  getCurrencySymbol$() { return this.currencySymbol$; }
+  get currentCurrencyCode() { return this.currencyCode(); }
+  get currentCurrencySymbol() { return this.currencySymbol(); }
 
   async getUserName(): Promise<string> {
     return (await this.storage.get<string>(KEYS.USER_NAME)) ?? 'User';
@@ -57,8 +66,8 @@ export class PreferencesService {
   async setCurrency(symbol: string, code: string): Promise<void> {
     await this.storage.set(KEYS.CURRENCY_SYMBOL, symbol);
     await this.storage.set(KEYS.CURRENCY_CODE, code);
-    this.currencyCode$.next(code);
-    this.currencySymbol$.next(symbol);
+    this.currencyCode.set(code);
+    this.currencySymbol.set(symbol);
   }
 
   getUserInitial(name: string): string {

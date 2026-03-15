@@ -1,6 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { BehaviorSubject, combineLatest } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { Expense, Income, Installment, InstallmentPayment, FinancialSummary, PaymentStatus, PaymentAllocation } from '../models';
 import { StorageService } from './storage.service';
 import { CreditCardService } from './credit-card.service';
@@ -15,30 +14,41 @@ const KEYS = {
 
 @Injectable({ providedIn: 'root' })
 export class FinancialEngineService {
-  private expenses$ = new BehaviorSubject<Expense[]>([]);
-  private incomes$ = new BehaviorSubject<Income[]>([]);
-  private installments$ = new BehaviorSubject<Installment[]>([]);
-  private installmentPayments$ = new BehaviorSubject<InstallmentPayment[]>([]);
-  private allocations$ = new BehaviorSubject<PaymentAllocation[]>([]);
+  private readonly _expenses = signal<Expense[]>([]);
+  private readonly _incomes = signal<Income[]>([]);
+  private readonly _installments = signal<Installment[]>([]);
+  private readonly _installmentPayments = signal<InstallmentPayment[]>([]);
+  private readonly _allocations = signal<PaymentAllocation[]>([]);
 
-  readonly summary$;
+  /**
+   * Computed financial summary — automatically recalculates whenever any
+   * underlying signal changes. No manual combineLatest needed.
+   */
+  readonly summary = computed(() =>
+    this.computeSummary(
+      this._expenses(),
+      this._incomes(),
+      this._installments(),
+      this._installmentPayments(),
+      this.cardService.cards(),
+      this._allocations(),
+    )
+  );
+
+  /** Observable alias for async-pipe consumers and AiContextService. */
+  readonly summary$ = toObservable(this.summary);
+
+  /** Observable accessors — backward compatible with all existing async-pipe consumers. */
+  private readonly expenses$ = toObservable(this._expenses);
+  private readonly incomes$ = toObservable(this._incomes);
+  private readonly installments$ = toObservable(this._installments);
+  private readonly installmentPayments$ = toObservable(this._installmentPayments);
+  private readonly allocations$ = toObservable(this._allocations);
 
   constructor(
     private storage: StorageService,
     private cardService: CreditCardService,
   ) {
-    this.summary$ = combineLatest([
-      this.expenses$,
-      this.incomes$,
-      this.installments$,
-      this.installmentPayments$,
-      this.cardService.getCards(),
-      this.allocations$,
-    ]).pipe(
-      map(([expenses, incomes, installments, payments, cards, allocations]) =>
-        this.computeSummary(expenses, incomes, installments, payments, cards, allocations)
-      )
-    );
     this.loadAll();
   }
 
@@ -111,63 +121,62 @@ export class FinancialEngineService {
     }
 
     this.updateStatuses(expenses, payments, ccCards);
-    this.expenses$.next(expenses);
-    this.incomes$.next(incomes);
-    this.installments$.next(installments);
-    this.installmentPayments$.next(payments);
-    this.allocations$.next(allocations);
+    this._expenses.set(expenses);
+    this._incomes.set(incomes);
+    this._installments.set(installments);
+    this._installmentPayments.set(payments);
+    this._allocations.set(allocations);
   }
 
   // ─── Expenses ────────────────────────────────────────────────────
-  getExpenses() { return this.expenses$.asObservable(); }
+  getExpenses() { return this.expenses$; }
 
   async addExpense(e: Omit<Expense, 'id'>): Promise<void> {
-    const list = this.expenses$.value;
     const item: Expense = { ...e, id: this.uuid() };
-    const updated = [...list, item];
+    const updated = [...this._expenses(), item];
     await this.storage.saveList(KEYS.EXPENSES, updated);
-    this.expenses$.next(updated);
+    this._expenses.set(updated);
   }
 
   async updateExpense(e: Expense): Promise<void> {
-    const updated = this.expenses$.value.map(x => x.id === e.id ? e : x);
+    const updated = this._expenses().map(x => x.id === e.id ? e : x);
     await this.storage.saveList(KEYS.EXPENSES, updated);
-    this.expenses$.next(updated);
+    this._expenses.set(updated);
   }
 
   async deleteExpense(id: string): Promise<void> {
-    const updated = this.expenses$.value.filter(x => x.id !== id);
+    const updated = this._expenses().filter(x => x.id !== id);
     // Cascade-delete allocations linked to this expense
-    const allocs = this.allocations$.value.filter(a => a.expenseId !== id);
+    const allocs = this._allocations().filter(a => a.expenseId !== id);
     await Promise.all([
       this.storage.saveList(KEYS.EXPENSES, updated),
       this.storage.saveList(KEYS.ALLOCATIONS, allocs),
     ]);
-    this.expenses$.next(updated);
-    this.allocations$.next(allocs);
+    this._expenses.set(updated);
+    this._allocations.set(allocs);
   }
 
   // ─── Incomes ─────────────────────────────────────────────────────
-  getIncomes() { return this.incomes$.asObservable(); }
+  getIncomes() { return this.incomes$; }
 
   async addIncome(i: Omit<Income, 'id'>): Promise<void> {
     const item: Income = { ...i, id: this.uuid() };
-    const updated = [...this.incomes$.value, item];
+    const updated = [...this._incomes(), item];
     await this.storage.saveList(KEYS.INCOMES, updated);
-    this.incomes$.next(updated);
+    this._incomes.set(updated);
   }
 
   async updateIncome(i: Income): Promise<void> {
-    const updated = this.incomes$.value.map(x => x.id === i.id ? i : x);
+    const updated = this._incomes().map(x => x.id === i.id ? i : x);
     await this.storage.saveList(KEYS.INCOMES, updated);
-    this.incomes$.next(updated);
+    this._incomes.set(updated);
   }
 
   async deleteIncome(id: string): Promise<void> {
-    const updated = this.incomes$.value.filter(x => x.id !== id);
+    const updated = this._incomes().filter(x => x.id !== id);
     // Find allocations linked to this income
-    const removedAllocs = this.allocations$.value.filter(a => a.incomeId === id);
-    const remainingAllocs = this.allocations$.value.filter(a => a.incomeId !== id);
+    const removedAllocs = this._allocations().filter(a => a.incomeId === id);
+    const remainingAllocs = this._allocations().filter(a => a.incomeId !== id);
 
     // Revert expenses that were fully paid by this income (if no other allocations remain)
     const affectedExpenseIds = new Set(removedAllocs.filter(a => a.expenseId).map(a => a.expenseId!));
@@ -177,14 +186,14 @@ export class FinancialEngineService {
     const stillAllocatedExpenses = new Set(remainingAllocs.filter(a => a.expenseId).map(a => a.expenseId!));
     const stillAllocatedPayments = new Set(remainingAllocs.filter(a => a.installmentPaymentId).map(a => a.installmentPaymentId!));
 
-    const expenses = this.expenses$.value.map(e => {
+    const expenses = this._expenses().map(e => {
       if (affectedExpenseIds.has(e.id) && !stillAllocatedExpenses.has(e.id) && e.status === 'paid') {
         return { ...e, status: 'pending' as PaymentStatus };
       }
       return e;
     });
 
-    const payments = this.installmentPayments$.value.map(p => {
+    const payments = this._installmentPayments().map(p => {
       if (affectedPaymentIds.has(p.id) && !stillAllocatedPayments.has(p.id) && p.status === 'paid') {
         return { ...p, status: 'pending' as PaymentStatus };
       }
@@ -197,170 +206,170 @@ export class FinancialEngineService {
       this.storage.saveList(KEYS.EXPENSES, expenses),
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payments),
     ]);
-    this.incomes$.next(updated);
-    this.allocations$.next(remainingAllocs);
-    this.expenses$.next(expenses);
-    this.installmentPayments$.next(payments);
+    this._incomes.set(updated);
+    this._allocations.set(remainingAllocs);
+    this._expenses.set(expenses);
+    this._installmentPayments.set(payments);
   }
 
   // ─── Installments ────────────────────────────────────────────────
-  getInstallments() { return this.installments$.asObservable(); }
-  getInstallmentPayments() { return this.installmentPayments$.asObservable(); }
+  getInstallments() { return this.installments$; }
+  getInstallmentPayments() { return this.installmentPayments$; }
 
   async addInstallment(inst: Omit<Installment, 'id'>): Promise<void> {
     const item: Installment = { ...inst, id: this.uuid() };
-    const instList = [...this.installments$.value, item];
+    const instList = [...this._installments(), item];
     // Generate payment schedule
     const payments = this.generatePayments(item);
-    const payList = [...this.installmentPayments$.value, ...payments];
+    const payList = [...this._installmentPayments(), ...payments];
     await Promise.all([
       this.storage.saveList(KEYS.INSTALLMENTS, instList),
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payList),
     ]);
-    this.installments$.next(instList);
-    this.installmentPayments$.next(payList);
+    this._installments.set(instList);
+    this._installmentPayments.set(payList);
   }
 
   async updateInstallment(inst: Installment): Promise<void> {
-    const instList = this.installments$.value.map(x => x.id === inst.id ? inst : x);
+    const instList = this._installments().map(x => x.id === inst.id ? inst : x);
     // Remove old payments and regenerate
-    const otherPayments = this.installmentPayments$.value.filter(p => p.installmentId !== inst.id);
+    const otherPayments = this._installmentPayments().filter(p => p.installmentId !== inst.id);
     const newPayments = this.generatePayments(inst);
     const payList = [...otherPayments, ...newPayments];
     await Promise.all([
       this.storage.saveList(KEYS.INSTALLMENTS, instList),
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payList),
     ]);
-    this.installments$.next(instList);
-    this.installmentPayments$.next(payList);
+    this._installments.set(instList);
+    this._installmentPayments.set(payList);
   }
 
   async deleteInstallment(id: string): Promise<void> {
-    const instList = this.installments$.value.filter(x => x.id !== id);
+    const instList = this._installments().filter(x => x.id !== id);
     const removedPaymentIds = new Set(
-      this.installmentPayments$.value.filter(x => x.installmentId === id).map(x => x.id)
+      this._installmentPayments().filter(x => x.installmentId === id).map(x => x.id)
     );
-    const payList = this.installmentPayments$.value.filter(x => x.installmentId !== id);
+    const payList = this._installmentPayments().filter(x => x.installmentId !== id);
     // Cascade-delete allocations linked to removed payments
-    const allocs = this.allocations$.value.filter(a => !a.installmentPaymentId || !removedPaymentIds.has(a.installmentPaymentId));
+    const allocs = this._allocations().filter(a => !a.installmentPaymentId || !removedPaymentIds.has(a.installmentPaymentId));
     await Promise.all([
       this.storage.saveList(KEYS.INSTALLMENTS, instList),
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payList),
       this.storage.saveList(KEYS.ALLOCATIONS, allocs),
     ]);
-    this.installments$.next(instList);
-    this.installmentPayments$.next(payList);
-    this.allocations$.next(allocs);
+    this._installments.set(instList);
+    this._installmentPayments.set(payList);
+    this._allocations.set(allocs);
   }
 
   async updateInstallmentPayment(payment: InstallmentPayment): Promise<void> {
-    const updated = this.installmentPayments$.value.map(p =>
+    const updated = this._installmentPayments().map(p =>
       p.id === payment.id ? payment : p
     );
     await this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, updated);
-    this.installmentPayments$.next(updated);
+    this._installmentPayments.set(updated);
   }
 
   async deleteInstallmentPayment(id: string): Promise<void> {
-    const updated = this.installmentPayments$.value.filter(p => p.id !== id);
+    const updated = this._installmentPayments().filter(p => p.id !== id);
     // Cascade-delete allocations linked to this payment
-    const allocs = this.allocations$.value.filter(a => a.installmentPaymentId !== id);
+    const allocs = this._allocations().filter(a => a.installmentPaymentId !== id);
     await Promise.all([
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, updated),
       this.storage.saveList(KEYS.ALLOCATIONS, allocs),
     ]);
-    this.installmentPayments$.next(updated);
-    this.allocations$.next(allocs);
+    this._installmentPayments.set(updated);
+    this._allocations.set(allocs);
   }
 
   async markPayment(paymentId: string, status: PaymentStatus): Promise<void> {
-    const updated = this.installmentPayments$.value.map(p =>
+    const updated = this._installmentPayments().map(p =>
       p.id === paymentId ? { ...p, status } : p
     );
     await this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, updated);
-    this.installmentPayments$.next(updated);
+    this._installmentPayments.set(updated);
   }
 
   // ─── Payment Allocations ────────────────────────────────────────
-  getAllocations() { return this.allocations$.asObservable(); }
+  getAllocations() { return this.allocations$; }
 
   getAllocationsForIncome(incomeId: string): PaymentAllocation[] {
-    return this.allocations$.value.filter(a => a.incomeId === incomeId);
+    return this._allocations().filter(a => a.incomeId === incomeId);
   }
 
   getAllocationsForExpense(expenseId: string): PaymentAllocation[] {
-    return this.allocations$.value.filter(a => a.expenseId === expenseId);
+    return this._allocations().filter(a => a.expenseId === expenseId);
   }
 
   getAllocationsForInstallmentPayment(paymentId: string): PaymentAllocation[] {
-    return this.allocations$.value.filter(a => a.installmentPaymentId === paymentId);
+    return this._allocations().filter(a => a.installmentPaymentId === paymentId);
   }
 
   getIncomeUsed(incomeId: string): number {
-    return this.allocations$.value
+    return this._allocations()
       .filter(a => a.incomeId === incomeId)
       .reduce((s, a) => s + a.amount, 0);
   }
 
   getIncomeRemaining(incomeId: string): number {
-    const income = this.incomes$.value.find(i => i.id === incomeId);
+    const income = this._incomes().find(i => i.id === incomeId);
     if (!income) return 0;
     return income.amount - this.getIncomeUsed(incomeId);
   }
 
   async addAllocation(alloc: Omit<PaymentAllocation, 'id'>): Promise<void> {
     const item: PaymentAllocation = { ...alloc, id: this.uuid() };
-    const updated = [...this.allocations$.value, item];
+    const updated = [...this._allocations(), item];
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
-    this.allocations$.next(updated);
+    this._allocations.set(updated);
   }
 
   async addAllocations(allocs: Omit<PaymentAllocation, 'id'>[]): Promise<void> {
     const items = allocs.map(a => ({ ...a, id: this.uuid() }));
-    const updated = [...this.allocations$.value, ...items];
+    const updated = [...this._allocations(), ...items];
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
-    this.allocations$.next(updated);
+    this._allocations.set(updated);
   }
 
   async removeAllocation(id: string): Promise<void> {
-    const alloc = this.allocations$.value.find(a => a.id === id);
-    const updated = this.allocations$.value.filter(a => a.id !== id);
+    const alloc = this._allocations().find(a => a.id === id);
+    const updated = this._allocations().filter(a => a.id !== id);
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
-    this.allocations$.next(updated);
+    this._allocations.set(updated);
 
     // Check if expense/payment still has other allocations; if not, revert to pending
     if (alloc?.expenseId) {
       const remaining = updated.filter(a => a.expenseId === alloc.expenseId);
       if (remaining.length === 0) {
-        const expenses = this.expenses$.value.map(e =>
+        const expenses = this._expenses().map(e =>
           e.id === alloc.expenseId && e.status === 'paid' ? { ...e, status: 'pending' as PaymentStatus } : e
         );
         await this.storage.saveList(KEYS.EXPENSES, expenses);
-        this.expenses$.next(expenses);
+        this._expenses.set(expenses);
       }
     }
     if (alloc?.installmentPaymentId) {
       const remaining = updated.filter(a => a.installmentPaymentId === alloc.installmentPaymentId);
       if (remaining.length === 0) {
-        const payments = this.installmentPayments$.value.map(p =>
+        const payments = this._installmentPayments().map(p =>
           p.id === alloc.installmentPaymentId && p.status === 'paid' ? { ...p, status: 'pending' as PaymentStatus } : p
         );
         await this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payments);
-        this.installmentPayments$.next(payments);
+        this._installmentPayments.set(payments);
       }
     }
   }
 
   async removeAllocationsForExpense(expenseId: string): Promise<void> {
-    const updated = this.allocations$.value.filter(a => a.expenseId !== expenseId);
+    const updated = this._allocations().filter(a => a.expenseId !== expenseId);
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
-    this.allocations$.next(updated);
+    this._allocations.set(updated);
   }
 
   async removeAllocationsForPayment(paymentId: string): Promise<void> {
-    const updated = this.allocations$.value.filter(a => a.installmentPaymentId !== paymentId);
+    const updated = this._allocations().filter(a => a.installmentPaymentId !== paymentId);
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
-    this.allocations$.next(updated);
+    this._allocations.set(updated);
   }
 
   /** Pay an expense: create allocations + mark paid */

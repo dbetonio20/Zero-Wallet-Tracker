@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { Injectable, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { CreditCard } from '../models';
 import { StorageService } from './storage.service';
 
@@ -7,7 +7,13 @@ const KEY = 'credit_cards';
 
 @Injectable({ providedIn: 'root' })
 export class CreditCardService {
-  private cards$ = new BehaviorSubject<CreditCard[]>([]);
+  private readonly _cards = signal<CreditCard[]>([]);
+
+  /** Read-only signal — use directly in templates or computed(). */
+  readonly cards = this._cards.asReadonly();
+
+  /** Observable alias for async-pipe consumers. */
+  readonly cards$ = toObservable(this._cards);
 
   constructor(private storage: StorageService) {
     this.load();
@@ -15,37 +21,39 @@ export class CreditCardService {
 
   private async load() {
     const cards = await this.storage.getList<CreditCard>(KEY);
-    this.cards$.next(cards);
+    this._cards.set(cards);
   }
 
-  getCards() { return this.cards$.asObservable(); }
+  getCards() { return this.cards$; }
 
   async addCard(card: Omit<CreditCard, 'id'>): Promise<void> {
     const item: CreditCard = { ...card, id: crypto.randomUUID() };
-    const updated = [...this.cards$.value, item];
+    const updated = [...this._cards(), item];
     await this.storage.saveList(KEY, updated);
-    this.cards$.next(updated);
+    this._cards.set(updated);
   }
 
   async updateCard(card: CreditCard): Promise<void> {
-    const updated = this.cards$.value.map(c => c.id === card.id ? card : c);
+    const updated = this._cards().map(c => c.id === card.id ? card : c);
     await this.storage.saveList(KEY, updated);
-    this.cards$.next(updated);
+    this._cards.set(updated);
   }
 
   async deleteCard(id: string): Promise<void> {
-    const updated = this.cards$.value.filter(c => c.id !== id);
+    const updated = this._cards().filter(c => c.id !== id);
     await this.storage.saveList(KEY, updated);
-    this.cards$.next(updated);
+    this._cards.set(updated);
   }
 
+  /** Returns the card with the given id, or undefined. */
   getById(id: string): CreditCard | undefined {
-    return this.cards$.value.find(c => c.id === id);
+    return this._cards().find(c => c.id === id);
   }
 
+  /** Returns cards whose next due date falls within the next N days. */
   getUpcomingDues(days = 7): CreditCard[] {
     const today = new Date();
-    return this.cards$.value.filter(card => {
+    return this._cards().filter(card => {
       const due = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
       if (due < today) due.setMonth(due.getMonth() + 1);
       const diff = (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);

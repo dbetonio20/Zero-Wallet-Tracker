@@ -23,6 +23,22 @@
     },
     {
       "type": "shell",
+      "label": "bun: build:apk",
+      "command": "bun run build:apk",
+      "group": "build",
+      "isBackground": false,
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
+      "label": "bun: build:apk:release",
+      "command": "bun run build:apk:release",
+      "group": "build",
+      "isBackground": false,
+      "problemMatcher": []
+    },
+    {
+      "type": "shell",
       "label": "bun: test",
       "command": "bun run test",
       "isBackground": true,
