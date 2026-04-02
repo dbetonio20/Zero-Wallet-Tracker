@@ -50,11 +50,11 @@
               <ion-item slot="header">
                 <ion-label>
                   <h3>{{ inst.transaction }}</h3>
-                  <p>{{ inst.cardName }} · {{ inst.monthlyAmount | currency:currencyCode:'symbol':'1.0-0' }}/mo</p>
+                  <p>{{ inst.cardName }} · {{ inst.monthlyAmount | currency:currencyCode:'symbol':'1.0-0' }}{{ inst.frequency === 'weekly' ? '/wk' : '/mo' }}</p>
                   <p>{{ inst.paidCount }}/{{ inst.months }} paid · {{ inst.remainingMonths }} remaining</p>
                   <p class="installment-header-total">Total: {{ inst.totalCost | currency:currencyCode:'symbol':'1.0-0' }} · Left: {{ inst.remainingAmount | currency:currencyCode:'symbol':'1.0-0' }}</p>
                 </ion-label>
-                <ion-badge slot="end" color="primary">{{ inst.remainingMonths }}mo</ion-badge>
+                <ion-badge slot="end" color="primary">{{ inst.remainingMonths }}{{ inst.frequency === 'weekly' ? 'wk' : 'mo' }}</ion-badge>
               </ion-item>
               <div slot="content">
                 <ion-list lines="full">
@@ -66,6 +66,9 @@
                           <p>Due: {{ p.dueDate | date:'MMM d, y' }}</p>
                           @if (p.status === 'paid' && getPaymentIncomeSources(p.id)) {
                             <p class="paid-source-label">Paid from: {{ getPaymentIncomeSources(p.id) }}</p>
+                          }
+                          @if (p.status === 'paid' && p.paidAt) {
+                            <p class="paid-date-label">Paid {{ p.paidAt | date:'MMM d, y' }}</p>
                           }
                         </ion-label>
                         <ion-badge slot="end" [color]="badgeColor(p.status)">{{ p.status }}</ion-badge>
@@ -199,13 +202,19 @@
           <ion-input label="Transaction Name" [(ngModel)]="installmentForm.transaction" placeholder="e.g. Honda ADV" />
         </ion-item>
         <ion-item>
-          <ion-input label="Monthly Amount (PHP)" type="number" [(ngModel)]="installmentForm.monthlyAmount" placeholder="0.00" />
+          <ion-select label="Payment Frequency" [(ngModel)]="installmentForm.frequency">
+            <ion-select-option value="monthly">Monthly</ion-select-option>
+            <ion-select-option value="weekly">Weekly</ion-select-option>
+          </ion-select>
+        </ion-item>
+        <ion-item>
+          <ion-input [label]="(installmentForm.frequency === 'weekly' ? 'Weekly' : 'Monthly') + ' Amount'" type="number" [(ngModel)]="installmentForm.monthlyAmount" placeholder="0.00" />
         </ion-item>
         <ion-item>
           <ion-input label="Start Date" type="date" [(ngModel)]="installmentForm.startDate" />
         </ion-item>
         <ion-item>
-          <ion-input label="Number of Months" type="number" [(ngModel)]="installmentForm.months" placeholder="12" />
+          <ion-input [label]="installmentForm.frequency === 'weekly' ? 'Number of Weeks' : 'Number of Months'" type="number" [(ngModel)]="installmentForm.months" placeholder="12" />
         </ion-item>
         <ion-item>
           <ion-select label="Credit Card" [(ngModel)]="installmentForm.cardId" placeholder="Select card (optional)">
@@ -279,6 +288,11 @@
             <ion-select-option value="overdue">Overdue</ion-select-option>
           </ion-select>
         </ion-item>
+        @if (paymentForm.status === 'paid') {
+          <ion-item>
+            <ion-input label="Paid Date" type="date" [(ngModel)]="paymentPaidAtForm" />
+          </ion-item>
+        }
         <ion-button expand="block" class="ion-margin-top" (click)="savePayment()">Update Payment</ion-button>
       </ion-content>
     </ng-template>

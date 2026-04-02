@@ -101,6 +101,9 @@ interface DashboardVM {
   insights: InsightItem[];
   savingsGoals: SavingsGoalVM[];
   cardCharges: CardChargesVM[];
+  recurringTotal: number;
+  recurringExpenses: Expense[];
+  pendingExpenses: Expense[];
 }
 
 type PayTarget =
@@ -133,6 +136,7 @@ export class DashboardComponent implements OnInit {
   currencyCode = 'PHP';
   expandedCardIds = new Set<string>();
   payingIds = new Set<string>();
+  isRecurringListOpen = false;
   payWithIncomeTarget: PayTarget | null = null;
   isPayWithIncomeOpen = false;
   selectedIncomeId: string | null = null;
@@ -212,6 +216,14 @@ export class DashboardComponent implements OnInit {
     } else {
       this.expandedCardIds.add(cardId);
     }
+  }
+
+  openRecurringModal(): void {
+    this.isRecurringListOpen = true;
+  }
+
+  closeRecurringModal(): void {
+    this.isRecurringListOpen = false;
   }
 
   markExpensePaid(expense: Expense, event: Event): void {
@@ -402,9 +414,6 @@ export class DashboardComponent implements OnInit {
           })
           .filter(occ => occ.unpaidAmount > 0);
 
-        // Cards whose billing due date already passed — must not appear in Upcoming
-        const overdueCardIds = new Set(overdueCards.map(occ => occ.card.id));
-
         // True overdue total: overdue expenses + overdue standalone payments + all unpaid card-linked amounts
         const overdueTotal =
           expenses.filter(e => e.status === 'overdue').reduce((s, e) => s + e.amount, 0) +
@@ -428,33 +437,19 @@ export class DashboardComponent implements OnInit {
           installments.filter((i: Installment) => i.cardId).map((i: Installment) => i.id)
         );
 
-        // Upcoming card groups: find non-paid card-linked payments whose dueDate is within 7 days, group by card
-        // Exclude payments belonging to cards already in overdueCards
-        const upcomingCardPayments = payments.filter(p => {
-          if (p.status === 'paid' || new Date(p.dueDate) > in7) return false;
-          if (!cardLinkedInstallmentIds.has(p.installmentId)) return false;
-          const inst = installments.find((i: Installment) => i.id === p.installmentId);
-          return inst?.cardId ? !overdueCardIds.has(inst.cardId) : false;
-        });
-        const cardPaymentMap = new Map<string, { card: CreditCard; cardPayments: InstallmentPayment[] }>();
-        for (const p of upcomingCardPayments) {
+        // Group ALL card-linked payments due in the selected month by card (no 7-day cap).
+        const selMonthCardPaymentMap = new Map<string, { card: CreditCard; cardPayments: InstallmentPayment[] }>();
+        for (const p of payments) {
+          if (!cardLinkedInstallmentIds.has(p.installmentId)) continue;
+          const pd = new Date(p.dueDate);
+          if (pd.getFullYear() !== selYear || pd.getMonth() !== selMonth) continue;
           const inst = installments.find((i: Installment) => i.id === p.installmentId);
           if (!inst?.cardId) continue;
           const card = cards.find(c => c.id === inst.cardId);
           if (!card) continue;
-          if (!cardPaymentMap.has(card.id)) cardPaymentMap.set(card.id, { card, cardPayments: [] });
-          cardPaymentMap.get(card.id)!.cardPayments.push(p);
+          if (!selMonthCardPaymentMap.has(card.id)) selMonthCardPaymentMap.set(card.id, { card, cardPayments: [] });
+          selMonthCardPaymentMap.get(card.id)!.cardPayments.push(p);
         }
-        const upcomingCards: UpcomingCardVM[] = Array.from(cardPaymentMap.values()).map(({ card: c, cardPayments }) => {
-          const cardInstallments = installments.filter((inst: Installment) => inst.cardId === c.id);
-          const due = new Date(currentYear, currentMonth, c.dueDate);
-          const lines = cardPayments.map(p => {
-            const inst = cardInstallments.find((i: Installment) => i.id === p.installmentId);
-            return { transaction: inst?.transaction ?? 'Installment', amount: p.amount, paymentId: p.id, dueDate: p.dueDate };
-          });
-          const pendingAmount = cardPayments.reduce((s, p) => s + p.amount, 0);
-          return { card: c, dueDate: due, pendingAmount, lines };
-        });
 
         // ─── Credit Card Charges ─────────────────────────────────────
         const cardCharges: CardChargesVM[] = cards
@@ -579,7 +574,10 @@ export class DashboardComponent implements OnInit {
         const monthlyExpenseItems: MonthTransactionVM[] = expenses
           .filter(e => {
             const d = new Date(e.date);
-            return d.getFullYear() === selYear && d.getMonth() === selMonth && !e.creditCardId;
+            // Exclude unpaid CC-linked expenses (shown grouped in card blocks).
+            // Paid CC-linked expenses are included here so they appear in the paid list.
+            return d.getFullYear() === selYear && d.getMonth() === selMonth &&
+              (!e.creditCardId || e.status === 'paid');
           })
           .map(e => ({
             kind: 'expense' as const,
@@ -591,7 +589,10 @@ export class DashboardComponent implements OnInit {
         const monthlyPaymentItems: MonthTransactionVM[] = payments
           .filter(p => {
             const d = new Date(p.dueDate);
-            return d.getFullYear() === selYear && d.getMonth() === selMonth && !cardLinkedInstallmentIds.has(p.installmentId);
+            // Exclude unpaid card-linked payments (shown grouped in card blocks).
+            // Paid card-linked payments are included here so they appear in the paid list.
+            return d.getFullYear() === selYear && d.getMonth() === selMonth &&
+              (!cardLinkedInstallmentIds.has(p.installmentId) || p.status === 'paid');
           })
           .map(p => {
             const inst = installments.find((i: Installment) => i.id === p.installmentId);
@@ -611,12 +612,39 @@ export class DashboardComponent implements OnInit {
           item: occ,
         }));
 
-        const upcomingCardItems: MonthTransactionVM[] = upcomingCards.map(uc => ({
-          kind: 'upcomingCard' as const,
-          statusLabel: 'upcoming' as const,
-          sortDate: uc.dueDate.toISOString(),
-          item: uc,
-        }));
+        // Build card-group transaction items for the selected month (all unpaid card-linked payments,
+        // regardless of 7-day window — classifies by whether the card due date has passed in selYear/selMonth).
+        const selMonthCardItems: MonthTransactionVM[] = [];
+        for (const { card: c, cardPayments } of selMonthCardPaymentMap.values()) {
+          // Skip cards already covered by overdueCardItems (current month, due date past)
+          if (overdueCards.some(occ => occ.card.id === c.id)) continue;
+          const cardInstallments = installments.filter((inst: Installment) => inst.cardId === c.id);
+          const cardDueDate = new Date(selYear, selMonth, c.dueDate);
+          const isOverdue = cardDueDate < today;
+          const unpaidPayments = cardPayments.filter(p => p.status !== 'paid');
+          // Only create a card-group row when there are still unpaid items to show
+          if (!unpaidPayments.length) continue;
+          const lines = unpaidPayments.map(p => {
+            const inst = cardInstallments.find((i: Installment) => i.id === p.installmentId);
+            return { transaction: inst?.transaction ?? 'Installment', amount: p.amount, paymentId: p.id, dueDate: p.dueDate };
+          });
+          const unpaidAmount = unpaidPayments.reduce((s, p) => s + p.amount, 0);
+          if (isOverdue) {
+            selMonthCardItems.push({
+              kind: 'overdueCard',
+              statusLabel: 'overdue',
+              sortDate: cardDueDate.toISOString(),
+              item: { card: c, dueDate: cardDueDate, unpaidAmount, lines },
+            });
+          } else {
+            selMonthCardItems.push({
+              kind: 'upcomingCard',
+              statusLabel: 'upcoming',
+              sortDate: cardDueDate.toISOString(),
+              item: { card: c, dueDate: cardDueDate, pendingAmount: unpaidAmount, lines },
+            });
+          }
+        }
 
         const getAmount = (t: MonthTransactionVM): number => {
           if (t.kind === 'expense')      return t.item.amount;
@@ -629,7 +657,7 @@ export class DashboardComponent implements OnInit {
           ...monthlyExpenseItems,
           ...monthlyPaymentItems,
           ...overdueCardItems,
-          ...upcomingCardItems,
+          ...selMonthCardItems,
         ].sort((a, b) => {
           if (sortBy === 'date-desc')   return new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime();
           if (sortBy === 'date-asc')    return new Date(a.sortDate).getTime() - new Date(b.sortDate).getTime();
@@ -643,6 +671,19 @@ export class DashboardComponent implements OnInit {
         const unpaidTransactions = allMonthTransactions.filter(t => t.statusLabel !== 'paid');
         const paidTransactions   = allMonthTransactions.filter(t => t.statusLabel === 'paid');
 
+        // Recurring: current-month expenses marked as recurring
+        const recurringExpenses = expenses.filter(e => {
+          const d = new Date(e.date);
+          return d.getFullYear() === currentYear && d.getMonth() === currentMonth && e.recurring;
+        });
+        const recurringTotal = recurringExpenses.reduce((s, e) => s + e.amount, 0);
+        // Pending: current-month unpaid non-recurring expenses
+        const pendingExpenses = expenses.filter(e => {
+          const d = new Date(e.date);
+          return d.getFullYear() === currentYear && d.getMonth() === currentMonth &&
+            !e.recurring && e.status !== 'paid';
+        });
+
         return {
           summary,
           incomes: incomeVMs,
@@ -654,6 +695,9 @@ export class DashboardComponent implements OnInit {
           insights,
           savingsGoals,
           cardCharges,
+          recurringTotal,
+          recurringExpenses,
+          pendingExpenses,
         };
       })
     );
@@ -685,12 +729,12 @@ export class DashboardComponent implements OnInit {
   }
 
   async saveIncome(): Promise<void> {
-    const { source, amount, date, recurring } = this.incomeForm;
+    const { name, source, amount, date, recurring } = this.incomeForm;
     if (!source || !amount || !date) return;
     if (this.editingIncome) {
-      await this.engine.updateIncome({ ...this.editingIncome, source, amount: +amount, date, recurring: !!recurring });
+      await this.engine.updateIncome({ ...this.editingIncome, name: name || '', source, amount: +amount, date, recurring: !!recurring });
     } else {
-      await this.engine.addIncome({ source, amount: +amount, date, recurring: !!recurring });
+      await this.engine.addIncome({ name: name || '', source, amount: +amount, date, recurring: !!recurring });
     }
     this.closeIncomeModal();
   }
@@ -705,6 +749,7 @@ export class DashboardComponent implements OnInit {
 
   private blankIncome(): Partial<Income> {
     return {
+      name: '',
       source: 'Salary',
       amount: undefined,
       date: new Date().toISOString().split('T')[0],
@@ -779,6 +824,7 @@ export class DashboardComponent implements OnInit {
   private _viewYear$  = new BehaviorSubject<number>(new Date().getFullYear());
   private _viewMonth$ = new BehaviorSubject<number>(new Date().getMonth());
   private _txSortBy$  = new BehaviorSubject<string>('status');
+  showPaidTx = false;
 
   get viewYear(): number  { return this._viewYear$.value; }
   get viewMonth(): number { return this._viewMonth$.value; }
@@ -792,15 +838,18 @@ export class DashboardComponent implements OnInit {
     let y = this._viewYear$.value, m = this._viewMonth$.value - 1;
     if (m < 0) { m = 11; y -= 1; }
     this._viewYear$.next(y); this._viewMonth$.next(m);
+    this.showPaidTx = false;
   }
   nextMonth(): void {
     let y = this._viewYear$.value, m = this._viewMonth$.value + 1;
     if (m > 11) { m = 0; y += 1; }
     this._viewYear$.next(y); this._viewMonth$.next(m);
+    this.showPaidTx = false;
   }
   goToCurrentMonth(): void {
     const n = new Date();
     this._viewYear$.next(n.getFullYear()); this._viewMonth$.next(n.getMonth());
+    this.showPaidTx = false;
   }
   setSortBy(v: string): void { this._txSortBy$.next(v); }
 

@@ -59,8 +59,8 @@ interface IncomeOption {
                     <ion-checkbox [checked]="opt.selected" (ionChange)="toggleIncome(opt)" />
                   </div>
                   <div class="pay-income-info">
-                    <div class="pay-income-name">{{ opt.income.source }}</div>
-                    <div class="pay-income-date">{{ opt.income.date }}</div>
+                    <div class="pay-income-name">{{ opt.income.name || opt.income.source }}</div>
+                    <div class="pay-income-date">{{ opt.income.name ? opt.income.source + ' · ' : '' }}{{ opt.income.date }}</div>
                     <div class="pay-income-remaining">
                       Remaining: {{ opt.remaining | currency:currencyCode:'symbol':'1.0-0' }}
                       <span class="pay-income-total">/ {{ opt.income.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>

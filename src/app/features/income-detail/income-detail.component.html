@@ -25,7 +25,7 @@
     <!-- Income Header Card -->
     <div class="hero-section">
       <div class="income-detail-header">
-        <div class="income-detail-source">{{ income.source }}</div>
+        <div class="income-detail-source">{{ income.name || income.source }}</div>
         <div class="income-detail-date">{{ income.date | date:'MMMM d, y' }}@if (income.recurring) { <span class="recurring-badge">Recurring</span>}</div>
       </div>
       <div class="hero-amount positive">{{ income.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
@@ -64,6 +64,9 @@
                 <ion-label>
                   <div class="transaction-name">{{ item.name }}</div>
                   <div class="transaction-date">{{ item.date | date:'MMM d, y' }} · {{ item.type === 'expense' ? 'Expense' : 'Installment' }}</div>
+                  @if (item.paidAt) {
+                    <div class="paid-date-label">Paid {{ item.paidAt | date:'MMM d, y' }}</div>
+                  }
                 </ion-label>
                 <div slot="end" class="transaction-amount success-text">
                   {{ item.allocatedAmount | currency:currencyCode:'symbol':'1.0-0' }}
@@ -104,6 +107,9 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding modal-content">
+        <ion-item class="form-item">
+          <ion-input label="Name" [(ngModel)]="incomeForm.name" placeholder="e.g. March Salary" />
+        </ion-item>
         <ion-item class="form-item">
           <ion-select label="Source" [(ngModel)]="incomeForm.source" placeholder="Select source" interface="action-sheet">
             @for (s of incomeSources; track s) {

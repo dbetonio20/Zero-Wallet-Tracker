@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonContent, IonButton, IonIcon,
-  IonSegment, IonSegmentButton, IonLabel, IonProgressBar, IonBadge,
+  IonSegment, IonSegmentButton, IonLabel, IonProgressBar, IonBadge, IonList, IonItem,
 } from '@ionic/angular/standalone';
 import { BaseChartDirective } from 'ng2-charts';
 import {
@@ -12,7 +12,7 @@ import {
   PointElement, CategoryScale, LinearScale, Filler,
 } from 'chart.js';
 import { addIcons } from 'ionicons';
-import { settingsOutline } from 'ionicons/icons';
+import { settingsOutline, repeatOutline } from 'ionicons/icons';
 import { Router } from '@angular/router';
 import { combineLatest } from 'rxjs';
 import { FinancialEngineService } from '../../core/services/financial-engine.service';
@@ -72,6 +72,7 @@ interface InstallmentOverviewVM {
   paidAmount: number;
   monthlyDue: number;
   monthlyPaid: number;
+  frequency?: 'monthly' | 'weekly';
 }
 
 interface CardUtilizationVM extends CreditCard {
@@ -84,9 +85,9 @@ interface CardUtilizationVM extends CreditCard {
   selector: 'app-reports',
   standalone: true,
   imports: [
-    CurrencyPipe, DecimalPipe, FormsModule,
+    CurrencyPipe, DecimalPipe, DatePipe, FormsModule,
     IonHeader, IonToolbar, IonContent, IonButton, IonIcon,
-    IonSegment, IonSegmentButton, IonLabel, IonProgressBar, IonBadge,
+    IonSegment, IonSegmentButton, IonLabel, IonProgressBar, IonBadge, IonList, IonItem,
     BaseChartDirective,
   ],
   templateUrl: './reports.component.html',
@@ -165,6 +166,11 @@ export class ReportsComponent implements OnInit {
 
   cardUtilization: CardUtilizationVM[] = [];
 
+  recurringExpensesList: Expense[] = [];
+  recurringByCategory: CategoryBreakdown[] = [];
+  recurringTotal = 0;
+  recurringCount = 0;
+
   get currentMonthIncome(): number { return this.cashFlowMonths[this.cashFlowMonths.length - 1]?.income ?? 0; }
   get currentMonthSpend(): number {
     const m = this.cashFlowMonths[this.cashFlowMonths.length - 1];
@@ -194,11 +200,11 @@ export class ReportsComponent implements OnInit {
   constructor(
     private engine: FinancialEngineService,
     private cardService: CreditCardService,
-    private categoryService: CategoryService,
+    protected categoryService: CategoryService,
     private prefs: PreferencesService,
     private router: Router,
   ) {
-    addIcons({ settingsOutline });
+    addIcons({ settingsOutline, repeatOutline });
     const now = new Date();
     this.selectedYear = now.getFullYear();
     this.selectedMonth = now.getMonth();
@@ -247,6 +253,7 @@ export class ReportsComponent implements OnInit {
     this.buildPaymentMethods();
     this.buildInstallmentsOverview();
     this.buildCardUtilization();
+    this.buildRecurringSection();
   }
 
   private buildCategoryBreakdown(): void {
@@ -368,6 +375,7 @@ export class ReportsComponent implements OnInit {
         totalCost: inst.monthlyAmount * inst.months, paidAmount,
         monthlyDue: monthPayments.reduce((s, p) => s + p.amount, 0),
         monthlyPaid: monthPayments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0),
+        frequency: inst.frequency,
       };
     });
     this.installmentMonthTotal = this.installmentOverview.reduce((s, i) => s + i.monthlyDue, 0);
@@ -385,6 +393,19 @@ export class ReportsComponent implements OnInit {
       const util = card.creditLimit > 0 ? unpaid / card.creditLimit : 0;
       return { ...card, unpaidBalance: unpaid, utilizationPercent: Math.min(util, 1), isHigh: util > 0.8 };
     });
+  }
+
+  private buildRecurringSection(): void {
+    this.recurringExpensesList = this.allExpenses.filter(
+      e => e.recurring && this.inMonth(e.date, this.selectedYear, this.selectedMonth)
+    );
+    this.recurringTotal = this.recurringExpensesList.reduce((s, e) => s + e.amount, 0);
+    this.recurringCount = this.recurringExpensesList.length;
+    const catMap = new Map<string, number>();
+    this.recurringExpensesList.forEach(e => catMap.set(e.category, (catMap.get(e.category) ?? 0) + e.amount));
+    this.recurringByCategory = [...catMap.entries()].map(([category, amount]) => ({
+      category, amount, color: this.categoryService.getColor(category),
+    }));
   }
 
   private getLast6Months(): { year: number; month: number; label: string }[] {

@@ -80,6 +80,7 @@ export class DebtsComponent implements OnInit {
   editingCard: CreditCard | null = null;
   isEditPaymentModalOpen = false;
   editingPayment: InstallmentPayment | null = null;
+  paymentPaidAtForm = '';
   paymentForm: { amount: number | undefined; dueDate: string; status: PaymentStatus } = this.blankPaymentForm();
 
   installmentForm: Partial<Installment & { cardName: string }> = this.blankInstallmentForm();
@@ -182,6 +183,7 @@ export class DebtsComponent implements OnInit {
         monthlyAmount: +this.installmentForm.monthlyAmount!,
         startDate: this.installmentForm.startDate!,
         months: +this.installmentForm.months!,
+        frequency: this.installmentForm.frequency ?? 'monthly',
       });
     } else {
       await this.engine.addInstallment({
@@ -190,6 +192,7 @@ export class DebtsComponent implements OnInit {
         monthlyAmount: +this.installmentForm.monthlyAmount!,
         startDate: this.installmentForm.startDate!,
         months: +this.installmentForm.months!,
+        frequency: this.installmentForm.frequency ?? 'monthly',
       });
     }
     this.closeInstallmentModal();
@@ -232,12 +235,14 @@ export class DebtsComponent implements OnInit {
   openEditPayment(payment: InstallmentPayment): void {
     this.editingPayment = payment;
     this.paymentForm = { amount: payment.amount, dueDate: payment.dueDate, status: payment.status };
+    this.paymentPaidAtForm = payment.paidAt ?? '';
     this.isEditPaymentModalOpen = true;
   }
 
   closeEditPaymentModal(): void {
     this.isEditPaymentModalOpen = false;
     this.editingPayment = null;
+    this.paymentPaidAtForm = '';
   }
 
   async savePayment(): Promise<void> {
@@ -246,11 +251,15 @@ export class DebtsComponent implements OnInit {
     if (this.editingPayment.status === 'paid' && this.paymentForm.status !== 'paid') {
       await this.engine.removeAllocationsForPayment(this.editingPayment.id);
     }
+    const paidAt = this.paymentForm.status === 'paid'
+      ? (this.paymentPaidAtForm || this.editingPayment.paidAt || new Date().toISOString().split('T')[0])
+      : undefined;
     await this.engine.updateInstallmentPayment({
       ...this.editingPayment,
       amount: +this.paymentForm.amount,
       dueDate: this.paymentForm.dueDate,
       status: this.paymentForm.status,
+      paidAt,
     });
     this.closeEditPaymentModal();
   }
@@ -379,6 +388,7 @@ export class DebtsComponent implements OnInit {
       startDate: new Date().toISOString().split('T')[0],
       months: 12,
       cardId: '',
+      frequency: 'monthly',
     };
   }
 

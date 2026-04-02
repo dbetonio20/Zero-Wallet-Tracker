@@ -7,6 +7,7 @@ const KEYS = {
   THEME: 'pref_theme',
   CURRENCY_SYMBOL: 'pref_currency_symbol',
   CURRENCY_CODE: 'pref_currency_code',
+  COLOR_PALETTE: 'pref_color_palette',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -15,14 +16,19 @@ export class PreferencesService {
   readonly currencyCode = signal<string>('PHP');
   /** Reactive signal for the active currency symbol (e.g. '₱'). */
   readonly currencySymbol = signal<string>('₱');
+  /** Reactive signal for the active color palette id (e.g. 'default'). */
+  readonly colorPalette = signal<string>('default');
 
   /** Observable alias — use with async pipe or combineLatest. */
   readonly currencyCode$ = toObservable(this.currencyCode);
   /** Observable alias — use with async pipe or combineLatest. */
   readonly currencySymbol$ = toObservable(this.currencySymbol);
+  /** Observable alias — use with async pipe or combineLatest. */
+  readonly colorPalette$ = toObservable(this.colorPalette);
 
   constructor(private storage: StorageService) {
     this.loadCurrency();
+    this.loadPalette();
   }
 
   private async loadCurrency(): Promise<void> {
@@ -30,6 +36,11 @@ export class PreferencesService {
     const symbol = (await this.storage.get<string>(KEYS.CURRENCY_SYMBOL)) ?? '₱';
     this.currencyCode.set(code);
     this.currencySymbol.set(symbol);
+  }
+
+  private async loadPalette(): Promise<void> {
+    const palette = (await this.storage.get<string>(KEYS.COLOR_PALETTE)) ?? 'default';
+    this.colorPalette.set(palette);
   }
 
   /** @deprecated Use `currencyCode$` field directly. */
@@ -53,6 +64,15 @@ export class PreferencesService {
 
   async setTheme(theme: string): Promise<void> {
     await this.storage.set(KEYS.THEME, theme);
+  }
+
+  async getPalette(): Promise<string> {
+    return (await this.storage.get<string>(KEYS.COLOR_PALETTE)) ?? 'default';
+  }
+
+  async setPalette(palette: string): Promise<void> {
+    await this.storage.set(KEYS.COLOR_PALETTE, palette);
+    this.colorPalette.set(palette);
   }
 
   async getCurrencySymbol(): Promise<string> {
@@ -82,10 +102,12 @@ export class PreferencesService {
     await this.storage.remove('credit_cards');
     await this.storage.remove('paymentAllocations');
     await this.storage.remove('savingsGoals');
+    await this.storage.remove('categories');
     await this.storage.remove(KEYS.USER_NAME);
     await this.storage.remove(KEYS.THEME);
     await this.storage.remove(KEYS.CURRENCY_SYMBOL);
     await this.storage.remove(KEYS.CURRENCY_CODE);
+    await this.storage.remove(KEYS.COLOR_PALETTE);
   }
 
   async exportAllData(): Promise<string> {
@@ -98,6 +120,7 @@ export class PreferencesService {
       theme: await this.getTheme(),
       currencySymbol: await this.getCurrencySymbol(),
       currencyCode: await this.getCurrencyCode(),
+      palette: await this.getPalette(),
     };
     return JSON.stringify(data, null, 2);
   }
@@ -117,6 +140,7 @@ export class PreferencesService {
       if (p.currencySymbol && p.currencyCode) {
         await this.setCurrency(p.currencySymbol, p.currencyCode);
       }
+      if (p.palette) await this.setPalette(p.palette);
     }
   }
 }

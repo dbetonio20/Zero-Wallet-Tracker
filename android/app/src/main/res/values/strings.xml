@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Zero Wallet Tracker</string>
-    <string name="title_activity_main">Zero Wallet Tracker</string>
-    <string name="package_name">com.zerowallet.tracker</string>
+    <string name="app_name">Salapi</string>
+    <string name="title_activity_main">Salapi</string>
+    <string name="package_name">com.salapi.tracker</string>
     <string name="custom_url_scheme">com.zerowallet.tracker</string>
 </resources>

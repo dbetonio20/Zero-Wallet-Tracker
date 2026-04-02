@@ -15,6 +15,8 @@ export class App implements OnInit {
   async ngOnInit(): Promise<void> {
     const theme = await this.prefs.getTheme();
     this.applyTheme(theme);
+    const palette = await this.prefs.getPalette();
+    this.applyPalette(palette);
     // Notification errors (permission denied, scheduling failure, plugin not
     // available on web) must never crash the root component.
     this.notifications.init().catch(() => {});
@@ -30,6 +32,14 @@ export class App implements OnInit {
       // System preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       html.classList.toggle('ion-palette-dark', prefersDark);
+    }
+  }
+
+  private applyPalette(palette: string): void {
+    if (palette === 'default') {
+      document.documentElement.removeAttribute('data-palette');
+    } else {
+      document.documentElement.setAttribute('data-palette', palette);
     }
   }
 }

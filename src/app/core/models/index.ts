@@ -40,12 +40,14 @@ export interface Expense {
   paymentMethod: string;
   creditCardId?: string; // set when paymentMethod is 'Credit Card'
   status: PaymentStatus;
+  paidAt?: string; // YYYY-MM-DD date when marked as paid
   recurring: boolean; // marks a monthly repeating expense
   notes: string;
 }
 
 export interface Income {
   id: string;
+  name?: string;    // optional display label, e.g. "March Salary"
   source: string;
   amount: number;
   date: string;
@@ -68,6 +70,7 @@ export interface Installment {
   monthlyAmount: number;
   startDate: string; // ISO date string
   months: number;
+  frequency?: 'monthly' | 'weekly'; // defaults to 'monthly' when absent
 }
 
 export interface InstallmentPayment {
@@ -76,6 +79,7 @@ export interface InstallmentPayment {
   dueDate: string; // ISO date string
   amount: number;
   status: PaymentStatus;
+  paidAt?: string; // YYYY-MM-DD date when marked as paid
 }
 
 export interface PaymentAllocation {

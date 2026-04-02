@@ -188,14 +188,14 @@ export class FinancialEngineService {
 
     const expenses = this._expenses().map(e => {
       if (affectedExpenseIds.has(e.id) && !stillAllocatedExpenses.has(e.id) && e.status === 'paid') {
-        return { ...e, status: 'pending' as PaymentStatus };
+        return { ...e, status: 'pending' as PaymentStatus, paidAt: undefined };
       }
       return e;
     });
 
     const payments = this._installmentPayments().map(p => {
       if (affectedPaymentIds.has(p.id) && !stillAllocatedPayments.has(p.id) && p.status === 'paid') {
-        return { ...p, status: 'pending' as PaymentStatus };
+        return { ...p, status: 'pending' as PaymentStatus, paidAt: undefined };
       }
       return p;
     });
@@ -283,8 +283,9 @@ export class FinancialEngineService {
   }
 
   async markPayment(paymentId: string, status: PaymentStatus): Promise<void> {
+    const paidAt = status === 'paid' ? new Date().toISOString().split('T')[0] : undefined;
     const updated = this._installmentPayments().map(p =>
-      p.id === paymentId ? { ...p, status } : p
+      p.id === paymentId ? { ...p, status, paidAt } : p
     );
     await this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, updated);
     this._installmentPayments.set(updated);
@@ -342,7 +343,7 @@ export class FinancialEngineService {
       const remaining = updated.filter(a => a.expenseId === alloc.expenseId);
       if (remaining.length === 0) {
         const expenses = this._expenses().map(e =>
-          e.id === alloc.expenseId && e.status === 'paid' ? { ...e, status: 'pending' as PaymentStatus } : e
+          e.id === alloc.expenseId && e.status === 'paid' ? { ...e, status: 'pending' as PaymentStatus, paidAt: undefined } : e
         );
         await this.storage.saveList(KEYS.EXPENSES, expenses);
         this._expenses.set(expenses);
@@ -352,7 +353,7 @@ export class FinancialEngineService {
       const remaining = updated.filter(a => a.installmentPaymentId === alloc.installmentPaymentId);
       if (remaining.length === 0) {
         const payments = this._installmentPayments().map(p =>
-          p.id === alloc.installmentPaymentId && p.status === 'paid' ? { ...p, status: 'pending' as PaymentStatus } : p
+          p.id === alloc.installmentPaymentId && p.status === 'paid' ? { ...p, status: 'pending' as PaymentStatus, paidAt: undefined } : p
         );
         await this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payments);
         this._installmentPayments.set(payments);
@@ -382,7 +383,7 @@ export class FinancialEngineService {
     }));
     await this.addAllocations(allocItems);
     // Mark expense as paid
-    await this.updateExpense({ ...expense, status: 'paid' });
+    await this.updateExpense({ ...expense, status: 'paid', paidAt: new Date().toISOString().split('T')[0] });
   }
 
   /** Pay an installment payment: create allocations + mark paid */
@@ -483,9 +484,14 @@ export class FinancialEngineService {
   private generatePayments(inst: Installment): InstallmentPayment[] {
     const payments: InstallmentPayment[] = [];
     const start = new Date(inst.startDate);
+    const isWeekly = inst.frequency === 'weekly';
     for (let i = 0; i < inst.months; i++) {
       const due = new Date(start);
-      due.setMonth(due.getMonth() + i);
+      if (isWeekly) {
+        due.setDate(due.getDate() + i * 7);
+      } else {
+        due.setMonth(due.getMonth() + i);
+      }
       payments.push({
         id: this.uuid(),
         installmentId: inst.id,

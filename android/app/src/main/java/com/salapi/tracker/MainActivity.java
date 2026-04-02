@@ -1,4 +1,4 @@
-package com.zerowallet.tracker;
+package com.salapi.tracker;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;

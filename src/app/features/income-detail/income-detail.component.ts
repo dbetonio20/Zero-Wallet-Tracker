@@ -24,6 +24,7 @@ interface LinkedItem {
   type: 'expense' | 'installment';
   name: string;
   date: string;
+  paidAt?: string;
   allocatedAmount: number;
 }
 
@@ -101,6 +102,7 @@ export class IncomeDetailComponent implements OnInit, OnDestroy {
             type: 'expense' as const,
             name: exp?.category || 'Unknown Expense',
             date: exp?.date || '',
+            paidAt: exp?.paidAt,
             allocatedAmount: alloc.amount,
           };
         } else if (alloc.installmentPaymentId) {
@@ -111,6 +113,7 @@ export class IncomeDetailComponent implements OnInit, OnDestroy {
             type: 'installment' as const,
             name: inst?.transaction || 'Installment Payment',
             date: pay?.dueDate || '',
+            paidAt: pay?.paidAt,
             allocatedAmount: alloc.amount,
           };
         }
@@ -145,9 +148,9 @@ export class IncomeDetailComponent implements OnInit, OnDestroy {
 
   async saveIncome(): Promise<void> {
     if (!this.income) return;
-    const { source, amount, date, recurring } = this.incomeForm;
+    const { name, source, amount, date, recurring } = this.incomeForm;
     if (!source || !amount || !date) return;
-    await this.engine.updateIncome({ ...this.income, source, amount: +amount, date, recurring: !!recurring });
+    await this.engine.updateIncome({ ...this.income, name: name || '', source, amount: +amount, date, recurring: !!recurring });
     this.closeEditModal();
   }
 

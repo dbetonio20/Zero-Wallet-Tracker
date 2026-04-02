@@ -66,6 +66,233 @@
   --accent-blue: #3880ff;
 }
 
+/* ── Color Palettes ─────────────────────────────────────── */
+
+/* Ocean */
+html[data-palette="ocean"]:not(.ion-palette-dark) {
+  --ion-color-primary: #0ea5e9;
+  --ion-color-primary-rgb: 14, 165, 233;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0284c7;
+  --ion-color-primary-tint: #38bdf8;
+  --ion-background-color: #f0f9ff;
+  --ion-background-color-rgb: 240, 249, 255;
+  --ion-text-color: #0c4a6e;
+  --ion-text-color-rgb: 12, 74, 110;
+  --ion-item-background: #e0f2fe;
+  --ion-card-background: #e0f2fe;
+  --ion-toolbar-background: #f0f9ff;
+  --dashboard-bg: #f0f9ff;
+  --card-bg: #e0f2fe;
+  --card-border: #bae6fd;
+  --text-primary: #0c4a6e;
+  --text-secondary: #0284c7;
+  --accent-green: #0ea5e9;
+}
+
+html[data-palette="ocean"].ion-palette-dark {
+  --ion-color-primary: #38bdf8;
+  --ion-color-primary-rgb: 56, 189, 248;
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-contrast-rgb: 0, 0, 0;
+  --ion-color-primary-shade: #0ea5e9;
+  --ion-color-primary-tint: #7dd3fc;
+  --ion-background-color: #0a1628;
+  --ion-background-color-rgb: 10, 22, 40;
+  --ion-text-color: #e0f2fe;
+  --ion-text-color-rgb: 224, 242, 254;
+  --ion-item-background: #0f2040;
+  --ion-card-background: #0f2040;
+  --ion-toolbar-background: #0a1628;
+  --dashboard-bg: #0a1628;
+  --card-bg: #0f2040;
+  --card-border: #1e3a5f;
+  --text-primary: #e0f2fe;
+  --text-secondary: #7dd3fc;
+  --accent-green: #38bdf8;
+}
+
+/* Sunset */
+html[data-palette="sunset"]:not(.ion-palette-dark) {
+  --ion-color-primary: #f97316;
+  --ion-color-primary-rgb: 249, 115, 22;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #ea6c03;
+  --ion-color-primary-tint: #fb923c;
+  --ion-background-color: #fffbf0;
+  --ion-background-color-rgb: 255, 251, 240;
+  --ion-text-color: #7c2d12;
+  --ion-text-color-rgb: 124, 45, 18;
+  --ion-item-background: #fff7eb;
+  --ion-card-background: #fff7eb;
+  --ion-toolbar-background: #fffbf0;
+  --dashboard-bg: #fffbf0;
+  --card-bg: #fff7eb;
+  --card-border: #fed7aa;
+  --text-primary: #7c2d12;
+  --text-secondary: #c2410c;
+  --accent-green: #f97316;
+}
+
+html[data-palette="sunset"].ion-palette-dark {
+  --ion-color-primary: #fb923c;
+  --ion-color-primary-rgb: 251, 146, 60;
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-contrast-rgb: 0, 0, 0;
+  --ion-color-primary-shade: #f97316;
+  --ion-color-primary-tint: #fdba74;
+  --ion-background-color: #1c0f05;
+  --ion-background-color-rgb: 28, 15, 5;
+  --ion-text-color: #fed7aa;
+  --ion-text-color-rgb: 254, 215, 170;
+  --ion-item-background: #2a1610;
+  --ion-card-background: #2a1610;
+  --ion-toolbar-background: #1c0f05;
+  --dashboard-bg: #1c0f05;
+  --card-bg: #2a1610;
+  --card-border: #4a2510;
+  --text-primary: #fed7aa;
+  --text-secondary: #fdba74;
+  --accent-green: #fb923c;
+}
+
+/* Forest */
+html[data-palette="forest"]:not(.ion-palette-dark) {
+  --ion-color-primary: #16a34a;
+  --ion-color-primary-rgb: 22, 163, 74;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #0d7a34;
+  --ion-color-primary-tint: #4ade80;
+  --ion-background-color: #f0fdf4;
+  --ion-background-color-rgb: 240, 253, 244;
+  --ion-text-color: #14532d;
+  --ion-text-color-rgb: 20, 83, 45;
+  --ion-item-background: #dcfce7;
+  --ion-card-background: #dcfce7;
+  --ion-toolbar-background: #f0fdf4;
+  --dashboard-bg: #f0fdf4;
+  --card-bg: #dcfce7;
+  --card-border: #bbf7d0;
+  --text-primary: #14532d;
+  --text-secondary: #15803d;
+  --accent-green: #16a34a;
+}
+
+html[data-palette="forest"].ion-palette-dark {
+  --ion-color-primary: #4ade80;
+  --ion-color-primary-rgb: 74, 222, 128;
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-contrast-rgb: 0, 0, 0;
+  --ion-color-primary-shade: #16a34a;
+  --ion-color-primary-tint: #86efac;
+  --ion-background-color: #052e16;
+  --ion-background-color-rgb: 5, 46, 22;
+  --ion-text-color: #dcfce7;
+  --ion-text-color-rgb: 220, 252, 231;
+  --ion-item-background: #0a3d20;
+  --ion-card-background: #0a3d20;
+  --ion-toolbar-background: #052e16;
+  --dashboard-bg: #052e16;
+  --card-bg: #0a3d20;
+  --card-border: #1a5c33;
+  --text-primary: #dcfce7;
+  --text-secondary: #86efac;
+  --accent-green: #4ade80;
+}
+
+/* Amethyst */
+html[data-palette="amethyst"]:not(.ion-palette-dark) {
+  --ion-color-primary: #7c3aed;
+  --ion-color-primary-rgb: 124, 58, 237;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #6d28d9;
+  --ion-color-primary-tint: #a78bfa;
+  --ion-background-color: #faf5ff;
+  --ion-background-color-rgb: 250, 245, 255;
+  --ion-text-color: #4c1d95;
+  --ion-text-color-rgb: 76, 29, 149;
+  --ion-item-background: #f3e8ff;
+  --ion-card-background: #f3e8ff;
+  --ion-toolbar-background: #faf5ff;
+  --dashboard-bg: #faf5ff;
+  --card-bg: #f3e8ff;
+  --card-border: #ddd6fe;
+  --text-primary: #4c1d95;
+  --text-secondary: #6d28d9;
+  --accent-green: #7c3aed;
+}
+
+html[data-palette="amethyst"].ion-palette-dark {
+  --ion-color-primary: #a78bfa;
+  --ion-color-primary-rgb: 167, 139, 250;
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-contrast-rgb: 0, 0, 0;
+  --ion-color-primary-shade: #7c3aed;
+  --ion-color-primary-tint: #c4b5fd;
+  --ion-background-color: #1e0a3c;
+  --ion-background-color-rgb: 30, 10, 60;
+  --ion-text-color: #f3e8ff;
+  --ion-text-color-rgb: 243, 232, 255;
+  --ion-item-background: #2d1156;
+  --ion-card-background: #2d1156;
+  --ion-toolbar-background: #1e0a3c;
+  --dashboard-bg: #1e0a3c;
+  --card-bg: #2d1156;
+  --card-border: #4a1a8c;
+  --text-primary: #f3e8ff;
+  --text-secondary: #c4b5fd;
+  --accent-green: #a78bfa;
+}
+
+/* Rose */
+html[data-palette="rose"]:not(.ion-palette-dark) {
+  --ion-color-primary: #e11d48;
+  --ion-color-primary-rgb: 225, 29, 72;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #be123c;
+  --ion-color-primary-tint: #fb7185;
+  --ion-background-color: #fff5f7;
+  --ion-background-color-rgb: 255, 245, 247;
+  --ion-text-color: #881337;
+  --ion-text-color-rgb: 136, 19, 55;
+  --ion-item-background: #ffe4e8;
+  --ion-card-background: #ffe4e8;
+  --ion-toolbar-background: #fff5f7;
+  --dashboard-bg: #fff5f7;
+  --card-bg: #ffe4e8;
+  --card-border: #fecdd3;
+  --text-primary: #881337;
+  --text-secondary: #be123c;
+  --accent-green: #e11d48;
+}
+
+html[data-palette="rose"].ion-palette-dark {
+  --ion-color-primary: #fb7185;
+  --ion-color-primary-rgb: 251, 113, 133;
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-contrast-rgb: 0, 0, 0;
+  --ion-color-primary-shade: #e11d48;
+  --ion-color-primary-tint: #fda4af;
+  --ion-background-color: #1a0a0d;
+  --ion-background-color-rgb: 26, 10, 13;
+  --ion-text-color: #ffe4e8;
+  --ion-text-color-rgb: 255, 228, 232;
+  --ion-item-background: #2a0f15;
+  --ion-card-background: #2a0f15;
+  --ion-toolbar-background: #1a0a0d;
+  --dashboard-bg: #1a0a0d;
+  --card-bg: #2a0f15;
+  --card-border: #5c1422;
+  --text-primary: #ffe4e8;
+  --text-secondary: #fda4af;
+  --accent-green: #fb7185;
+}
+
 /* ── Global Font ───────────────────────────────────────── */
 * {
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace;
@@ -318,6 +545,13 @@ ion-content {
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.3px;
+}
+
+.tx-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .section-title {

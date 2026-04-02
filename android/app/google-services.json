@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "734353150517",
+    "project_id": "project-salapi",
+    "storage_bucket": "project-salapi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:734353150517:android:588896c0419a4bd17f177c",
+        "android_client_info": {
+          "package_name": "com.salapi.tracker"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "734353150517-iff3l68lgf0rj1t7fl821ebhk9nfcq52.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.salapi.tracker",
+            "certificate_hash": "516f065c76ce70673f24e09f9e7f3c2fbd16210f"
+          }
+        },
+        {
+          "client_id": "734353150517-hbnfcdkvqrin01b5e1m9sjbm2i1q79na.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLgpjOxSbIhU_CIc7aNy0OZ4RYTdDCrt4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "734353150517-hbnfcdkvqrin01b5e1m9sjbm2i1q79na.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

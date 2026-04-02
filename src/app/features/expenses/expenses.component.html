@@ -110,6 +110,9 @@
                 @if (e.status === 'paid' && getExpenseIncomeSources(e.id)) {
                   <p class="paid-source-label">Paid from: {{ getExpenseIncomeSources(e.id) }}</p>
                 }
+                @if (e.status === 'paid' && e.paidAt) {
+                  <p class="paid-date-label">Paid {{ e.paidAt | date:'MMM d, y' }}</p>
+                }
               </ion-label>
               <ion-note slot="end" [color]="badgeColor(e.status)">
                 {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
@@ -201,6 +204,11 @@
         <ion-item>
           <ion-textarea label="Notes" [(ngModel)]="form.notes" placeholder="Optional notes" />
         </ion-item>
+        @if (editingExpense && editingExpense.status === 'paid') {
+          <ion-item>
+            <ion-input label="Paid Date" type="date" [(ngModel)]="paidAtForm" />
+          </ion-item>
+        }
         <ion-button expand="block" class="ion-margin-top" (click)="save()"
           [disabled]="!form.category || !form.amount || !form.date">
           {{ editingExpense ? 'Update Expense' : 'Save Expense' }}

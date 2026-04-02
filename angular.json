@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "zero-wallet-tracker": {
+    "salapi": {
       "projectType": "application",
       "schematics": {},
       "root": "",
@@ -59,10 +59,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "zero-wallet-tracker:build:production"
+              "buildTarget": "salapi:build:production"
             },
             "development": {
-              "buildTarget": "zero-wallet-tracker:build:development"
+              "buildTarget": "salapi:build:development"
             }
           },
           "defaultConfiguration": "development"

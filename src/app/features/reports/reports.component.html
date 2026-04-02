@@ -29,6 +29,7 @@
     <ion-segment-button value="comparison"><ion-label>Comparison</ion-label></ion-segment-button>
     <ion-segment-button value="cash-flow"><ion-label>Cash Flow</ion-label></ion-segment-button>
     <ion-segment-button value="installments"><ion-label>Installments</ion-label></ion-segment-button>
+    <ion-segment-button value="recurring"><ion-label>Recurring</ion-label></ion-segment-button>
     <ion-segment-button value="pay-methods"><ion-label>By Method</ion-label></ion-segment-button>
     <ion-segment-button value="cards"><ion-label>Cards</ion-label></ion-segment-button>
   </ion-segment>
@@ -159,6 +160,16 @@
       <div class="summary-card">
         <div class="summary-card-label">Avg / Day</div>
         <div class="summary-card-value">{{ avgPerDay | currency:currencyCode:'symbol':'1.2-2' }}</div>
+      </div>
+    </div>
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="summary-card-label">Recurring</div>
+        <div class="summary-card-value">{{ recurringTotal | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Recurring %</div>
+        <div class="summary-card-value">{{ totalForMonth > 0 ? (recurringTotal / totalForMonth * 100 | number:'1.0-0') : 0 }}%</div>
       </div>
     </div>
 
@@ -311,11 +322,16 @@
     @for (inst of installmentOverview; track inst.id) {
       <div class="report-card">
         <div class="report-card-header">
-          <span class="report-card-title">{{ inst.transaction }}</span>
-          <span class="report-card-sub">{{ inst.cardName }} · {{ inst.monthlyAmount | currency:currencyCode:'symbol':'1.0-0' }}/mo</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="report-card-title">{{ inst.transaction }}</span>
+            <ion-badge [color]="inst.frequency === 'weekly' ? 'tertiary' : 'primary'">
+              {{ inst.frequency === 'weekly' ? 'Weekly' : 'Monthly' }}
+            </ion-badge>
+          </div>
+          <span class="report-card-sub">{{ inst.cardName }} · {{ inst.monthlyAmount | currency:currencyCode:'symbol':'1.0-0' }}{{ inst.frequency === 'weekly' ? '/wk' : '/mo' }}</span>
         </div>
         <div class="report-progress-row">
-          <span>{{ inst.paidCount }} / {{ inst.months }} months ({{ (inst.progress * 100) | number:'1.0-0' }}%)</span>
+          <span>{{ inst.paidCount }} / {{ inst.months }} {{ inst.frequency === 'weekly' ? 'weeks' : 'months' }} ({{ (inst.progress * 100) | number:'1.0-0' }}%)</span>
           <span>{{ inst.paidAmount | currency:currencyCode:'symbol':'1.0-0' }} / {{ inst.totalCost | currency:currencyCode:'symbol':'1.0-0' }}</span>
         </div>
         <ion-progress-bar [value]="inst.progress" color="success"></ion-progress-bar>
@@ -330,6 +346,58 @@
           </div>
         }
       </div>
+    }
+  }
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- RECURRING TAB                                               -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  @if (activeSegment === 'recurring') {
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="summary-card-label">Recurring Total</div>
+        <div class="summary-card-value">{{ recurringTotal | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-card-label">Count</div>
+        <div class="summary-card-value">{{ recurringCount }}</div>
+      </div>
+    </div>
+
+    @if (!recurringExpensesList.length) {
+      <div class="empty-state">
+        <ion-icon name="repeat-outline" style="font-size:2rem; color:var(--ion-color-medium);"></ion-icon>
+        <p>No recurring expenses for this month</p>
+      </div>
+    } @else {
+      @if (recurringByCategory.length) {
+        <div class="chart-legend" style="margin-bottom:12px;">
+          @for (c of recurringByCategory; track c.category) {
+            <span class="legend-item">
+              <span class="legend-dot" [style.background]="c.color"></span>
+              {{ c.category }}: {{ c.amount | currency:currencyCode:'symbol':'1.0-0' }}
+              ({{ recurringTotal > 0 ? (c.amount / recurringTotal * 100 | number:'1.0-0') : 0 }}%)
+            </span>
+          }
+        </div>
+      }
+      <ion-list>
+        @for (e of recurringExpensesList; track e.id) {
+          <ion-item>
+            <span slot="start" class="legend-dot" [style.background]="categoryService.getColor(e.category)" style="width:10px;height:10px;border-radius:50%;display:inline-block;"></span>
+            <ion-label>
+              <h3>{{ e.name || e.category }}</h3>
+              <p>{{ e.category }} · {{ e.date | date:'MMM d' }}</p>
+            </ion-label>
+            <div slot="end" style="text-align:right;">
+              <div style="font-weight:600;">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+              <ion-badge [color]="e.status === 'paid' ? 'success' : e.status === 'overdue' ? 'danger' : 'warning'">
+                {{ e.status }}
+              </ion-badge>
+            </div>
+          </ion-item>
+        }
+      </ion-list>
     }
   }
 

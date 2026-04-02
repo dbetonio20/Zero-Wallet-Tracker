@@ -72,6 +72,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   payingExpense: Expense | null = null;
   editingExpense: Expense | null = null;
   editingCategory: Category | null = null;
+  paidAtForm = '';
 
   // ── Filters ──────────────────────────────────────────────────────────
   searchText$ = new BehaviorSubject<string>('');
@@ -204,10 +205,11 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   openEditExpense(expense: Expense): void {
     this.editingExpense = expense;
     this.form = { ...expense };
+    this.paidAtForm = expense.paidAt ?? '';
     this.isModalOpen = true;
   }
 
-  closeModal(): void { this.isModalOpen = false; this.editingExpense = null; }
+  closeModal(): void { this.isModalOpen = false; this.editingExpense = null; this.paidAtForm = ''; }
 
   async save(): Promise<void> {
     if (!this.form.category || !this.form.amount || !this.form.date) return;
@@ -223,7 +225,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       recurring: this.form.recurring ?? false,
     };
     if (this.editingExpense) {
-      await this.engine.updateExpense({ ...this.editingExpense, ...base });
+      const paidAt = this.editingExpense.status === 'paid'
+        ? (this.paidAtForm || this.editingExpense.paidAt)
+        : this.editingExpense.paidAt;
+      await this.engine.updateExpense({ ...this.editingExpense, ...base, paidAt });
     } else {
       await this.engine.addExpense({ ...base, status: 'pending' });
     }
@@ -237,7 +242,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   async markUnpaid(e: Expense): Promise<void> {
     await this.engine.removeAllocationsForExpense(e.id);
-    await this.engine.updateExpense({ ...e, status: 'pending' });
+    await this.engine.updateExpense({ ...e, status: 'pending', paidAt: undefined });
   }
 
   closePayModal(): void { this.isPayModalOpen = false; this.payingExpense = null; }
@@ -245,7 +250,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   async onPayResult(result: PayModalResult): Promise<void> {
     if (!this.payingExpense) return;
     if (result.withoutIncome) {
-      await this.engine.updateExpense({ ...this.payingExpense, status: 'paid' });
+      await this.engine.updateExpense({ ...this.payingExpense, status: 'paid', paidAt: new Date().toISOString().split('T')[0] });
     } else {
       await this.engine.payExpenseWithIncomes(this.payingExpense, result.allocations);
     }

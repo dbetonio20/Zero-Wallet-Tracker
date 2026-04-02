@@ -1,0 +1,37 @@
+<ion-content [fullscreen]="true" class="login-content">
+  <div class="login-wrapper">
+    <div class="login-brand">
+      <div class="brand-glyph">◐</div>
+      <h1 class="brand-name">salapi</h1>
+      <p class="brand-tagline">Zero-based budgeting, simplified.</p>
+    </div>
+
+    <div class="login-actions">
+      <ion-button
+        expand="block"
+        class="google-btn"
+        [disabled]="loading()"
+        (click)="signInWithGoogle()"
+      >
+        <ion-spinner *ngIf="loading()" name="crescent" slot="start"></ion-spinner>
+        <ion-icon *ngIf="!loading()" name="logo-google" slot="start"></ion-icon>
+        <span>{{ loading() ? 'Signing in…' : 'Continue with Google' }}</span>
+      </ion-button>
+
+      <ion-button
+        expand="block"
+        fill="clear"
+        class="guest-btn"
+        [disabled]="loading()"
+        (click)="continueAsGuest()"
+      >
+        Use without account
+      </ion-button>
+    </div>
+
+    <p class="login-disclaimer">
+      Sign in to back up and sync your data across devices. Without an account,
+      data is stored on this device only.
+    </p>
+  </div>
+</ion-content>

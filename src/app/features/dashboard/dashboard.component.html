@@ -19,8 +19,8 @@
   <!-- Hero Balance Section -->
   <div class="hero-section">
     <div class="hero-label">Total Balance</div>
-    <div class="hero-amount" [class.negative]="vm.summary.balance < 0" [class.positive]="vm.summary.balance >= 0">
-      {{ vm.summary.balance | currency:currencyCode:'symbol':'1.0-0' }}
+    <div class="hero-amount" [class.negative]="vm.summary.totalObligations > vm.summary.totalIncome" [class.positive]="vm.summary.totalObligations <= vm.summary.totalIncome">
+      {{ vm.summary.totalObligations | currency:currencyCode:'symbol':'1.0-0' }}
     </div>
     <div class="hero-warnings">
       @if (vm.summary.balance < 0) {
@@ -55,16 +55,18 @@
           <span class="hero-stat-value expense-value">{{ (vm.summary.paidExpenses + vm.summary.paidInstallments) | currency:currencyCode:'symbol':'1.0-0' }}</span>
         </div>
       </div>
-      <div class="hero-stat-divider"></div>
-      <div class="hero-stat">
-        <div class="hero-stat-icon pending-icon">
-          <ion-icon name="time-outline"></ion-icon>
+      @if (vm.recurringTotal > 0) {
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat" (click)="openRecurringModal()" style="cursor:pointer;">
+          <div class="hero-stat-icon pending-icon">
+            <ion-icon name="repeat-outline"></ion-icon>
+          </div>
+          <div class="hero-stat-info">
+            <span class="hero-stat-label">Recurring</span>
+            <span class="hero-stat-value pending-value">{{ vm.recurringTotal | currency:currencyCode:'symbol':'1.0-0' }}</span>
+          </div>
         </div>
-        <div class="hero-stat-info">
-          <span class="hero-stat-label">Pending</span>
-          <span class="hero-stat-value pending-value">{{ vm.summary.totalObligations | currency:currencyCode:'symbol':'1.0-0' }}</span>
-        </div>
-      </div>
+      }
     </div>
   </div>
 
@@ -294,9 +296,17 @@
         <span class="section-dot dot-warning"></span> Transactions
         <span class="section-month-label">{{ MONTHS[viewMonth] }} {{ viewYear }}</span>
       </div>
-      <ion-badge [color]="vm.unpaidTransactions.length ? 'danger' : 'medium'">
-        {{ vm.unpaidTransactions.length }} unpaid
-      </ion-badge>
+      <div class="tx-header-right">
+        <ion-badge [color]="vm.unpaidTransactions.length ? 'danger' : 'medium'">
+          {{ vm.unpaidTransactions.length }} unpaid
+        </ion-badge>
+        @if (vm.paidTransactions.length) {
+          <button class="sort-pill" [class.active]="showPaidTx" (click)="showPaidTx = !showPaidTx">
+            <ion-icon name="checkmark-circle-outline" class="pill-icon"></ion-icon>
+            {{ vm.paidTransactions.length }} paid
+          </button>
+        }
+      </div>
     </div>
 
     @if (!vm.unpaidTransactions.length && !vm.paidTransactions.length) {
@@ -420,7 +430,7 @@
       }
 
       <!-- Paid sub-list -->
-      @if (vm.paidTransactions.length) {
+      @if ((showPaidTx || !vm.unpaidTransactions.length) && vm.paidTransactions.length) {
         <div class="paid-transactions-section">
           <div class="paid-section-label">
             <ion-icon name="checkmark-circle-outline"></ion-icon>
@@ -440,6 +450,9 @@
                       <span class="tx-status-badge badge-paid">Paid</span>
                     </div>
                     <div class="transaction-date">{{ t.item.date | date:'MMM d, y' }} · {{ t.item.paymentMethod }}</div>
+                    @if (t.item.paidAt) {
+                      <div class="paid-date-label">Paid {{ t.item.paidAt | date:'MMM d, y' }}</div>
+                    }
                   </div>
                   <div class="transaction-amount paid-text">{{ t.item.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
                 </div>
@@ -456,6 +469,9 @@
                       <span class="tx-status-badge badge-paid">Paid</span>
                     </div>
                     <div class="transaction-date">Due: {{ t.item.dueDate | date:'MMM d, y' }}</div>
+                    @if (t.item.paidAt) {
+                      <div class="paid-date-label">Paid {{ t.item.paidAt | date:'MMM d, y' }}</div>
+                    }
                   </div>
                   <div class="transaction-amount paid-text">{{ t.item.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
                 </div>
@@ -495,7 +511,7 @@
               <ion-label>
                 <div class="income-label-row">
                   <div>
-                    <div class="transaction-name">{{ i.source }}</div>
+                    <div class="transaction-name">{{ i.name || i.source }}</div>
                     <div class="transaction-date">{{ i.date | date:'MMM d, y' }}@if (i.recurring) {<span class="recurring-badge">Recurring</span>}</div>
                     <div class="income-usage-inline">
                       <div class="income-usage-bar-mini">
@@ -540,6 +556,9 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding modal-content">
+        <ion-item class="form-item">
+          <ion-input label="Name" [(ngModel)]="incomeForm.name" placeholder="e.g. March Salary" />
+        </ion-item>
         <ion-item class="form-item">
           <ion-select label="Source" [(ngModel)]="incomeForm.source" placeholder="Select source" interface="action-sheet">
             @for (s of incomeSources; track s) {
@@ -603,8 +622,8 @@
                   }
                 </div>
                 <div class="pay-income-details">
-                  <div class="pay-income-source">{{ inc.source }}</div>
-                  <div class="pay-income-meta">{{ inc.date | date:'MMM d, y' }}</div>
+                  <div class="pay-income-source">{{ inc.name || inc.source }}</div>
+                  <div class="pay-income-meta">{{ inc.name ? inc.source + ' · ' : '' }}{{ inc.date | date:'MMM d, y' }}</div>
                   <div class="income-usage-bar-mini">
                     <div class="income-usage-fill" [style.width.%]="inc.usagePercent"></div>
                   </div>
@@ -789,6 +808,75 @@
           (click)="confirmAllocPlan()">
           {{ allocPlannerInProgress ? 'Allocating...' : 'Mark Selected as Paid' }}
         </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Recurring & Pending Expenses Modal -->
+  <ion-modal [isOpen]="isRecurringListOpen" (didDismiss)="closeRecurringModal()" [breakpoints]="[0, 0.85]" [initialBreakpoint]="0.85">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Recurring & Pending</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeRecurringModal()">
+              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        @if (vm$ | async; as vm) {
+          <!-- Recurring Expenses -->
+          <div class="section-title" style="font-weight:600; margin-bottom:8px; color:var(--ion-color-primary);">
+            <ion-icon name="repeat-outline" style="vertical-align:middle; margin-right:4px;"></ion-icon>
+            Recurring Expenses ({{ vm.recurringExpenses.length }})
+          </div>
+          @if (!vm.recurringExpenses.length) {
+            <p style="color:var(--ion-color-medium); font-size:0.85rem; margin-bottom:16px;">No recurring expenses this month.</p>
+          } @else {
+            <ion-list>
+              @for (e of vm.recurringExpenses; track e.id) {
+                <ion-item>
+                  <ion-label>
+                    <h3>{{ e.name || e.category }}</h3>
+                    <p>{{ e.category }} · {{ e.date | date:'MMM d' }}</p>
+                  </ion-label>
+                  <div slot="end" style="text-align:right;">
+                    <div style="font-weight:600;">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                    <ion-badge [color]="e.status === 'paid' ? 'success' : e.status === 'overdue' ? 'danger' : 'warning'">
+                      {{ e.status }}
+                    </ion-badge>
+                  </div>
+                </ion-item>
+              }
+            </ion-list>
+          }
+          <!-- Pending Expenses -->
+          <div class="section-title" style="font-weight:600; margin:16px 0 8px; color:var(--ion-color-warning);">
+            <ion-icon name="time-outline" style="vertical-align:middle; margin-right:4px;"></ion-icon>
+            Pending Expenses ({{ vm.pendingExpenses.length }})
+          </div>
+          @if (!vm.pendingExpenses.length) {
+            <p style="color:var(--ion-color-medium); font-size:0.85rem;">No pending expenses this month.</p>
+          } @else {
+            <ion-list>
+              @for (e of vm.pendingExpenses; track e.id) {
+                <ion-item>
+                  <ion-label>
+                    <h3>{{ e.name || e.category }}</h3>
+                    <p>{{ e.category }} · {{ e.date | date:'MMM d' }}</p>
+                  </ion-label>
+                  <div slot="end" style="text-align:right;">
+                    <div style="font-weight:600;">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                    <ion-badge [color]="e.status === 'overdue' ? 'danger' : 'medium'">{{ e.status }}</ion-badge>
+                  </div>
+                </ion-item>
+              }
+            </ion-list>
+          }
+          <div style="height:24px;"></div>
+        }
       </ion-content>
     </ng-template>
   </ion-modal>

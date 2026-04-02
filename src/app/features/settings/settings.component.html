@@ -10,7 +10,7 @@
   <!-- Brand Header -->
   <div class="brand-header">
     <div class="brand-icon">◐</div>
-    <div class="brand-name">zero</div>
+    <div class="brand-name">salapi</div>
   </div>
 
   <!-- Appearance & Personalization -->
@@ -18,10 +18,36 @@
   <div class="settings-group">
     <ion-item button (click)="changeTheme()" [detail]="false">
       <ion-label>
-        <h3>Choose Theme</h3>
+        <h3>Mode</h3>
       </ion-label>
       <span slot="end" class="settings-value">{{ theme }}</span>
     </ion-item>
+  </div>
+
+  <div class="section-header">Color Theme</div>
+  <div class="settings-group palette-section">
+    <div class="palette-grid">
+      <div
+        *ngFor="let p of PALETTES"
+        class="palette-card"
+        [class.palette-selected]="colorPalette === p.id"
+        (click)="selectPalette(p.id)"
+      >
+        <div class="palette-preview">
+          <div class="preview-half" [ngStyle]="{'background': p.lightBg}">
+            <div class="preview-dot" [ngStyle]="{'background': p.accent}"></div>
+          </div>
+          <div class="preview-half" [ngStyle]="{'background': p.darkBg}">
+            <div class="preview-dot" [ngStyle]="{'background': p.darkAccent}"></div>
+          </div>
+        </div>
+        <div class="palette-name">{{ p.name }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-header" style="margin-top: 4px;">Profile & Currency</div>
+  <div class="settings-group">
     <ion-item button (click)="changeName()" [detail]="false">
       <ion-label>
         <h3>Change Name</h3>
@@ -54,13 +80,13 @@
     <ion-item button (click)="deleteAllData()" [detail]="false">
       <ion-label>
         <h3>Delete all data</h3>
-        <p>All data associated with zero will be deleted</p>
+        <p>All data associated with Salapi will be deleted</p>
       </ion-label>
     </ion-item>
   </div>
 
   <!-- Help & Feedback -->
-  <div class="section-header">Help & Feedback</div>
+  <!-- <div class="section-header">Help & Feedback</div>
   <div class="settings-group">
     <ion-item [detail]="false">
       <ion-label>
@@ -84,6 +110,38 @@
       <ion-label>
         <h3>Version</h3>
         <p>v1.0</p>
+      </ion-label>
+    </ion-item>
+  </div> -->
+
+  <!-- Account -->
+  <div class="section-header">Account</div>
+
+  <div *ngIf="!isLoggedIn()" class="settings-group sync-notice">
+    <div class="sync-notice-content">
+      <div class="sync-notice-icon">☁</div>
+      <div class="sync-notice-text">
+        <strong>Cloud sync is off</strong>
+        <span>Sign in with Google to automatically back up and sync your data across devices.</span>
+      </div>
+    </div>
+    <ion-item button (click)="signIn()" [detail]="false">
+      <ion-label color="primary">
+        <h3>Sign In with Google</h3>
+        <p>Enable backup &amp; sync</p>
+      </ion-label>
+    </ion-item>
+  </div>
+
+  <div *ngIf="isLoggedIn()" class="settings-group">
+    <div *ngIf="syncError()" class="sync-error-banner">
+      <span class="sync-error-icon">⚠</span>
+      <span class="sync-error-text">Sync issue: {{ syncError() }}</span>
+    </div>
+    <ion-item button (click)="signOut()" [detail]="false">
+      <ion-label color="danger">
+        <h3>Sign Out</h3>
+        <p>Data will be cleared. You can back up first.</p>
       </ion-label>
     </ion-item>
   </div>
