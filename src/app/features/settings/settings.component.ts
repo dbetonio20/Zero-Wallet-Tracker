@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { NgFor, NgIf, NgStyle } from '@angular/common';
+import { DatePipe, NgFor, NgIf, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonContent, IonItem, IonLabel,
@@ -12,9 +12,6 @@ import { AuthService } from '../../core/services/auth.service';
 import { SyncService } from '../../core/services/sync.service';
 import { GUEST_MODE_KEY } from '../../core/guards/auth.guard';
 import { Router } from '@angular/router';
-import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { Share } from '@capacitor/share';
 
 const PALETTES = [
   { id: 'default',   name: 'Emerald',   lightBg: '#ffffff', accent: '#2dd36f', darkBg: '#121212', darkAccent: '#2dd36f' },
@@ -29,7 +26,7 @@ const PALETTES = [
   selector: 'app-settings',
   standalone: true,
   imports: [
-    FormsModule, NgFor, NgIf, NgStyle,
+    FormsModule, NgFor, NgIf, NgStyle, DatePipe,
     IonHeader, IonToolbar, IonContent, IonItem, IonLabel,
     IonButtons, IonBackButton,
   ],
@@ -134,6 +131,8 @@ export class SettingsComponent implements OnInit {
   currencyCode = 'PHP';
   isLoggedIn!: () => boolean;
   syncError!: () => string | null;
+  lastCompactionAt!: () => string | null;
+  syncWarningCount!: () => number;
 
   constructor(
     private prefs: PreferencesService,
@@ -145,6 +144,8 @@ export class SettingsComponent implements OnInit {
   ) {
     this.isLoggedIn = this.authService.isLoggedIn;
     this.syncError = this.syncService.syncError;
+    this.lastCompactionAt = this.syncService.lastCompactionAt;
+    this.syncWarningCount = () => this.syncService.syncWarnings().length;
   }
 
   async ngOnInit(): Promise<void> {
@@ -249,17 +250,42 @@ export class SettingsComponent implements OnInit {
           JSON.parse(json); // validate before importing
           const confirm = await this.alertCtrl.create({
             header: 'Import Data',
-            message: 'This will overwrite all existing data with the backup. Continue?',
+            message: 'This will merge imported data with your current records. Newer records win, invalid records are blocked in strict mode, and nothing is silently erased. Continue?',
             buttons: [
               { text: 'Cancel', role: 'cancel' },
               {
                 text: 'Import',
                 handler: async () => {
-                  await this.prefs.importAllData(json);
-                  // Shut down the native AI plugin cleanly before reload to
-                  // prevent MediaPipe double-init crash on next session.
-                  await this.ai.shutdown();
-                  window.location.reload();
+                  try {
+                    const report = await this.prefs.importAllData(json);
+                    const summary = await this.alertCtrl.create({
+                      header: 'Import Complete',
+                      message: `${report.importedCount} records processed, ${report.updatedCount} merged, ${report.warnings.length} warnings. Reload now to refresh the app state?`,
+                      buttons: [
+                        { text: 'Later', role: 'cancel' },
+                        {
+                          text: 'Reload',
+                          handler: async () => {
+                            // Shut down the native AI plugin cleanly before reload to
+                            // prevent MediaPipe double-init crash on next session.
+                            await this.ai.shutdown();
+                            window.location.reload();
+                          },
+                        },
+                      ],
+                    });
+                    await summary.present();
+                  } catch (err) {
+                    const message = err instanceof Error
+                      ? err.message
+                      : 'Import was blocked by strict validation rules.';
+                    const blocked = await this.alertCtrl.create({
+                      header: 'Import Blocked',
+                      message,
+                      buttons: ['OK'],
+                    });
+                    await blocked.present();
+                  }
                 },
               },
             ],
@@ -268,7 +294,7 @@ export class SettingsComponent implements OnInit {
         } catch {
           const alert = await this.alertCtrl.create({
             header: 'Invalid File',
-            message: 'The selected file is not a valid Salapi backup.',
+            message: 'The selected file could not be imported safely.',
             buttons: ['OK'],
           });
           await alert.present();
@@ -277,43 +303,6 @@ export class SettingsComponent implements OnInit {
       reader.readAsText(file);
     };
     input.click();
-  }
-
-  async downloadData(): Promise<void> {
-    const data = await this.prefs.exportAllData();
-
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const fileName = `salapi-backup-${Date.now()}.json`;
-        const result = await Filesystem.writeFile({
-          path: fileName,
-          data,
-          directory: Directory.Cache,
-          encoding: Encoding.UTF8,
-        });
-        await Share.share({
-          title: 'Salapi Backup',
-          text: 'Your Salapi data export.',
-          url: result.uri,
-          dialogTitle: 'Save or share your backup',
-        });
-      } catch (e) {
-        const alert = await this.alertCtrl.create({
-          header: 'Export Failed',
-          message: 'Could not export your data. Please try again.',
-          buttons: ['OK'],
-        });
-        await alert.present();
-      }
-    } else {
-      const blob = new Blob([data], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'salapi-backup.json';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
   }
 
   private applyTheme(theme: string): void {
@@ -368,45 +357,17 @@ export class SettingsComponent implements OnInit {
   async signOut(): Promise<void> {
     const confirmAlert = await this.alertCtrl.create({
       header: 'Sign Out',
-      message: 'Are you sure you want to sign out?',
+      message: 'Are you sure you want to sign out? Local data on this device will be cleared.',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
           text: 'Sign Out',
           role: 'destructive',
-          handler: () => this._showBackupPrompt(),
+          handler: () => this._doSignOut(),
         },
       ],
     });
     await confirmAlert.present();
-  }
-
-  private async _showBackupPrompt(): Promise<void> {
-    const backupAlert = await this.alertCtrl.create({
-      header: 'Back up first?',
-      message:
-        'Your financial data and preferences will be cleared. Download a backup before signing out?',
-      backdropDismiss: false,
-      buttons: [
-        {
-          text: 'Cancel',
-          role: 'cancel',
-        },
-        {
-          text: 'Sign Out Without Backup',
-          role: 'destructive',
-          handler: () => this._doSignOut(),
-        },
-        {
-          text: 'Back Up & Sign Out',
-          handler: async () => {
-            await this.downloadData();
-            await this._doSignOut();
-          },
-        },
-      ],
-    });
-    await backupAlert.present();
   }
 
   private async _doSignOut(): Promise<void> {

@@ -5,11 +5,16 @@ import { Storage } from '@ionic/storage-angular';
 
 import { routes } from './app.routes';
 import { AuthService } from './core/services/auth.service';
-// SyncService is eagerly instantiated here so it registers its storage callback
-// before any component writes data.
 import { SyncService } from './core/services/sync.service';
 
-function initAuth(authService: AuthService): () => Promise<void> {
+/**
+ * APP_INITIALIZER factory that:
+ * 1. Constructs SyncService eagerly so its storage callback is registered
+ *    before any component writes data.
+ * 2. Waits for Firebase to restore the persisted auth session before any
+ *    route guard evaluates.
+ */
+function initApp(authService: AuthService, _syncService: SyncService): () => Promise<void> {
   return () => authService.init();
 }
 
@@ -22,11 +27,9 @@ export const appConfig: ApplicationConfig = {
     Storage,
     {
       provide: APP_INITIALIZER,
-      useFactory: initAuth,
-      deps: [AuthService],
+      useFactory: initApp,
+      deps: [AuthService, SyncService],
       multi: true,
     },
-    // Eagerly instantiate SyncService so it registers its storage callback early.
-    { provide: SyncService, useClass: SyncService },
   ]
 };

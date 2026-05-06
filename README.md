@@ -2,6 +2,16 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.7.
 
+## Documentation
+
+Project documentation is organized under [docs/README.md](docs/README.md).
+
+Key references:
+
+- [docs/ai/CODEBASE.md](docs/ai/CODEBASE.md)
+- [docs/ai/SKILL.md](docs/ai/SKILL.md)
+- [docs/ai/AI-PLAN.md](docs/ai/AI-PLAN.md)
+
 ## Development server
 
 To start a local development server, run:

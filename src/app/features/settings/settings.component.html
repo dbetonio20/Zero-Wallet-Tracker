@@ -65,16 +65,10 @@
   <!-- Manage your Data -->
   <div class="section-header">Manage your Data</div>
   <div class="settings-group">
-    <ion-item button (click)="downloadData()" [detail]="false">
-      <ion-label>
-        <h3>Download your data</h3>
-        <p>You can import this data in a new device</p>
-      </ion-label>
-    </ion-item>
     <ion-item button (click)="importData()" [detail]="false">
       <ion-label>
         <h3>Import your data</h3>
-        <p>Restore from a previous backup file</p>
+        <p>Merge data from a JSON file using strict safety rules</p>
       </ion-label>
     </ion-item>
     <ion-item button (click)="deleteAllData()" [detail]="false">
@@ -122,13 +116,13 @@
       <div class="sync-notice-icon">☁</div>
       <div class="sync-notice-text">
         <strong>Cloud sync is off</strong>
-        <span>Sign in with Google to automatically back up and sync your data across devices.</span>
+        <span>Sign in with Google to automatically sync your data across devices.</span>
       </div>
     </div>
     <ion-item button (click)="signIn()" [detail]="false">
       <ion-label color="primary">
         <h3>Sign In with Google</h3>
-        <p>Enable backup &amp; sync</p>
+        <p>Enable cloud sync</p>
       </ion-label>
     </ion-item>
   </div>
@@ -138,10 +132,22 @@
       <span class="sync-error-icon">⚠</span>
       <span class="sync-error-text">Sync issue: {{ syncError() }}</span>
     </div>
+    <ion-item [detail]="false">
+      <ion-label>
+        <h3>Sync diagnostics</h3>
+        <p>Warnings: {{ syncWarningCount() }}</p>
+        <p *ngIf="lastCompactionAt(); else noCompactionYet">
+          Last compaction: {{ lastCompactionAt() | date:'medium' }}
+        </p>
+        <ng-template #noCompactionYet>
+          <p>Last compaction: not run yet</p>
+        </ng-template>
+      </ion-label>
+    </ion-item>
     <ion-item button (click)="signOut()" [detail]="false">
       <ion-label color="danger">
         <h3>Sign Out</h3>
-        <p>Data will be cleared. You can back up first.</p>
+        <p>Local data on this device will be cleared.</p>
       </ion-label>
     </ion-item>
   </div>

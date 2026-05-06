@@ -1,143 +1,273 @@
+# 🚀 Zero Wallet Tracker — Engineering Guide + Angular Skill
+
+## 📌 Overview
+
+Zero Wallet Tracker is a mobile-first personal finance app built with Angular 21, Ionic 8, and Capacitor 8.
+
+The app focuses on:
+
+* Expense and income tracking
+* Installments and credit card management
+* Financial summaries and reports
+* Offline-first local persistence
+* Clean, reactive, strongly typed architecture
+* Android-first delivery via Capacitor
+
+This document serves as both:
+
+* 📘 Engineering Guide (project-specific rules)
+* 🧠 Angular Best Practices Skill (for developers and AI agents)
+
 ---
-name: angular-best-practices
-description: 'Angular developer skill for writing clean, idiomatic Angular code. Use when: creating Angular components, services, pipes, directives; reviewing Angular code; adding state with signals or observables; setting up standalone components; implementing CRUD services; writing clean code; applying Angular best practices; refactoring Angular code; using ChangeDetectionStrategy.OnPush; structuring templates with async pipe or vm$ pattern.'
-argument-hint: 'Optional: describe the feature or file you are working on'
----
 
-# Angular Best Practices — Clean Code Skill
+# 🧠 Core Engineering Principles
 
-## When to Use
+## 1. Clean Code Rules
 
-Invoke this skill whenever you are:
+Always enforce:
 
-- Creating or editing an Angular **component, service, pipe, or directive**
-- Implementing **state management** with signals or observables
-- Reviewing Angular code for correctness and idiomatic style
-- Structuring templates with the `async` pipe or `vm$` pattern
-- Adding **CRUD operations** to a service
-- Asking for "clean Angular code", "best practices", or "refactor"
+* Single responsibility per component/service
+* Strong typing (NO `any`)
+* Separation of concerns (UI vs logic vs persistence)
+* Feature-based structure
+* Immutable updates
+* Descriptive naming
 
----
+### ✅ Good
 
-## 1. Standalone Components — Mandatory Checklist
+```ts
+readonly expenses = this._expenses.asReadonly();
+readonly summary = computed(() => this.buildSummary());
+```
 
-Every component MUST:
+### ❌ Bad
 
-- [ ] Declare `standalone: true`
-- [ ] List every import explicitly in `imports: []` — no barrel re-exports, no `CommonModule`
-- [ ] Set `changeDetection: ChangeDetectionStrategy.OnPush`
-- [ ] Register all Ionicons in the **constructor** via `addIcons({})` (if using `<ion-icon>`)
-- [ ] Use `inject()` for dependency injection (not constructor parameters for non-services)
-- [ ] Clean up subscriptions with `takeUntilDestroyed(this.destroyRef)`
-
-```typescript
-import { Component, ChangeDetectionStrategy, inject, DestroyRef } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AsyncPipe, CurrencyPipe } from '@angular/common';
-
-@Component({
-  selector: 'app-my-feature',
-  standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    AsyncPipe,
-    CurrencyPipe,
-    // ...list every Ionic component used in template
-  ],
-  templateUrl: './my-feature.component.html',
-})
-export class MyFeatureComponent {
-  private readonly myService = inject(MyService);
-  private readonly destroyRef = inject(DestroyRef);
-
-  constructor() {
-    addIcons({ addOutline, trashOutline }); // register before template renders
-  }
+```ts
+getData(): any {
+  return this.data;
 }
 ```
 
 ---
 
-## 2. Signal-Based State in Services
+## 2. Architecture Pattern
 
-### Standard Pattern (3-layer exposure)
+```text
+UI (Standalone Components)
+   ↓
+Signals / Observable adapters
+   ↓
+Services (Business Logic)
+   ↓
+StorageService
+   ↓
+IndexedDB (Ionic Storage)
+```
 
-```typescript
-import { Injectable, signal, computed } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
+---
 
-@Injectable({ providedIn: 'root' })
-export class MyService {
-  // 1. Private writable — only this service mutates
-  private readonly _items = signal<Item[]>([]);
+## 3. Signal-First State Management
 
-  // 2. Public read-only — for direct reads and computed()
-  readonly items = this._items.asReadonly();
+Use:
 
-  // 3. Observable alias — for async pipe and combineLatest consumers
-  readonly items$ = toObservable(this._items);
+* `signal()` → writable state
+* `computed()` → derived state
+* `effect()` → side effects
+* `toObservable()` → interop
 
-  // Derived state — recalculates automatically when dependencies change
-  readonly total = computed(() =>
-    this._items().reduce((sum, item) => sum + item.amount, 0)
-  );
-  readonly total$ = toObservable(this.total);
-}
+### Standard Pattern
+
+```ts
+private readonly _expenses = signal<Expense[]>([]);
+
+readonly expenses = this._expenses.asReadonly();
+readonly expenses$ = toObservable(this._expenses);
+
+readonly summary = computed(() => this.calculateSummary());
+```
+
+### ❌ Never
+
+* Use `BehaviorSubject` for app state
+* Mutate arrays directly
+* Hide state inside components
+
+---
+
+# 🧩 Tech Stack
+
+| Layer           | Technology                   |
+| --------------- | ---------------------------- |
+| Framework       | Angular 21 (standalone only) |
+| UI              | Ionic 8                      |
+| Mobile          | Capacitor 8                  |
+| Storage         | Ionic Storage (IndexedDB)    |
+| Charts          | chart.js + ng2-charts        |
+| Language        | TypeScript 5.9               |
+| Testing         | Jasmine + Karma              |
+| Package Manager | Bun                          |
+
+---
+
+# 🏗️ Project Structure
+
+```text
+src/app/
+  core/
+    models/
+    services/
+    plugins/
+  features/
+    ai/
+    dashboard/
+    debts/
+    expenses/
+    reports/
+    settings/
+    tabs/
 ```
 
 ### Rules
 
-- **Do NOT use `BehaviorSubject` for new state** — use `signal()` instead
-- Use `Subject<void>` only for one-shot event buses (not state)
-- Use `effect()` only for side effects that must react to signal changes
-- Use `toSignal()` to consume Observables in signal-based contexts
+* Business logic → `core/services`
+* UI → `features/*`
+* Models → `core/models`
+* No NgModules
+* Kebab-case filenames
 
 ---
 
-## 3. CRUD Service Template
+# ⚙️ Coding Standards
 
-```typescript
-import { Injectable, signal } from '@angular/core';
-import { toObservable } from '@angular/core/rxjs-interop';
-import { StorageService } from './storage.service';
+## Type Safety
 
-const STORAGE_KEY = 'my_items';
+```ts
+interface Expense {
+  id: string;
+  amount: number;
+}
+```
 
+✔ No `any`
+✔ Explicit return types
+
+---
+
+## Services Own Logic
+
+Services handle:
+
+* state
+* calculations
+* persistence
+* domain rules
+
+Components should NEVER:
+
+* access storage directly
+* contain business logic
+
+---
+
+## Immutable Updates
+
+```ts
+this._expenses.update(curr => [...curr, expense]);
+```
+
+---
+
+## Storage Pattern
+
+```ts
+await this.storage.saveList('expenses', expenses);
+```
+
+✔ Always go through `StorageService`
+
+---
+
+# 📊 Financial Engine
+
+Central service: `FinancialEngineService`
+
+Handles:
+
+* expenses
+* incomes
+* installments
+* allocations
+* recurring logic
+* summaries
+
+### Derived State Pattern
+
+```ts
+readonly summary = computed(() => ({
+  totalIncome: this.totalIncome(),
+  totalExpenses: this.totalExpenses(),
+  balance: this.balance()
+}));
+```
+
+---
+
+# 📱 Angular Best Practices Skill
+
+## 1. Standalone Components (MANDATORY)
+
+```ts
+@Component({
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [AsyncPipe, CurrencyPipe],
+})
+export class MyComponent {
+  private readonly service = inject(MyService);
+
+  constructor() {
+    addIcons({ addOutline });
+  }
+}
+```
+
+### Checklist
+
+* [ ] standalone: true
+* [ ] OnPush
+* [ ] explicit imports[]
+* [ ] inject() usage
+* [ ] addIcons() in constructor
+
+---
+
+## 2. Signal-Based Services
+
+```ts
 @Injectable({ providedIn: 'root' })
-export class MyItemService {
-  private readonly storage = inject(StorageService);
+export class MyService {
+  private readonly _items = signal<Item[]>([]);
 
-  private readonly _items = signal<MyItem[]>([]);
   readonly items = this._items.asReadonly();
   readonly items$ = toObservable(this._items);
 
-  /** Load persisted items — call once after StorageService is ready. */
-  async load(): Promise<void> {
-    const saved = await this.storage.getList<MyItem>(STORAGE_KEY);
-    this._items.set(saved ?? []);
-  }
+  readonly total = computed(() =>
+    this._items().reduce((sum, i) => sum + i.amount, 0)
+  );
+}
+```
 
-  /** Add a new item (generates a UUID). */
-  async add(item: Omit<MyItem, 'id'>): Promise<void> {
-    const withId: MyItem = { ...item, id: crypto.randomUUID() };
-    const updated = [...this._items(), withId];
-    await this.storage.saveList(STORAGE_KEY, updated);
-    this._items.set(updated);
-  }
+---
 
-  /** Replace an existing item matched by id. */
-  async update(item: MyItem): Promise<void> {
-    const updated = this._items().map(x => (x.id === item.id ? item : x));
-    await this.storage.saveList(STORAGE_KEY, updated);
-    this._items.set(updated);
-  }
+## 3. CRUD Service Pattern
 
-  /** Remove an item by id. */
-  async delete(id: string): Promise<void> {
-    const updated = this._items().filter(x => x.id !== id);
-    await this.storage.saveList(STORAGE_KEY, updated);
-    this._items.set(updated);
-  }
+```ts
+async add(item: Omit<MyItem, 'id'>): Promise<void> {
+  const withId = { ...item, id: crypto.randomUUID() };
+  const updated = [...this._items(), withId];
+
+  await this.storage.saveList(STORAGE_KEY, updated);
+  this._items.set(updated);
 }
 ```
 
@@ -145,155 +275,161 @@ export class MyItemService {
 
 ## 4. Template Patterns
 
-### 4a. Simple Signal Read (preferred for single values)
+### Signals
 
 ```html
-<!-- In template — signals are called as functions -->
-<span>Total: {{ myService.total() }}</span>
+{{ myService.total() }}
 ```
 
-### 4b. Async Pipe with ViewModel (preferred for complex pages)
-
-```typescript
-// Component class
-readonly vm$ = combineLatest([
-  this.engine.summary$,
-  this.prefs.currencyCode$,
-]).pipe(
-  map(([summary, currencyCode]) => ({ summary, currencyCode }))
-);
-```
+### ViewModel
 
 ```html
 @if (vm$ | async; as vm) {
-  <span>{{ vm.summary.balance | currency:vm.currencyCode:'symbol':'1.0-0' }}</span>
+  {{ vm.balance | currency:vm.currencyCode }}
 }
 ```
-
-### 4c. Control-Flow (Angular 17+)
-
-Prefer new control-flow syntax over structural directives:
-
-```html
-@if (condition) { ... } @else { ... }
-@for (item of items; track item.id) { ... } @empty { <p>No items</p> }
-@switch (status) { @case ('paid') { ... } @default { ... } }
-```
-
-### 4d. Currency — always dynamic
-
-```html
-<!-- ✅ Correct — dynamic code from PreferencesService -->
-{{ amount | currency:currencyCode:'symbol':'1.0-0' }}
-
-<!-- ❌ Wrong — hardcoded symbol -->
-{{ amount | currency:'USD':'symbol':'1.0-0' }}
-```
-
-`currencyCode` must come from `PreferencesService.currencyCode` (signal) or `currencyCode$` (async pipe).
 
 ---
 
 ## 5. Naming Conventions
 
-| Item | Convention | Example |
-|---|---|---|
-| Files | `kebab-case` | `expense-list.component.ts` |
-| Components | `PascalCase` + suffix | `ExpenseListComponent` |
-| Services | `PascalCase` + `Service` | `FinancialEngineService` |
-| Private signals | `_camelCase` | `_expenses` |
-| Public signal (read-only) | `camelCase` | `expenses` |
-| Observable alias | `camelCase$` | `expenses$` |
-| Computed | `camelCase` (noun) | `total`, `summary` |
-| ViewModel interfaces | `PascalCase` + `VM` | `DashboardVM`, `IncomeVM` |
-| Storage keys | `snake_case` string const | `'credit_cards'`, `'pref_theme'` |
-| Methods | `camelCase` verb | `addExpense()`, `markAsPaid()` |
+| Type       | Example                   |
+| ---------- | ------------------------- |
+| File       | expense-list.component.ts |
+| Service    | ExpenseService            |
+| Signal     | _expenses                 |
+| Observable | expenses$                 |
+| Computed   | total                     |
 
 ---
 
 ## 6. Clean Code Rules
 
-### No `any` Types
+### ❌ No `any`
 
-```typescript
-// ❌ Bad
-function process(data: any) { ... }
+### ❌ No logic in templates
 
-// ✅ Good
-function process(data: Expense[]): FinancialSummary { ... }
-```
-
-### Extract Template Logic
-
-```typescript
-// ❌ Bad — logic in template
-// {{ items.filter(x => x.status === 'paid').length }}
-
-// ✅ Good — computed property or getter
+```ts
 readonly paidCount = computed(() =>
   this._items().filter(x => x.status === 'paid').length
 );
 ```
 
-### Single Responsibility
+---
 
-- One service = one domain entity (expenses, cards, categories…)
-- Keep components as thin orchestrators — push logic to services
-- Pure transformation functions belong in `computed()` or standalone utility functions
+# 🎨 UI Guidelines
 
-### No Magic Values
-
-```typescript
-// ❌ Bad
-if (days <= 7) { ... }
-
-// ✅ Good
-const UPCOMING_THRESHOLD_DAYS = 7;
-if (days <= UPCOMING_THRESHOLD_DAYS) { ... }
-```
-
-### Subscriptions — always clean up
-
-```typescript
-// ✅ Use takeUntilDestroyed — no manual ngOnDestroy needed
-this.someService.events$
-  .pipe(takeUntilDestroyed(this.destroyRef))
-  .subscribe(event => this.handleEvent(event));
-```
+* Ionic standalone components only
+* OnPush always
+* No direct DOM manipulation
+* Dark-mode safe styling
+* Use Ionic tokens
 
 ---
 
-## 7. Code Review Checklist
+# 📈 Reports System
 
-Before submitting or approving any Angular change:
-
-- [ ] No `NgModule` created or referenced
-- [ ] All imports in `imports[]` array are explicit (no `CommonModule`)
-- [ ] `standalone: true` on all components/directives/pipes
-- [ ] `ChangeDetectionStrategy.OnPush` set (new components)
-- [ ] No `BehaviorSubject` used for new state (use `signal()`)
-- [ ] No `any` type used
-- [ ] All subscriptions cleaned up with `takeUntilDestroyed`
-- [ ] Icons registered in constructor via `addIcons()`
-- [ ] Currency uses dynamic `currencyCode` — no hardcoded symbols
-- [ ] No logic in templates — extracted to `computed()` or methods
-- [ ] JSDoc on all public service methods
-- [ ] No single-letter variable names outside tight loops
-- [ ] `providedIn: 'root'` on services (unless feature-scoped)
+* Chart.js + ng2-charts
+* Donut charts
+* Custom legends
+* Mobile-first design
 
 ---
 
-## 8. Anti-Patterns to Avoid
+# 💳 Debt System
 
-| Anti-pattern | Fix |
-|---|---|
-| `BehaviorSubject` for state | `signal()` + `toObservable()` |
-| `NgModule` | Standalone + explicit `imports[]` |
-| Subscribing manually in component without cleanup | `takeUntilDestroyed(destroyRef)` |
-| `any` type | Proper interface / generic |
-| Logic in template expressions | `computed()` getter in class |
-| Hardcoded currency symbol | `prefs.currencyCode` signal |
-| Global icon registration | `addIcons()` in component constructor |
-| Side effects in `computed()` | Move to `effect()` or service method |
-| `combineLatest` for derived state in services | `computed()` |
-| Manual `ChangeDetectorRef.markForCheck()` everywhere | `OnPush` + `async` pipe |
+```text
+Installment → InstallmentPayment[] → Status tracking
+```
+
+✔ Ensure no duplicate schedules
+✔ Maintain correct payment states
+
+---
+
+# 🤖 AI Feature Rules
+
+* Uses native `LlmPlugin`
+* Android-first
+* Streaming uses Observables
+* Keep prompt context small
+
+---
+
+# 🧪 Testing Strategy
+
+Focus on:
+
+* financial calculations
+* recurring logic
+* overdue handling
+* allocations
+
+---
+
+# ⚠️ Non-Negotiable Rules
+
+## MUST
+
+* Signals for state
+* Standalone components
+* Lazy routes
+* Strong typing
+* Storage via service
+
+## NEVER
+
+* `any`
+* NgModules
+* direct mutation
+* storage in components
+* duplicate logic
+
+---
+
+# 🧱 Adding Features
+
+1. Add model
+2. Extend service
+3. Add persistence
+4. Build UI
+5. Add route
+6. Reuse patterns
+7. Validate
+
+---
+
+# 🔐 Data Handling
+
+* IndexedDB only
+* JSON export/import
+* Offline-first
+
+---
+
+# ✅ Code Review Checklist
+
+* [ ] No `any`
+* [ ] Signals used correctly
+* [ ] No mutation
+* [ ] Clean separation of concerns
+* [ ] Storage via service
+* [ ] OnPush components
+* [ ] Icons registered
+* [ ] Currency dynamic
+* [ ] No template logic
+
+---
+
+# 📌 Final Summary
+
+This project enforces:
+
+* Signal-first Angular architecture
+* Clean separation of concerns
+* Offline-first design
+* Strong typing
+* High performance patterns
+
+👉 When in doubt:
+**Follow Angular 21 standalone + signal-first approach — always over legacy patterns.**

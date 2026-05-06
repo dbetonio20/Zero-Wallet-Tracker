@@ -27,14 +27,18 @@ export class AuthService {
   /**
    * Called once at app startup via APP_INITIALIZER.
    * Resolves after Firebase restores the persisted auth session (or confirms no session).
-   * This ensures the auth guard has accurate state before any route activates.
+   * The listener is kept alive (NOT unsubscribed) so the signal stays accurate
+   * for the entire app lifetime — e.g. token expiry, sign-out from another tab.
    */
   init(): Promise<void> {
     return new Promise(resolve => {
-      const unsubscribe = onAuthStateChanged(firebaseAuth, user => {
+      let resolved = false;
+      onAuthStateChanged(firebaseAuth, user => {
         this._currentUser.set(user);
-        unsubscribe(); // only needed for the initial resolution
-        resolve();
+        if (!resolved) {
+          resolved = true;
+          resolve();
+        }
       });
     });
   }
@@ -43,15 +47,23 @@ export class AuthService {
    * Opens the native Android Google account picker and signs the user in.
    * The credential returned by the Capacitor plugin is forwarded to the
    * Firebase Web SDK so that Firestore (and onAuthStateChanged) work correctly.
+   * Throws a user-friendly error if the sign-in was cancelled or credentials
+   * were not returned by the native plugin.
    */
   async signInWithGoogle(): Promise<void> {
     const result = await FirebaseAuthentication.signInWithGoogle();
+
+    if (!result.credential?.idToken) {
+      throw new Error('Sign-in was cancelled or no credential was returned.');
+    }
+
     const credential = GoogleAuthProvider.credential(
-      result.credential?.idToken,
-      result.credential?.accessToken
+      result.credential.idToken,
+      result.credential.accessToken
     );
-    const userCredential = await signInWithCredential(firebaseAuth, credential);
-    this._currentUser.set(userCredential.user);
+    // signInWithCredential triggers onAuthStateChanged which updates the signal.
+    await signInWithCredential(firebaseAuth, credential);
+    // No manual signal set needed — onAuthStateChanged handles it.
   }
 
   /**

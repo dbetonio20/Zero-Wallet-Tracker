@@ -1,7 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
+import { Component, OnInit, inject, effect } from '@angular/core';
+import { IonApp, IonRouterOutlet, ToastController } from '@ionic/angular/standalone';
 import { PreferencesService } from './core/services/preferences.service';
 import { NotificationService } from './core/services/notification.service';
+import { SyncService } from './core/services/sync.service';
 
 @Component({
   selector: 'app-root',
@@ -11,14 +12,32 @@ import { NotificationService } from './core/services/notification.service';
 export class App implements OnInit {
   private prefs = inject(PreferencesService);
   private notifications = inject(NotificationService);
+  private syncService = inject(SyncService);
+  private toastCtrl = inject(ToastController);
+
+  constructor() {
+    // Watch for background sync failures and surface a non-intrusive toast.
+    effect(() => {
+      const err = this.syncService.syncError();
+      if (err) {
+        this.toastCtrl
+          .create({
+            message: `☁️ Cloud sync failed: ${err}`,
+            duration: 5000,
+            color: 'warning',
+            position: 'bottom',
+            buttons: [{ text: 'Dismiss', role: 'cancel' }],
+          })
+          .then(t => t.present());
+      }
+    });
+  }
 
   async ngOnInit(): Promise<void> {
     const theme = await this.prefs.getTheme();
     this.applyTheme(theme);
     const palette = await this.prefs.getPalette();
     this.applyPalette(palette);
-    // Notification errors (permission denied, scheduling failure, plugin not
-    // available on web) must never crash the root component.
     this.notifications.init().catch(() => {});
   }
 

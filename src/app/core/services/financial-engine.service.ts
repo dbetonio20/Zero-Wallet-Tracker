@@ -1,6 +1,23 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { Expense, Income, Installment, InstallmentPayment, FinancialSummary, PaymentStatus, PaymentAllocation } from '../models';
+import {
+  Expense,
+  Income,
+  Installment,
+  InstallmentPayment,
+  FinancialSummary,
+  NewExpenseInput,
+  NewIncomeInput,
+  NewInstallmentInput,
+  NewPaymentAllocationInput,
+  PaymentAllocation,
+  PaymentStatus,
+  createSyncedEntity,
+  filterActiveSyncedEntities,
+  normalizeSyncedEntity,
+  tombstoneSyncedEntity,
+  touchSyncedEntity,
+} from '../models';
 import { StorageService } from './storage.service';
 import { CreditCardService } from './credit-card.service';
 
@@ -20,18 +37,26 @@ export class FinancialEngineService {
   private readonly _installmentPayments = signal<InstallmentPayment[]>([]);
   private readonly _allocations = signal<PaymentAllocation[]>([]);
 
+  private readonly activeExpenses = computed(() => filterActiveSyncedEntities(this._expenses()));
+  private readonly activeIncomes = computed(() => filterActiveSyncedEntities(this._incomes()));
+  private readonly activeInstallments = computed(() => filterActiveSyncedEntities(this._installments()));
+  private readonly activeInstallmentPayments = computed(() =>
+    filterActiveSyncedEntities(this._installmentPayments())
+  );
+  private readonly activeAllocations = computed(() => filterActiveSyncedEntities(this._allocations()));
+
   /**
    * Computed financial summary — automatically recalculates whenever any
    * underlying signal changes. No manual combineLatest needed.
    */
   readonly summary = computed(() =>
     this.computeSummary(
-      this._expenses(),
-      this._incomes(),
-      this._installments(),
-      this._installmentPayments(),
+      this.activeExpenses(),
+      this.activeIncomes(),
+      this.activeInstallments(),
+      this.activeInstallmentPayments(),
       this.cardService.cards(),
-      this._allocations(),
+      this.activeAllocations(),
     )
   );
 
@@ -39,11 +64,11 @@ export class FinancialEngineService {
   readonly summary$ = toObservable(this.summary);
 
   /** Observable accessors — backward compatible with all existing async-pipe consumers. */
-  private readonly expenses$ = toObservable(this._expenses);
-  private readonly incomes$ = toObservable(this._incomes);
-  private readonly installments$ = toObservable(this._installments);
-  private readonly installmentPayments$ = toObservable(this._installmentPayments);
-  private readonly allocations$ = toObservable(this._allocations);
+  private readonly expenses$ = toObservable(this.activeExpenses);
+  private readonly incomes$ = toObservable(this.activeIncomes);
+  private readonly installments$ = toObservable(this.activeInstallments);
+  private readonly installmentPayments$ = toObservable(this.activeInstallmentPayments);
+  private readonly allocations$ = toObservable(this.activeAllocations);
 
   constructor(
     private storage: StorageService,
@@ -62,18 +87,28 @@ export class FinancialEngineService {
       this.storage.getList<import('../models').CreditCard>('credit_cards'),
     ]);
 
+    expenses = expenses.map(expense => normalizeSyncedEntity(expense));
+    incomes = incomes.map(income => normalizeSyncedEntity(income));
+    installments = installments.map(installment => normalizeSyncedEntity(installment));
+    payments = payments.map(payment => normalizeSyncedEntity(payment));
+    allocations = allocations.map(allocation => normalizeSyncedEntity(allocation));
+    ccCards = ccCards.map(card => normalizeSyncedEntity(card));
+
+    const activeExpenses = filterActiveSyncedEntities(expenses);
+    const activeIncomes = filterActiveSyncedEntities(incomes);
+
     // Auto-generate current-month entries for recurring expenses
     const today = new Date();
     const curYear = today.getFullYear();
     const curMonth = today.getMonth();
     const generated: Expense[] = [];
-    for (const e of expenses) {
+    for (const e of activeExpenses) {
       if (!e.recurring) continue;
       const eDate = new Date(e.date);
       // Only seed from past months' recurring items
       if (eDate.getFullYear() === curYear && eDate.getMonth() === curMonth) continue;
       // Check if this month's copy already exists (same name + category + recurring)
-      const exists = expenses.some(x =>
+      const exists = activeExpenses.some(x =>
         x.recurring &&
         x.name === e.name &&
         x.category === e.category &&
@@ -81,12 +116,13 @@ export class FinancialEngineService {
       );
       if (!exists) {
         const newDate = new Date(curYear, curMonth, Math.min(eDate.getDate(), new Date(curYear, curMonth + 1, 0).getDate()));
-        const seeded: Expense = {
+        const seeded: Expense = createSyncedEntity({
           ...e,
           id: this.uuid(),
           date: newDate.toISOString().split('T')[0],
           status: 'pending',
-        };
+          paidAt: undefined,
+        });
         generated.push(seeded);
       }
     }
@@ -97,22 +133,22 @@ export class FinancialEngineService {
 
     // Auto-generate current-month income for recurring incomes
     const generatedIncomes: Income[] = [];
-    for (const i of incomes) {
+    for (const i of activeIncomes) {
       if (!i.recurring) continue;
       const iDate = new Date(i.date);
       if (iDate.getFullYear() === curYear && iDate.getMonth() === curMonth) continue;
-      const exists = incomes.some(x =>
+      const exists = activeIncomes.some(x =>
         x.recurring &&
         x.source === i.source &&
         (() => { const d = new Date(x.date); return d.getFullYear() === curYear && d.getMonth() === curMonth; })()
       );
       if (!exists) {
         const newDate = new Date(curYear, curMonth, Math.min(iDate.getDate(), new Date(curYear, curMonth + 1, 0).getDate()));
-        generatedIncomes.push({
+        generatedIncomes.push(createSyncedEntity({
           ...i,
           id: this.uuid(),
           date: newDate.toISOString().split('T')[0],
-        });
+        }));
       }
     }
     if (generatedIncomes.length) {
@@ -120,7 +156,11 @@ export class FinancialEngineService {
       await this.storage.saveList(KEYS.INCOMES, incomes);
     }
 
-    this.updateStatuses(expenses, payments, ccCards);
+    this.updateStatuses(
+      filterActiveSyncedEntities(expenses),
+      filterActiveSyncedEntities(payments),
+      filterActiveSyncedEntities(ccCards)
+    );
     this._expenses.set(expenses);
     this._incomes.set(incomes);
     this._installments.set(installments);
@@ -131,23 +171,31 @@ export class FinancialEngineService {
   // ─── Expenses ────────────────────────────────────────────────────
   getExpenses() { return this.expenses$; }
 
-  async addExpense(e: Omit<Expense, 'id'>): Promise<void> {
-    const item: Expense = { ...e, id: this.uuid() };
+  async addExpense(e: NewExpenseInput): Promise<void> {
+    const item: Expense = createSyncedEntity({ ...e, id: this.uuid() });
     const updated = [...this._expenses(), item];
     await this.storage.saveList(KEYS.EXPENSES, updated);
     this._expenses.set(updated);
   }
 
   async updateExpense(e: Expense): Promise<void> {
-    const updated = this._expenses().map(x => x.id === e.id ? e : x);
+    const updated = this._expenses().map(existingExpense =>
+      existingExpense.id === e.id
+        ? touchSyncedEntity({ ...existingExpense, ...e, createdAt: existingExpense.createdAt })
+        : existingExpense
+    );
     await this.storage.saveList(KEYS.EXPENSES, updated);
     this._expenses.set(updated);
   }
 
   async deleteExpense(id: string): Promise<void> {
-    const updated = this._expenses().filter(x => x.id !== id);
+    const updated = this._expenses().map(expense =>
+      expense.id === id ? tombstoneSyncedEntity(expense) : expense
+    );
     // Cascade-delete allocations linked to this expense
-    const allocs = this._allocations().filter(a => a.expenseId !== id);
+    const allocs = this._allocations().map(allocation =>
+      allocation.expenseId === id ? tombstoneSyncedEntity(allocation) : allocation
+    );
     await Promise.all([
       this.storage.saveList(KEYS.EXPENSES, updated),
       this.storage.saveList(KEYS.ALLOCATIONS, allocs),
@@ -159,24 +207,33 @@ export class FinancialEngineService {
   // ─── Incomes ─────────────────────────────────────────────────────
   getIncomes() { return this.incomes$; }
 
-  async addIncome(i: Omit<Income, 'id'>): Promise<void> {
-    const item: Income = { ...i, id: this.uuid() };
+  async addIncome(i: NewIncomeInput): Promise<void> {
+    const item: Income = createSyncedEntity({ ...i, id: this.uuid() });
     const updated = [...this._incomes(), item];
     await this.storage.saveList(KEYS.INCOMES, updated);
     this._incomes.set(updated);
   }
 
   async updateIncome(i: Income): Promise<void> {
-    const updated = this._incomes().map(x => x.id === i.id ? i : x);
+    const updated = this._incomes().map(existingIncome =>
+      existingIncome.id === i.id
+        ? touchSyncedEntity({ ...existingIncome, ...i, createdAt: existingIncome.createdAt })
+        : existingIncome
+    );
     await this.storage.saveList(KEYS.INCOMES, updated);
     this._incomes.set(updated);
   }
 
   async deleteIncome(id: string): Promise<void> {
-    const updated = this._incomes().filter(x => x.id !== id);
+    const updated = this._incomes().map(income =>
+      income.id === id ? tombstoneSyncedEntity(income) : income
+    );
     // Find allocations linked to this income
-    const removedAllocs = this._allocations().filter(a => a.incomeId === id);
-    const remainingAllocs = this._allocations().filter(a => a.incomeId !== id);
+    const removedAllocs = this.activeAllocations().filter(allocation => allocation.incomeId === id);
+    const remainingAllocs = this.activeAllocations().filter(allocation => allocation.incomeId !== id);
+    const updatedAllocations = this._allocations().map(allocation =>
+      allocation.incomeId === id ? tombstoneSyncedEntity(allocation) : allocation
+    );
 
     // Revert expenses that were fully paid by this income (if no other allocations remain)
     const affectedExpenseIds = new Set(removedAllocs.filter(a => a.expenseId).map(a => a.expenseId!));
@@ -202,12 +259,12 @@ export class FinancialEngineService {
 
     await Promise.all([
       this.storage.saveList(KEYS.INCOMES, updated),
-      this.storage.saveList(KEYS.ALLOCATIONS, remainingAllocs),
+      this.storage.saveList(KEYS.ALLOCATIONS, updatedAllocations),
       this.storage.saveList(KEYS.EXPENSES, expenses),
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payments),
     ]);
     this._incomes.set(updated);
-    this._allocations.set(remainingAllocs);
+    this._allocations.set(updatedAllocations);
     this._expenses.set(expenses);
     this._installmentPayments.set(payments);
   }
@@ -216,8 +273,8 @@ export class FinancialEngineService {
   getInstallments() { return this.installments$; }
   getInstallmentPayments() { return this.installmentPayments$; }
 
-  async addInstallment(inst: Omit<Installment, 'id'>): Promise<void> {
-    const item: Installment = { ...inst, id: this.uuid() };
+  async addInstallment(inst: NewInstallmentInput): Promise<void> {
+    const item: Installment = createSyncedEntity({ ...inst, id: this.uuid() });
     const instList = [...this._installments(), item];
     // Generate payment schedule
     const payments = this.generatePayments(item);
@@ -231,27 +288,53 @@ export class FinancialEngineService {
   }
 
   async updateInstallment(inst: Installment): Promise<void> {
-    const instList = this._installments().map(x => x.id === inst.id ? inst : x);
-    // Remove old payments and regenerate
-    const otherPayments = this._installmentPayments().filter(p => p.installmentId !== inst.id);
+    const instList = this._installments().map(existingInstallment =>
+      existingInstallment.id === inst.id
+        ? touchSyncedEntity({ ...existingInstallment, ...inst, createdAt: existingInstallment.createdAt })
+        : existingInstallment
+    );
+    const replacedPaymentIds = new Set(
+      this.activeInstallmentPayments()
+        .filter(payment => payment.installmentId === inst.id)
+        .map(payment => payment.id)
+    );
+    // Tombstone old payments and regenerate a fresh schedule.
+    const otherPayments = this._installmentPayments().map(payment =>
+      payment.installmentId === inst.id ? tombstoneSyncedEntity(payment) : payment
+    );
     const newPayments = this.generatePayments(inst);
     const payList = [...otherPayments, ...newPayments];
+    const allocs = this._allocations().map(allocation =>
+      allocation.installmentPaymentId && replacedPaymentIds.has(allocation.installmentPaymentId)
+        ? tombstoneSyncedEntity(allocation)
+        : allocation
+    );
     await Promise.all([
       this.storage.saveList(KEYS.INSTALLMENTS, instList),
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payList),
+      this.storage.saveList(KEYS.ALLOCATIONS, allocs),
     ]);
     this._installments.set(instList);
     this._installmentPayments.set(payList);
+    this._allocations.set(allocs);
   }
 
   async deleteInstallment(id: string): Promise<void> {
-    const instList = this._installments().filter(x => x.id !== id);
-    const removedPaymentIds = new Set(
-      this._installmentPayments().filter(x => x.installmentId === id).map(x => x.id)
+    const instList = this._installments().map(installment =>
+      installment.id === id ? tombstoneSyncedEntity(installment) : installment
     );
-    const payList = this._installmentPayments().filter(x => x.installmentId !== id);
+    const removedPaymentIds = new Set(
+      this.activeInstallmentPayments().filter(x => x.installmentId === id).map(x => x.id)
+    );
+    const payList = this._installmentPayments().map(payment =>
+      payment.installmentId === id ? tombstoneSyncedEntity(payment) : payment
+    );
     // Cascade-delete allocations linked to removed payments
-    const allocs = this._allocations().filter(a => !a.installmentPaymentId || !removedPaymentIds.has(a.installmentPaymentId));
+    const allocs = this._allocations().map(allocation =>
+      allocation.installmentPaymentId && removedPaymentIds.has(allocation.installmentPaymentId)
+        ? tombstoneSyncedEntity(allocation)
+        : allocation
+    );
     await Promise.all([
       this.storage.saveList(KEYS.INSTALLMENTS, instList),
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payList),
@@ -263,17 +346,23 @@ export class FinancialEngineService {
   }
 
   async updateInstallmentPayment(payment: InstallmentPayment): Promise<void> {
-    const updated = this._installmentPayments().map(p =>
-      p.id === payment.id ? payment : p
+    const updated = this._installmentPayments().map(existingPayment =>
+      existingPayment.id === payment.id
+        ? touchSyncedEntity({ ...existingPayment, ...payment, createdAt: existingPayment.createdAt })
+        : existingPayment
     );
     await this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, updated);
     this._installmentPayments.set(updated);
   }
 
   async deleteInstallmentPayment(id: string): Promise<void> {
-    const updated = this._installmentPayments().filter(p => p.id !== id);
+    const updated = this._installmentPayments().map(payment =>
+      payment.id === id ? tombstoneSyncedEntity(payment) : payment
+    );
     // Cascade-delete allocations linked to this payment
-    const allocs = this._allocations().filter(a => a.installmentPaymentId !== id);
+    const allocs = this._allocations().map(allocation =>
+      allocation.installmentPaymentId === id ? tombstoneSyncedEntity(allocation) : allocation
+    );
     await Promise.all([
       this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, updated),
       this.storage.saveList(KEYS.ALLOCATIONS, allocs),
@@ -284,8 +373,10 @@ export class FinancialEngineService {
 
   async markPayment(paymentId: string, status: PaymentStatus): Promise<void> {
     const paidAt = status === 'paid' ? new Date().toISOString().split('T')[0] : undefined;
-    const updated = this._installmentPayments().map(p =>
-      p.id === paymentId ? { ...p, status, paidAt } : p
+    const updated = this._installmentPayments().map(payment =>
+      payment.id === paymentId
+        ? touchSyncedEntity({ ...payment, status, paidAt })
+        : payment
     );
     await this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, updated);
     this._installmentPayments.set(updated);
@@ -295,65 +386,73 @@ export class FinancialEngineService {
   getAllocations() { return this.allocations$; }
 
   getAllocationsForIncome(incomeId: string): PaymentAllocation[] {
-    return this._allocations().filter(a => a.incomeId === incomeId);
+    return this.activeAllocations().filter(a => a.incomeId === incomeId);
   }
 
   getAllocationsForExpense(expenseId: string): PaymentAllocation[] {
-    return this._allocations().filter(a => a.expenseId === expenseId);
+    return this.activeAllocations().filter(a => a.expenseId === expenseId);
   }
 
   getAllocationsForInstallmentPayment(paymentId: string): PaymentAllocation[] {
-    return this._allocations().filter(a => a.installmentPaymentId === paymentId);
+    return this.activeAllocations().filter(a => a.installmentPaymentId === paymentId);
   }
 
   getIncomeUsed(incomeId: string): number {
-    return this._allocations()
+    return this.activeAllocations()
       .filter(a => a.incomeId === incomeId)
       .reduce((s, a) => s + a.amount, 0);
   }
 
   getIncomeRemaining(incomeId: string): number {
-    const income = this._incomes().find(i => i.id === incomeId);
+    const income = this.activeIncomes().find(i => i.id === incomeId);
     if (!income) return 0;
     return income.amount - this.getIncomeUsed(incomeId);
   }
 
-  async addAllocation(alloc: Omit<PaymentAllocation, 'id'>): Promise<void> {
-    const item: PaymentAllocation = { ...alloc, id: this.uuid() };
+  async addAllocation(alloc: NewPaymentAllocationInput): Promise<void> {
+    const item: PaymentAllocation = createSyncedEntity({ ...alloc, id: this.uuid() });
     const updated = [...this._allocations(), item];
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
     this._allocations.set(updated);
   }
 
-  async addAllocations(allocs: Omit<PaymentAllocation, 'id'>[]): Promise<void> {
-    const items = allocs.map(a => ({ ...a, id: this.uuid() }));
+  async addAllocations(allocs: NewPaymentAllocationInput[]): Promise<void> {
+    const items = allocs.map(allocation => createSyncedEntity({ ...allocation, id: this.uuid() }));
     const updated = [...this._allocations(), ...items];
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
     this._allocations.set(updated);
   }
 
   async removeAllocation(id: string): Promise<void> {
-    const alloc = this._allocations().find(a => a.id === id);
-    const updated = this._allocations().filter(a => a.id !== id);
+    const alloc = this.activeAllocations().find(a => a.id === id);
+    const updated = this._allocations().map(allocation =>
+      allocation.id === id ? tombstoneSyncedEntity(allocation) : allocation
+    );
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
     this._allocations.set(updated);
 
     // Check if expense/payment still has other allocations; if not, revert to pending
     if (alloc?.expenseId) {
-      const remaining = updated.filter(a => a.expenseId === alloc.expenseId);
+      const remaining = filterActiveSyncedEntities(updated).filter(a => a.expenseId === alloc.expenseId);
       if (remaining.length === 0) {
         const expenses = this._expenses().map(e =>
-          e.id === alloc.expenseId && e.status === 'paid' ? { ...e, status: 'pending' as PaymentStatus, paidAt: undefined } : e
+          e.id === alloc.expenseId && e.status === 'paid'
+            ? touchSyncedEntity({ ...e, status: 'pending' as PaymentStatus, paidAt: undefined })
+            : e
         );
         await this.storage.saveList(KEYS.EXPENSES, expenses);
         this._expenses.set(expenses);
       }
     }
     if (alloc?.installmentPaymentId) {
-      const remaining = updated.filter(a => a.installmentPaymentId === alloc.installmentPaymentId);
+      const remaining = filterActiveSyncedEntities(updated).filter(
+        a => a.installmentPaymentId === alloc.installmentPaymentId
+      );
       if (remaining.length === 0) {
         const payments = this._installmentPayments().map(p =>
-          p.id === alloc.installmentPaymentId && p.status === 'paid' ? { ...p, status: 'pending' as PaymentStatus, paidAt: undefined } : p
+          p.id === alloc.installmentPaymentId && p.status === 'paid'
+            ? touchSyncedEntity({ ...p, status: 'pending' as PaymentStatus, paidAt: undefined })
+            : p
         );
         await this.storage.saveList(KEYS.INSTALLMENT_PAYMENTS, payments);
         this._installmentPayments.set(payments);
@@ -362,13 +461,17 @@ export class FinancialEngineService {
   }
 
   async removeAllocationsForExpense(expenseId: string): Promise<void> {
-    const updated = this._allocations().filter(a => a.expenseId !== expenseId);
+    const updated = this._allocations().map(allocation =>
+      allocation.expenseId === expenseId ? tombstoneSyncedEntity(allocation) : allocation
+    );
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
     this._allocations.set(updated);
   }
 
   async removeAllocationsForPayment(paymentId: string): Promise<void> {
-    const updated = this._allocations().filter(a => a.installmentPaymentId !== paymentId);
+    const updated = this._allocations().map(allocation =>
+      allocation.installmentPaymentId === paymentId ? tombstoneSyncedEntity(allocation) : allocation
+    );
     await this.storage.saveList(KEYS.ALLOCATIONS, updated);
     this._allocations.set(updated);
   }
@@ -492,13 +595,13 @@ export class FinancialEngineService {
       } else {
         due.setMonth(due.getMonth() + i);
       }
-      payments.push({
+      payments.push(createSyncedEntity({
         id: this.uuid(),
         installmentId: inst.id,
         dueDate: due.toISOString().split('T')[0],
         amount: inst.monthlyAmount,
         status: 'pending',
-      });
+      }));
     }
     return payments;
   }

@@ -11,8 +11,9 @@ export const firebaseApp = initializeApp(environment.firebase);
 export const firebaseAuth = getAuth(firebaseApp);
 
 /**
- * Firestore instance with offline persistence enabled.
- * On Capacitor Android (single-tab WebView), persistentLocalCache is appropriate.
+ * Firestore with offline persistence enabled.
+ * Uses cache-first reads (getDoc) so the app works immediately on startup.
+ * Firestore will sync from the server in the background once connected.
  */
 export const firestoreDb = initializeFirestore(firebaseApp, {
   localCache: persistentLocalCache(),

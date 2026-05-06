@@ -1,19 +1,27 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
-import { CreditCard } from '../models';
+import {
+  CreditCard,
+  NewCreditCardInput,
+  createSyncedEntity,
+  filterActiveSyncedEntities,
+  normalizeSyncedEntity,
+  tombstoneSyncedEntity,
+  touchSyncedEntity,
+} from '../models';
 import { StorageService } from './storage.service';
 
 const KEY = 'credit_cards';
 
 @Injectable({ providedIn: 'root' })
 export class CreditCardService {
-  private readonly _cards = signal<CreditCard[]>([]);
+  private readonly _allCards = signal<CreditCard[]>([]);
 
   /** Read-only signal — use directly in templates or computed(). */
-  readonly cards = this._cards.asReadonly();
+  readonly cards = computed(() => filterActiveSyncedEntities(this._allCards()));
 
   /** Observable alias for async-pipe consumers. */
-  readonly cards$ = toObservable(this._cards);
+  readonly cards$ = toObservable(this.cards);
 
   constructor(private storage: StorageService) {
     this.load();
@@ -21,39 +29,46 @@ export class CreditCardService {
 
   private async load() {
     const cards = await this.storage.getList<CreditCard>(KEY);
-    this._cards.set(cards);
+    this._allCards.set(cards.map(card => normalizeSyncedEntity(card)));
   }
 
   getCards() { return this.cards$; }
 
-  async addCard(card: Omit<CreditCard, 'id'>): Promise<void> {
-    const item: CreditCard = { ...card, id: crypto.randomUUID() };
-    const updated = [...this._cards(), item];
+  async addCard(card: NewCreditCardInput): Promise<void> {
+    const item: CreditCard = createSyncedEntity({
+      ...card,
+      id: crypto.randomUUID(),
+    });
+    const updated = [...this._allCards(), item];
     await this.storage.saveList(KEY, updated);
-    this._cards.set(updated);
+    this._allCards.set(updated);
   }
 
   async updateCard(card: CreditCard): Promise<void> {
-    const updated = this._cards().map(c => c.id === card.id ? card : c);
+    const updated = this._allCards().map(c =>
+      c.id === card.id ? touchSyncedEntity({ ...c, ...card, createdAt: c.createdAt }) : c
+    );
     await this.storage.saveList(KEY, updated);
-    this._cards.set(updated);
+    this._allCards.set(updated);
   }
 
   async deleteCard(id: string): Promise<void> {
-    const updated = this._cards().filter(c => c.id !== id);
+    const updated = this._allCards().map(card =>
+      card.id === id ? tombstoneSyncedEntity(card) : card
+    );
     await this.storage.saveList(KEY, updated);
-    this._cards.set(updated);
+    this._allCards.set(updated);
   }
 
   /** Returns the card with the given id, or undefined. */
   getById(id: string): CreditCard | undefined {
-    return this._cards().find(c => c.id === id);
+    return this.cards().find(c => c.id === id);
   }
 
   /** Returns cards whose next due date falls within the next N days. */
   getUpcomingDues(days = 7): CreditCard[] {
     const today = new Date();
-    return this._cards().filter(card => {
+    return this.cards().filter(card => {
       const due = new Date(today.getFullYear(), today.getMonth(), card.dueDate);
       if (due < today) due.setMonth(due.getMonth() + 1);
       const diff = (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
