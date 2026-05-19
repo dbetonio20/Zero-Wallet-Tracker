@@ -1533,55 +1533,261 @@ ion-accordion {
 }
 
 /* ── Income Detail Page ───────────────────────────────── */
-.income-detail-header {
-  text-align: center;
-  margin-bottom: 8px;
+.income-detail-header { display: none; }
+.income-detail-source { display: none; }
+.income-detail-date { display: none; }
+.income-usage-bar-container { display: none; }
+
+/* ── Income Detail — redesigned ─────────────────────── */
+.idc-hero {
+  margin: 12px 16px 0;
+  padding: 20px 20px 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.income-detail-source {
-  font-size: 1.1rem;
+.idc-source-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.idc-source {
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.income-detail-date {
-  font-size: 0.85rem;
+.idc-recurring-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-green);
+  background: rgba(45, 211, 111, 0.12);
+  border: 1px solid rgba(45, 211, 111, 0.3);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+.idc-date {
+  font-size: 0.8rem;
   color: var(--text-secondary);
-  margin-top: 2px;
 }
 
-.income-usage-bar-container {
-  margin-top: 16px;
-  padding: 0 16px;
+.idc-amount {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--accent-green);
+  letter-spacing: -0.5px;
+  margin: 6px 0 12px;
 }
 
-.income-usage-bar {
+.idc-usage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 8px;
+}
+
+.idc-usage-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.idc-usage-stat--right {
+  align-items: flex-end;
+}
+
+.idc-usage-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.idc-usage-val {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.idc-bar-track {
   height: 8px;
-  background: var(--card-border);
+  background: rgba(255,255,255,0.06);
   border-radius: 4px;
   overflow: hidden;
 }
 
-.income-usage-fill {
+.idc-bar-fill {
   height: 100%;
-  background: var(--accent-green);
   border-radius: 4px;
-  transition: width 0.3s ease;
+  background: var(--accent-green);
+  transition: width 0.4s ease;
 }
 
-.income-usage-labels {
+.idc-bar-full {
+  background: #ff4961;
+}
+
+.idc-bar-pct {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-align: right;
+  margin-top: 4px;
+}
+
+/* ── Income Detail — Linked list ──────────────────────── */
+.idc-section {
+  margin: 16px 16px 0;
+}
+
+.idc-section-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-top: 6px;
-  font-size: 0.8rem;
+  margin-bottom: 10px;
+  padding: 0 2px;
 }
 
-.income-usage-used {
+.idc-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
   color: var(--text-secondary);
 }
 
-.income-usage-remaining {
+.idc-section-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  background: var(--card-border);
+  color: var(--text-secondary);
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.idc-list {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.idc-list-item {
+  --background: transparent;
+  --padding-start: 12px;
+  --inner-padding-end: 12px;
+}
+
+.idc-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.idc-icon-expense {
+  background: rgba(255, 196, 9, 0.12);
+  color: #ffc409;
+}
+
+.idc-icon-inst {
+  background: rgba(61, 194, 255, 0.12);
+  color: #3dc2ff;
+}
+
+.idc-item-name {
+  font-size: 0.92rem;
   font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.idc-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.idc-item-type-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.badge-expense {
+  background: rgba(255, 196, 9, 0.12);
+  color: #ffc409;
+}
+
+.badge-inst {
+  background: rgba(61, 194, 255, 0.12);
+  color: #3dc2ff;
+}
+
+.idc-item-paid {
+  font-size: 0.72rem;
+  color: var(--accent-green);
+}
+
+.idc-item-amount {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-green);
+  white-space: nowrap;
+}
+
+.idc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 24px;
+  gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+}
+
+.idc-empty ion-icon {
+  font-size: 2rem;
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.idc-empty p {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 4px 0 0;
+}
+
+.idc-empty span {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 /* ── Dashboard: Income usage inline ───────────────────── */
@@ -1638,48 +1844,295 @@ ion-accordion {
   margin-top: 2px;
 }
 
-/* ── Installment Totals Summary ───────────────────────── */
-.installment-totals {
+/* ── Installment Totals Summary (legacy, kept for safety) ── */
+.installment-totals { display: none; }
+.installment-total-item { display: none; }
+.installment-total-label { display: none; }
+.installment-total-value { display: none; }
+.installment-total-divider { display: none; }
+.installment-header-total { display: none; }
+
+/* ── Installment Pill Tabs ─────────────────────────────── */
+.inst-pill-tabs {
   display: flex;
-  align-items: center;
-  justify-content: space-around;
-  margin: 8px 16px 12px;
-  padding: 12px 8px;
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 14px;
+  gap: 8px;
+  margin: 12px 16px 4px;
 }
 
-.installment-total-item {
+.inst-pill-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--card-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+
+.inst-pill-tab.active {
+  background: rgba(45, 211, 111, 0.12);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.inst-pill-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--card-border);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: background 0.18s, color 0.18s;
+}
+
+.inst-pill-count.active {
+  background: var(--accent-green);
+  color: #000;
+}
+
+/* ── Installment Summary Strip ─────────────────────────── */
+.inst-summary-strip {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  margin: 10px 16px 14px;
+  padding: 14px 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+}
+
+.inst-summary-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+  flex: 1;
 }
 
-.installment-total-label {
-  font-size: 0.7rem;
+.inst-summary-label {
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--text-secondary);
 }
 
-.installment-total-value {
-  font-size: 0.95rem;
+.inst-summary-value {
+  font-size: 0.93rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.installment-total-divider {
+.inst-summary-sep {
   width: 1px;
-  height: 28px;
   background: var(--card-border);
+  align-self: stretch;
+  margin: 4px 0;
 }
 
-.installment-header-total {
-  font-size: 0.75rem;
+/* ── Installment Cards List ────────────────────────────── */
+.inst-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 16px;
+}
+
+.inst-card-group {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+}
+
+.inst-card-group--done {
+  opacity: 0.85;
+  border-color: rgba(45, 211, 111, 0.3);
+}
+
+.inst-card-group ion-accordion {
+  background: transparent;
+}
+
+.inst-card-header {
+  padding: 14px 16px 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.inst-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.inst-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.inst-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.inst-card-monthly {
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--accent-green);
-  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.inst-freq {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.inst-card-subtitle {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+/* ── Progress bar ────────── */
+.inst-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.inst-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--card-border);
+  overflow: hidden;
+}
+
+.inst-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent-green);
+  transition: width 0.4s ease;
+}
+
+.inst-progress-fill--done {
+  background: var(--accent-green);
+}
+
+.inst-progress-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 32px;
+  text-align: right;
+}
+
+.inst-card-amounts {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inst-amount-left {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ff4961;
+}
+
+.inst-amount-total {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-green);
+}
+
+.inst-months-left {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.inst-done-badge {
+  font-size: 0.72rem;
+}
+
+/* ── Payment rows ────────── */
+.inst-card-content {
+  border-top: 1px solid var(--card-border);
+}
+
+.inst-payment-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+.dot-paid { background: var(--accent-green); }
+.dot-pending { background: #ffc409; }
+.dot-overdue { background: #ff4961; }
+
+.inst-payment-paid {
+  opacity: 0.65;
+}
+
+.inst-payment-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.inst-payment-amount {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.inst-status-badge {
+  font-size: 0.65rem;
+}
+
+.inst-card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  justify-content: flex-end;
+}
+
+/* ── Empty state ─────────── */
+.inst-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px;
+  color: var(--text-secondary);
+  gap: 10px;
+}
+
+.inst-empty-icon {
+  font-size: 2.5rem;
+  color: var(--accent-green);
+  opacity: 0.6;
 }
 
 /* ── Report Page Enhancements ──────────────────────────── */

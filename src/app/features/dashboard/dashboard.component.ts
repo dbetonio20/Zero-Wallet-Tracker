@@ -607,19 +607,10 @@ export class DashboardComponent implements OnInit {
             };
           });
 
-        const overdueCardItems: MonthTransactionVM[] = overdueCards.map(occ => ({
-          kind: 'overdueCard' as const,
-          statusLabel: 'overdue' as const,
-          sortDate: occ.dueDate.toISOString(),
-          item: occ,
-        }));
-
         // Build card-group transaction items for the selected month (all unpaid card-linked payments,
         // regardless of 7-day window — classifies by whether the card due date has passed in selYear/selMonth).
         const selMonthCardItems: MonthTransactionVM[] = [];
         for (const { card: c, cardPayments } of selMonthCardPaymentMap.values()) {
-          // Skip cards already covered by overdueCardItems (current month, due date past)
-          if (overdueCards.some(occ => occ.card.id === c.id)) continue;
           const cardInstallments = installments.filter((inst: Installment) => inst.cardId === c.id);
           const cardDueDate = new Date(selYear, selMonth, c.dueDate);
           const isOverdue = cardDueDate < today;
@@ -658,7 +649,6 @@ export class DashboardComponent implements OnInit {
         const allMonthTransactions: MonthTransactionVM[] = [
           ...monthlyExpenseItems,
           ...monthlyPaymentItems,
-          ...overdueCardItems,
           ...selMonthCardItems,
         ].sort((a, b) => {
           if (sortBy === 'date-desc')   return new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime();
@@ -846,6 +836,13 @@ export class DashboardComponent implements OnInit {
   get isCurrentMonth(): boolean {
     const n = new Date();
     return this.viewYear === n.getFullYear() && this.viewMonth === n.getMonth();
+  }
+
+  get isViewInPast(): boolean {
+    const n = new Date();
+    const nowIndex = n.getFullYear() * 12 + n.getMonth();
+    const viewIndex = this.viewYear * 12 + this.viewMonth;
+    return viewIndex < nowIndex;
   }
 
   prevMonth(): void {

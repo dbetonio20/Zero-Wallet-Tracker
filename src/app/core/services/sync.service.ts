@@ -71,6 +71,13 @@ export class SyncService {
    */
   private suppressSync = false;
 
+  /**
+   * Counts in-flight local pushes per key. While > 0, snapshot-triggered
+   * reloadFromStorage is skipped so intermediate Firestore snapshots (fired
+   * during our own push) cannot overwrite in-memory signal state.
+   */
+  private readonly pushInFlight = new Map<string, number>();
+
   /** Set when a background Firestore push fails. Cleared on next successful push. */
   readonly syncError = signal<string | null>(null);
 
@@ -96,12 +103,24 @@ export class SyncService {
       if (!this.isSyncKey(key)) return;
       const uid = this.auth.currentUser()?.uid;
       if (!uid) return;
+      // Increment counter so the snapshot handler skips reloadFromStorage
+      // while our own writes are still in flight (prevents intermediate
+      // Firestore snapshots from reverting local UI state).
+      this.pushInFlight.set(key, (this.pushInFlight.get(key) ?? 0) + 1);
       this.pushKey(uid, key, data as RawSyncedRecord[])
         .then(() => this.syncError.set(null))
         .catch(err => {
           const msg = err instanceof Error ? err.message : 'Cloud sync failed';
           this.syncError.set(msg);
           console.warn('[SyncService] background push failed', err);
+        })
+        .finally(() => {
+          const count = (this.pushInFlight.get(key) ?? 1) - 1;
+          if (count <= 0) {
+            this.pushInFlight.delete(key);
+          } else {
+            this.pushInFlight.set(key, count);
+          }
         });
     });
   }
@@ -216,10 +235,15 @@ export class SyncService {
           await this.storage.saveList(key, mergeResult.merged);
         });
 
-        // Update in-memory signals so the UI reflects the merged state immediately
-        // (covers deletions propagated from other devices / sessions).
-        await this.engine.reloadFromStorage(key);
-        await this.reloadServiceSignal(key);
+        // Skip reloading signals if we triggered this snapshot ourselves via a
+        // local push — the in-memory signals already have the correct state and
+        // reloading from storage at this point would revert optimistic UI updates.
+        if (!this.pushInFlight.has(key)) {
+          // Update in-memory signals so the UI reflects the merged state immediately
+          // (covers deletions propagated from other devices / sessions).
+          await this.engine.reloadFromStorage(key);
+          await this.reloadServiceSignal(key);
+        }
 
         this.syncError.set(null);
       },
@@ -324,17 +348,14 @@ export class SyncService {
       return isSyncedEntityDeleted(left) ? 1 : -1;
     }
 
-    const leftAuthority = this.getRecordAuthority(left);
-    const rightAuthority = this.getRecordAuthority(right);
-
-    if (leftAuthority !== rightAuthority) {
-      return leftAuthority - rightAuthority;
-    }
-
-    return this.compareIsoTimestamps(
-      this.getAuthorityTimestamp(left),
-      this.getAuthorityTimestamp(right)
-    );
+    // Compare by the best available timestamp. Use serverUpdatedAt when available
+    // (it reflects the authoritative server time), otherwise fall back to updatedAt.
+    // This means a locally-modified record (updatedAt only) can beat an older remote
+    // record that has serverUpdatedAt set — preventing stale Firestore data from
+    // overwriting fresh local writes before they've been pushed to the server.
+    const leftTime = left.serverUpdatedAt ?? left.updatedAt ?? left.createdAt;
+    const rightTime = right.serverUpdatedAt ?? right.updatedAt ?? right.createdAt;
+    return this.compareIsoTimestamps(leftTime, rightTime);
   }
 
   canCompactTombstone(

@@ -23,86 +23,186 @@
   <!-- Installments Tab -->
   @if (activeSegment === 'installments') {
     @if (vm$ | async; as list) {
-      @if (!list.length) {
-        <p class="empty-state">No installments yet. Tap + to add one.</p>
-      } @else {
-        <!-- Installment Totals Summary -->
-        <div class="installment-totals">
-          <div class="installment-total-item">
-            <span class="installment-total-label">Total</span>
-            <span class="installment-total-value">{{ totalCost(list) | currency:currencyCode:'symbol':'1.0-0' }}</span>
-          </div>
-          <div class="installment-total-divider"></div>
-          <div class="installment-total-item">
-            <span class="installment-total-label">Paid</span>
-            <span class="installment-total-value success-text">{{ totalPaid(list) | currency:currencyCode:'symbol':'1.0-0' }}</span>
-          </div>
-          <div class="installment-total-divider"></div>
-          <div class="installment-total-item">
-            <span class="installment-total-label">Remaining</span>
-            <span class="installment-total-value danger-text">{{ totalRemaining(list) | currency:currencyCode:'symbol':'1.0-0' }}</span>
-          </div>
-        </div>
 
-        <ion-accordion-group>
-          @for (inst of list; track inst.id) {
-            <ion-accordion [value]="inst.id">
-              <ion-item slot="header">
-                <ion-label>
-                  <h3>{{ inst.transaction }}</h3>
-                  <p>{{ inst.cardName }} · {{ inst.monthlyAmount | currency:currencyCode:'symbol':'1.0-0' }}{{ inst.frequency === 'weekly' ? '/wk' : '/mo' }}</p>
-                  <p>{{ inst.paidCount }}/{{ inst.months }} paid · {{ inst.remainingMonths }} remaining</p>
-                  <p class="installment-header-total">Total: {{ inst.totalCost | currency:currencyCode:'symbol':'1.0-0' }} · Left: {{ inst.remainingAmount | currency:currencyCode:'symbol':'1.0-0' }}</p>
-                </ion-label>
-                <ion-badge slot="end" color="primary">{{ inst.remainingMonths }}{{ inst.frequency === 'weekly' ? 'wk' : 'mo' }}</ion-badge>
-              </ion-item>
-              <div slot="content">
-                <ion-list lines="full">
-                  @for (p of inst.payments; track p.id) {
-                    <ion-item-sliding>
-                      <ion-item>
-                        <ion-label>
-                          <h3>{{ p.dueDate | date:'MMMM y' }}</h3>
-                          <p>Due: {{ p.dueDate | date:'MMM d, y' }}</p>
-                          @if (p.status === 'paid' && getPaymentIncomeSources(p.id)) {
-                            <p class="paid-source-label">Paid from: {{ getPaymentIncomeSources(p.id) }}</p>
-                          }
-                          @if (p.status === 'paid' && p.paidAt) {
-                            <p class="paid-date-label">Paid {{ p.paidAt | date:'MMM d, y' }}</p>
-                          }
-                        </ion-label>
-                        <ion-badge slot="end" [color]="badgeColor(p.status)">{{ p.status }}</ion-badge>
-                        <ion-note slot="end">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</ion-note>
-                      </ion-item>
-                      <ion-item-options side="end">
-                        @if (p.status !== 'paid') {
-                          <ion-item-option color="success" (click)="markPaid(p, inst.transaction)">
-                            <ion-icon name="checkmark-outline" slot="icon-only" />
-                          </ion-item-option>
-                        }
-                        <ion-item-option color="primary" (click)="openEditPayment(p)">
-                          <ion-icon name="create-outline" slot="icon-only" />
-                        </ion-item-option>
-                        <ion-item-option color="danger" (click)="deletePayment(p, inst.transaction)">
-                          <ion-icon name="trash-outline" slot="icon-only" />
-                        </ion-item-option>
-                      </ion-item-options>
-                    </ion-item-sliding>
-                  }
-                </ion-list>
-                <ion-button expand="block" fill="outline" color="primary" class="ion-margin" (click)="openEditInstallment(inst)">
-                  <ion-icon name="create-outline" slot="start" />
-                  Edit Installment
-                </ion-button>
-                <ion-button expand="block" fill="outline" color="danger" class="ion-margin" (click)="deleteInstallment(inst.id, inst.transaction)">
-                  <ion-icon name="trash-outline" slot="start" />
-                  Delete Installment
-                </ion-button>
-              </div>
-            </ion-accordion>
-          }
-        </ion-accordion-group>
-      }
+      <!-- Pending / Completed pill tabs -->
+      <div class="inst-pill-tabs">
+        <button class="inst-pill-tab" [class.active]="installmentSegment === 'pending'" (click)="installmentSegment = 'pending'">
+          Pending
+          <span class="inst-pill-count" [class.active]="installmentSegment === 'pending'">{{ pendingInstallments(list).length }}</span>
+        </button>
+        <button class="inst-pill-tab" [class.active]="installmentSegment === 'completed'" (click)="installmentSegment = 'completed'">
+          Completed
+          <span class="inst-pill-count" [class.active]="installmentSegment === 'completed'">{{ completedInstallments(list).length }}</span>
+        </button>
+      </div>
+
+      <!-- ── PENDING ── -->
+      @if (installmentSegment === 'pending') {
+        @let pendingList = pendingInstallments(list);
+        @if (!pendingList.length) {
+          <div class="inst-empty-state">
+            <ion-icon name="checkmark-outline" class="inst-empty-icon"></ion-icon>
+            <p>All caught up! No pending installments.</p>
+          </div>
+        } @else {
+          <!-- Summary strip -->
+          <div class="inst-summary-strip">
+            <div class="inst-summary-item">
+              <span class="inst-summary-label">Total Cost</span>
+              <span class="inst-summary-value">{{ totalCost(pendingList) | currency:currencyCode:'symbol':'1.0-0' }}</span>
+            </div>
+            <div class="inst-summary-sep"></div>
+            <div class="inst-summary-item">
+              <span class="inst-summary-label">Paid So Far</span>
+              <span class="inst-summary-value success-text">{{ totalPaid(pendingList) | currency:currencyCode:'symbol':'1.0-0' }}</span>
+            </div>
+            <div class="inst-summary-sep"></div>
+            <div class="inst-summary-item">
+              <span class="inst-summary-label">Remaining</span>
+              <span class="inst-summary-value danger-text">{{ totalRemaining(pendingList) | currency:currencyCode:'symbol':'1.0-0' }}</span>
+            </div>
+          </div>
+
+          <!-- Installment cards -->
+          <div class="inst-cards-list">
+            @for (inst of pendingList; track inst.id) {
+              <ion-accordion-group class="inst-card-group">
+                <ion-accordion [value]="inst.id">
+                  <div slot="header" class="inst-card-header">
+                    <div class="inst-card-top">
+                      <div class="inst-card-title-row">
+                        <span class="inst-card-name">{{ inst.transaction }}</span>
+                        <span class="inst-card-monthly">{{ inst.monthlyAmount | currency:currencyCode:'symbol':'1.0-0' }}<span class="inst-freq">{{ inst.frequency === 'weekly' ? '/wk' : '/mo' }}</span></span>
+                      </div>
+                      <span class="inst-card-subtitle">{{ inst.cardName }}</span>
+                    </div>
+                    <!-- Progress bar -->
+                    <div class="inst-progress-row">
+                      <div class="inst-progress-track">
+                        <div class="inst-progress-fill" [style.width.%]="(inst.paidCount / inst.months) * 100"></div>
+                      </div>
+                      <span class="inst-progress-label">{{ inst.paidCount }}/{{ inst.months }}</span>
+                    </div>
+                    <div class="inst-card-amounts">
+                      <span class="inst-amount-left">{{ inst.remainingAmount | currency:currencyCode:'symbol':'1.0-0' }} left</span>
+                      <span class="inst-months-left">{{ inst.remainingMonths }}{{ inst.frequency === 'weekly' ? ' wks' : ' mos' }} to go</span>
+                    </div>
+                  </div>
+
+                  <div slot="content" class="inst-card-content">
+                    <ion-list lines="full">
+                      @for (p of inst.payments; track p.id) {
+                        <ion-item-sliding>
+                          <ion-item [class.inst-payment-paid]="p.status === 'paid'">
+                            <div slot="start" class="inst-payment-dot" [class]="'dot-' + p.status"></div>
+                            <ion-label>
+                              <h3>{{ p.dueDate | date:'MMMM y' }}</h3>
+                              <p>Due {{ p.dueDate | date:'MMM d, y' }}</p>
+                              @if (p.status === 'paid' && getPaymentIncomeSources(p.id)) {
+                                <p class="paid-source-label">from {{ getPaymentIncomeSources(p.id) }}</p>
+                              }
+                              @if (p.status === 'paid' && p.paidAt) {
+                                <p class="paid-date-label">paid {{ p.paidAt | date:'MMM d, y' }}</p>
+                              }
+                            </ion-label>
+                            <div slot="end" class="inst-payment-end">
+                              <span class="inst-payment-amount">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                              <ion-badge [color]="badgeColor(p.status)" class="inst-status-badge">{{ p.status }}</ion-badge>
+                            </div>
+                          </ion-item>
+                          <ion-item-options side="end">
+                            @if (p.status !== 'paid') {
+                              <ion-item-option color="success" (click)="markPaid(p, inst.transaction)">
+                                <ion-icon name="checkmark-outline" slot="icon-only" />
+                              </ion-item-option>
+                            }
+                            <ion-item-option color="primary" (click)="openEditPayment(p)">
+                              <ion-icon name="create-outline" slot="icon-only" />
+                            </ion-item-option>
+                            <ion-item-option color="danger" (click)="deletePayment(p, inst.transaction)">
+                              <ion-icon name="trash-outline" slot="icon-only" />
+                            </ion-item-option>
+                          </ion-item-options>
+                        </ion-item-sliding>
+                      }
+                    </ion-list>
+                    <div class="inst-card-actions">
+                      <ion-button fill="outline" color="primary" size="small" (click)="openEditInstallment(inst)">
+                        <ion-icon name="create-outline" slot="start" />Edit
+                      </ion-button>
+                      <ion-button fill="outline" color="danger" size="small" (click)="deleteInstallment(inst.id, inst.transaction)">
+                        <ion-icon name="trash-outline" slot="start" />Delete
+                      </ion-button>
+                    </div>
+                  </div>
+                </ion-accordion>
+              </ion-accordion-group>
+            }
+          </div>
+        }
+      } <!-- end pending -->
+
+      <!-- ── COMPLETED ── -->
+      @if (installmentSegment === 'completed') {
+        @let completedList = completedInstallments(list);
+        @if (!completedList.length) {
+          <div class="inst-empty-state">
+            <ion-icon name="checkmark-outline" class="inst-empty-icon"></ion-icon>
+            <p>No completed installments yet.</p>
+          </div>
+        } @else {
+          <div class="inst-cards-list">
+            @for (inst of completedList; track inst.id) {
+              <ion-accordion-group class="inst-card-group inst-card-group--done">
+                <ion-accordion [value]="inst.id">
+                  <div slot="header" class="inst-card-header">
+                    <div class="inst-card-top">
+                      <div class="inst-card-title-row">
+                        <span class="inst-card-name">{{ inst.transaction }}</span>
+                        <ion-badge color="success" class="inst-done-badge">✓ Done</ion-badge>
+                      </div>
+                      <span class="inst-card-subtitle">{{ inst.cardName }}</span>
+                    </div>
+                    <div class="inst-progress-row">
+                      <div class="inst-progress-track">
+                        <div class="inst-progress-fill inst-progress-fill--done" style="width:100%"></div>
+                      </div>
+                      <span class="inst-progress-label">{{ inst.months }}/{{ inst.months }}</span>
+                    </div>
+                    <div class="inst-card-amounts">
+                      <span class="inst-amount-total">Total paid: {{ inst.totalCost | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                    </div>
+                  </div>
+
+                  <div slot="content" class="inst-card-content">
+                    <ion-list lines="full">
+                      @for (p of inst.payments; track p.id) {
+                        <ion-item>
+                          <div slot="start" class="inst-payment-dot dot-paid"></div>
+                          <ion-label>
+                            <h3>{{ p.dueDate | date:'MMMM y' }}</h3>
+                            @if (p.paidAt) {
+                              <p class="paid-date-label">paid {{ p.paidAt | date:'MMM d, y' }}</p>
+                            }
+                          </ion-label>
+                          <div slot="end" class="inst-payment-end">
+                            <span class="inst-payment-amount">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                          </div>
+                        </ion-item>
+                      }
+                    </ion-list>
+                    <div class="inst-card-actions">
+                      <ion-button fill="outline" color="danger" size="small" (click)="deleteInstallment(inst.id, inst.transaction)">
+                        <ion-icon name="trash-outline" slot="start" />Delete
+                      </ion-button>
+                    </div>
+                  </div>
+                </ion-accordion>
+              </ion-accordion-group>
+            }
+          </div>
+        }
+      } <!-- end completed -->
     }
   }
 

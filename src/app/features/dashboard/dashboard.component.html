@@ -208,7 +208,7 @@
     </div>
     @if (!isCurrentMonth) {
       <button class="month-today-chip" (click)="goToCurrentMonth()">
-        <ion-icon name="arrow-back-outline" class="today-chip-icon"></ion-icon>
+        <ion-icon [name]="isViewInPast ? 'arrow-forward-outline' : 'arrow-back-outline'" class="today-chip-icon"></ion-icon>
         Back to today
       </button>
     }

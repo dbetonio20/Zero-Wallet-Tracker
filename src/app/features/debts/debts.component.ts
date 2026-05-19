@@ -64,6 +64,7 @@ interface CardWithExpensesVM {
 })
 export class DebtsComponent implements OnInit {
   activeSegment = 'installments';
+  installmentSegment: 'pending' | 'completed' = 'pending';
   userName = 'U';
   userInitial = 'U';
   currencyCode = 'PHP';
@@ -212,12 +213,16 @@ export class DebtsComponent implements OnInit {
 
   async onPayResult(result: PayModalResult): Promise<void> {
     if (!this.payingPayment) return;
-    if (result.withoutIncome) {
-      await this.engine.markPayment(this.payingPayment.id, 'paid');
-    } else {
-      await this.engine.payInstallmentWithIncomes(this.payingPayment, result.allocations);
-    }
+    // Capture references and close the modal immediately for instant UX
+    const paymentId = this.payingPayment.id;
+    const payment = this.payingPayment;
+    const allocations = result.allocations;
     this.closePayModal();
+    if (result.withoutIncome) {
+      await this.engine.markPayment(paymentId, 'paid');
+    } else {
+      await this.engine.payInstallmentWithIncomes(payment, allocations);
+    }
   }
 
   getPaymentIncomeSources(paymentId: string): string {
@@ -310,6 +315,14 @@ export class DebtsComponent implements OnInit {
 
   totalRemaining(list: InstallmentVM[]): number {
     return list.reduce((s, i) => s + i.remainingAmount, 0);
+  }
+
+  pendingInstallments(list: InstallmentVM[]): InstallmentVM[] {
+    return list.filter(i => i.paidCount < i.months);
+  }
+
+  completedInstallments(list: InstallmentVM[]): InstallmentVM[] {
+    return list.filter(i => i.paidCount >= i.months);
   }
 
   // ─── Credit Card ─────────────────────────────────────────────────

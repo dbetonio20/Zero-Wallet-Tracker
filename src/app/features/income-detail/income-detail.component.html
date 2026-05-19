@@ -22,55 +22,60 @@
 
 <ion-content [fullscreen]="true">
   @if (income) {
-    <!-- Income Header Card -->
-    <div class="hero-section">
-      <div class="income-detail-header">
-        <div class="income-detail-source">{{ income.name || income.source }}</div>
-        <div class="income-detail-date">{{ income.date | date:'MMMM d, y' }}@if (income.recurring) { <span class="recurring-badge">Recurring</span>}</div>
+    <!-- Income Hero Card -->
+    <div class="idc-hero">
+      <div class="idc-source-row">
+        <span class="idc-source">{{ income.name || income.source }}</span>
+        @if (income.recurring) { <span class="idc-recurring-badge">Recurring</span> }
       </div>
-      <div class="hero-amount positive">{{ income.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+      <div class="idc-date">{{ income.date | date:'MMMM d, y' }}</div>
+      <div class="idc-amount">{{ income.amount | currency:currencyCode:'symbol':'1.0-0' }}</div>
 
-      <!-- Usage Bar -->
-      <div class="income-usage-bar-container">
-        <div class="income-usage-bar">
-          <div class="income-usage-fill" [style.width.%]="usagePercent"></div>
+      <!-- Usage summary row -->
+      <div class="idc-usage-row">
+        <div class="idc-usage-stat">
+          <span class="idc-usage-label">Used</span>
+          <span class="idc-usage-val">{{ usedAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
         </div>
-        <div class="income-usage-labels">
-          <span class="income-usage-used">Used: {{ usedAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
-          <span class="income-usage-remaining" [class.success-text]="remainingAmount > 0" [class.danger-text]="remainingAmount <= 0">
-            Remaining: {{ remainingAmount | currency:currencyCode:'symbol':'1.0-0' }}
-          </span>
+        <div class="idc-usage-stat idc-usage-stat--right">
+          <span class="idc-usage-label">Remaining</span>
+          <span class="idc-usage-val" [class.success-text]="remainingAmount > 0" [class.danger-text]="remainingAmount <= 0">{{ remainingAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
         </div>
       </div>
+
+      <!-- Progress bar -->
+      <div class="idc-bar-track">
+        <div class="idc-bar-fill" [style.width.%]="usagePercent" [class.idc-bar-full]="usagePercent >= 100"></div>
+      </div>
+      <div class="idc-bar-pct">{{ usagePercent | number:'1.0-0' }}% allocated</div>
     </div>
 
-    <!-- Linked Expenses -->
-    <div class="section">
-      <div class="section-header">
-        <div class="section-title">
-          <span class="section-dot dot-success"></span> Paid from this income
-        </div>
-        <ion-badge color="medium">{{ linkedItems.length }}</ion-badge>
+    <!-- Linked payments -->
+    <div class="idc-section">
+      <div class="idc-section-header">
+        <span class="idc-section-title">Paid from this income</span>
+        <span class="idc-section-count">{{ linkedItems.length }}</span>
       </div>
 
       @if (linkedItems.length) {
-        <div class="card-glass">
+        <div class="idc-list">
           @for (item of linkedItems; track item.allocationId) {
             <ion-item-sliding>
-              <ion-item class="transaction-item-ionic">
-                <div class="transaction-icon" [class]="item.type === 'expense' ? 'warning-bg' : 'medium-bg'" slot="start">
+              <ion-item class="idc-list-item">
+                <div class="idc-item-icon" [class]="item.type === 'expense' ? 'idc-icon-expense' : 'idc-icon-inst'" slot="start">
                   <ion-icon [name]="item.type === 'expense' ? 'pricetag-outline' : 'card-outline'"></ion-icon>
                 </div>
                 <ion-label>
-                  <div class="transaction-name">{{ item.name }}</div>
-                  <div class="transaction-date">{{ item.date | date:'MMM d, y' }} · {{ item.type === 'expense' ? 'Expense' : 'Installment' }}</div>
+                  <div class="idc-item-name">{{ item.name }}</div>
+                  <div class="idc-item-meta">
+                    {{ item.date | date:'MMM d, y' }}
+                    <span class="idc-item-type-badge" [class]="item.type === 'expense' ? 'badge-expense' : 'badge-inst'">{{ item.type === 'expense' ? 'Expense' : 'Installment' }}</span>
+                  </div>
                   @if (item.paidAt) {
-                    <div class="paid-date-label">Paid {{ item.paidAt | date:'MMM d, y' }}</div>
+                    <div class="idc-item-paid">✓ Paid {{ item.paidAt | date:'MMM d, y' }}</div>
                   }
                 </ion-label>
-                <div slot="end" class="transaction-amount success-text">
-                  {{ item.allocatedAmount | currency:currencyCode:'symbol':'1.0-0' }}
-                </div>
+                <div slot="end" class="idc-item-amount">{{ item.allocatedAmount | currency:currencyCode:'symbol':'1.0-0' }}</div>
               </ion-item>
               <ion-item-options side="end">
                 <ion-item-option color="danger" (click)="unlinkAllocation(item.allocationId)">
@@ -81,11 +86,10 @@
           }
         </div>
       } @else {
-        <div class="card-glass">
-          <div class="empty-state">
-            <ion-icon name="wallet-outline" class="empty-icon"></ion-icon>
-            <p>No expenses linked to this income yet</p>
-          </div>
+        <div class="idc-empty">
+          <ion-icon name="wallet-outline"></ion-icon>
+          <p>No expenses linked yet</p>
+          <span>Tap the allocate button above to assign expenses</span>
         </div>
       }
     </div>
