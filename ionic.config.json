@@ -1,0 +1,7 @@
+{
+  "name": "Salapi-Wallet-Tracker",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

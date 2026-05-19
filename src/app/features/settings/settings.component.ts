@@ -3,9 +3,10 @@ import { DatePipe, NgFor, NgIf, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonContent, IonItem, IonLabel,
-  IonButtons, IonBackButton,
-  AlertController,
+  IonButtons, IonBackButton, IonSpinner,
+  AlertController, ToastController,
 } from '@ionic/angular/standalone';
+import { signal } from '@angular/core';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { AiService } from '../../core/services/ai.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -28,7 +29,7 @@ const PALETTES = [
   imports: [
     FormsModule, NgFor, NgIf, NgStyle, DatePipe,
     IonHeader, IonToolbar, IonContent, IonItem, IonLabel,
-    IonButtons, IonBackButton,
+    IonButtons, IonBackButton, IonSpinner,
   ],
   templateUrl: './settings.component.html',
   styles: [`
@@ -133,10 +134,12 @@ export class SettingsComponent implements OnInit {
   syncError!: () => string | null;
   lastCompactionAt!: () => string | null;
   syncWarningCount!: () => number;
+  readonly syncing = signal(false);
 
   constructor(
     private prefs: PreferencesService,
     private alertCtrl: AlertController,
+    private toastCtrl: ToastController,
     private router: Router,
     private ai: AiService,
     private authService: AuthService,
@@ -333,17 +336,45 @@ export class SettingsComponent implements OnInit {
       message: 'This action cannot be undone. All your data will be permanently deleted.',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
-        {
-          text: 'Delete Everything',
-          role: 'destructive',
-          handler: async () => {
-            await this.prefs.clearAllData();
-            window.location.reload();
-          },
-        },
+        { text: 'Delete Everything', role: 'destructive' },
       ],
     });
     await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role !== 'destructive') return;
+
+    const uid = this.authService.currentUser()?.uid;
+    if (uid) {
+      await this.syncService.wipeFirestoreData(uid);
+    }
+    await this.prefs.clearAllData();
+    window.location.reload();
+  }
+
+  async manualSync(): Promise<void> {
+    if (this.syncing()) return;
+    this.syncing.set(true);
+    try {
+      await this.syncService.forceSync();
+      const toast = await this.toastCtrl.create({
+        message: 'Sync complete! Your data is up to date.',
+        duration: 3000,
+        color: 'success',
+        position: 'bottom',
+      });
+      await toast.present();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Sync failed. Please try again.';
+      const toast = await this.toastCtrl.create({
+        message: msg,
+        duration: 4000,
+        color: 'danger',
+        position: 'bottom',
+      });
+      await toast.present();
+    } finally {
+      this.syncing.set(false);
+    }
   }
 
   goBack(): void {

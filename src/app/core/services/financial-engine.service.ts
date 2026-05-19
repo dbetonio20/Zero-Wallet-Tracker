@@ -635,6 +635,51 @@ export class FinancialEngineService {
     });
   }
 
+  /**
+   * Reloads a single collection's signal from IndexedDB.
+   * Called by SyncService after each Firestore merge so the UI reflects
+   * remote changes (including cross-device deletions) without a full restart.
+   */
+  async reloadFromStorage(key: string): Promise<void> {
+    switch (key) {
+      case KEYS.EXPENSES: {
+        const records = (await this.storage.getList<Expense>(KEYS.EXPENSES)).map(e =>
+          normalizeSyncedEntity(e)
+        );
+        this._expenses.set(records);
+        break;
+      }
+      case KEYS.INCOMES: {
+        const records = (await this.storage.getList<Income>(KEYS.INCOMES)).map(i =>
+          normalizeSyncedEntity(i)
+        );
+        this._incomes.set(records);
+        break;
+      }
+      case KEYS.INSTALLMENTS: {
+        const records = (await this.storage.getList<Installment>(KEYS.INSTALLMENTS)).map(i =>
+          normalizeSyncedEntity(i)
+        );
+        this._installments.set(records);
+        break;
+      }
+      case KEYS.INSTALLMENT_PAYMENTS: {
+        const records = (
+          await this.storage.getList<InstallmentPayment>(KEYS.INSTALLMENT_PAYMENTS)
+        ).map(p => normalizeSyncedEntity(p));
+        this._installmentPayments.set(records);
+        break;
+      }
+      case KEYS.ALLOCATIONS: {
+        const records = (await this.storage.getList<PaymentAllocation>(KEYS.ALLOCATIONS)).map(a =>
+          normalizeSyncedEntity(a)
+        );
+        this._allocations.set(records);
+        break;
+      }
+    }
+  }
+
   private uuid(): string {
     return crypto.randomUUID();
   }

@@ -8,6 +8,7 @@ import {
   IonModal, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption,
   IonToggle, IonProgressBar,
   IonTextarea, IonFab, IonFabButton,
+  AlertController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -317,6 +318,7 @@ export class DashboardComponent implements OnInit {
     private categoryService: CategoryService,
     private goalService: SavingsGoalService,
     private quickAdd: QuickAddService,
+    private alertCtrl: AlertController,
   ) {
     addIcons({
       addOutline, createOutline, trashOutline, warningOutline,
@@ -786,8 +788,20 @@ export class DashboardComponent implements OnInit {
     this.closeGoalModal();
   }
 
-  async deleteGoal(id: string): Promise<void> {
-    await this.goalService.deleteGoal(id);
+  async deleteGoal(id: string, name: string): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Delete Goal',
+      message: `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: () => this.goalService.deleteGoal(id),
+        },
+      ],
+    });
+    await alert.present();
   }
 
   openContribute(goal: SavingsGoalVM, mode: 'add' | 'withdraw'): void {

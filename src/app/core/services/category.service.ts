@@ -87,6 +87,12 @@ export class CategoryService {
     this._allCategories.set(list);
   }
 
+  /** Reloads the categories signal from IndexedDB. Called by SyncService after a Firestore merge. */
+  async reloadFromStorage(): Promise<void> {
+    const list = await this.storage.getList<Category>(KEY);
+    this._allCategories.set(list.map(category => normalizeSyncedEntity(category)));
+  }
+
   private async save(list: Category[]): Promise<void> {
     await this.storage.saveList(KEY, list);
     this._allCategories.set(list);

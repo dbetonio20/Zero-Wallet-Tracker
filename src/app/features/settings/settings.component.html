@@ -144,6 +144,13 @@
         </ng-template>
       </ion-label>
     </ion-item>
+    <ion-item button (click)="manualSync()" [detail]="false" [disabled]="syncing()">
+      <ion-label color="primary">
+        <h3>Sync Now</h3>
+        <p>Force a full pull &amp; push with the cloud</p>
+      </ion-label>
+      <ion-spinner *ngIf="syncing()" slot="end" name="crescent"></ion-spinner>
+    </ion-item>
     <ion-item button (click)="signOut()" [detail]="false">
       <ion-label color="danger">
         <h3>Sign Out</h3>

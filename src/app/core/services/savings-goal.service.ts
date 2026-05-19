@@ -92,6 +92,12 @@ export class SavingsGoalService {
     this._allGoals.set(list.map(goal => normalizeSyncedEntity(goal)));
   }
 
+  /** Reloads the goals signal from IndexedDB. Called by SyncService after a Firestore merge. */
+  async reloadFromStorage(): Promise<void> {
+    const list = await this.storage.getList<SavingsGoal>(KEY);
+    this._allGoals.set(list.map(goal => normalizeSyncedEntity(goal)));
+  }
+
   private async save(list: SavingsGoal[]): Promise<void> {
     await this.storage.saveList(KEY, list);
     this._allGoals.set(list);

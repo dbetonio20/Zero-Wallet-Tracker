@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   serverTimestamp,
   setDoc,
@@ -13,10 +14,15 @@ import { firestoreDb } from '../config/firebase.config';
 import {
   SyncMetadata,
   SyncWarning,
-  normalizeSyncedEntity,
   isSyncedEntityDeleted,
+  normalizeSyncedEntity,
+  tombstoneSyncedEntity,
 } from '../models';
 import { AuthService } from './auth.service';
+import { CategoryService } from './category.service';
+import { CreditCardService } from './credit-card.service';
+import { FinancialEngineService } from './financial-engine.service';
+import { SavingsGoalService } from './savings-goal.service';
 import { StorageService } from './storage.service';
 
 /** All storage keys that are synced to Firestore. */
@@ -50,6 +56,10 @@ interface CompactionReport {
 export class SyncService {
   private readonly storage = inject(StorageService);
   private readonly auth = inject(AuthService);
+  private readonly engine = inject(FinancialEngineService);
+  private readonly cardService = inject(CreditCardService);
+  private readonly categoryService = inject(CategoryService);
+  private readonly goalService = inject(SavingsGoalService);
   private readonly keyUnsubscribers = new Map<SyncKey, () => void>();
   private activeUid: string | null = null;
   private compactionInFlight = false;
@@ -111,21 +121,26 @@ export class SyncService {
   /**
    * Pushes a single collection to Firestore as per-record documents.
    * Path: `users/{uid}/{key}/{recordId}`
-   * setDoc queues writes offline and syncs automatically when reconnected.
+   * Tombstoned records (deletedAt set) are hard-deleted from Firestore immediately.
+   * Non-deleted records are upserted; writes are queued offline and synced when reconnected.
    */
   async pushKey(uid: string, key: SyncKey, data: RawSyncedRecord[]): Promise<void> {
     const normalizedRecords = data.map(record => this.normalizeRecord(record));
 
     for (const record of normalizedRecords) {
       const ref = doc(firestoreDb, `users/${uid}/${key}/${record.id}`);
-      await setDoc(
-        ref,
-        {
-          ...record,
-          serverUpdatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      if (isSyncedEntityDeleted(record)) {
+        await deleteDoc(ref);
+      } else {
+        await setDoc(
+          ref,
+          {
+            ...record,
+            serverUpdatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+      }
     }
   }
 
@@ -139,6 +154,28 @@ export class SyncService {
       const data = await this.storage.getList<RawSyncedRecord>(key);
       await this.pushKey(uid, key, data);
     }
+  }
+
+  /**
+   * Forces a full bidirectional sync: restarts all real-time Firestore listeners
+   * (pull) and pushes the entire local dataset up to Firestore (push).
+   * Safe to call at any time while logged in.
+   */
+  async forceSync(): Promise<void> {
+    const uid = this.auth.currentUser()?.uid;
+    if (!uid) return;
+
+    // Restart listeners to immediately pull latest remote state.
+    this.stopAllListeners();
+    this.activeUid = null; // reset so bindRealtimeSync doesn't short-circuit
+    for (const key of SYNC_KEYS) {
+      this.startKeyListener(uid, key);
+    }
+    this.activeUid = uid;
+
+    // Push local data up so any missing records are sent to Firestore.
+    await this.pushAll(uid);
+    this.syncError.set(null);
   }
 
   private async bindRealtimeSync(uid: string | null): Promise<void> {
@@ -179,6 +216,11 @@ export class SyncService {
           await this.storage.saveList(key, mergeResult.merged);
         });
 
+        // Update in-memory signals so the UI reflects the merged state immediately
+        // (covers deletions propagated from other devices / sessions).
+        await this.engine.reloadFromStorage(key);
+        await this.reloadServiceSignal(key);
+
         this.syncError.set(null);
       },
       err => {
@@ -188,6 +230,24 @@ export class SyncService {
     );
 
     this.keyUnsubscribers.set(key, unsubscribe);
+  }
+
+  /**
+   * Reloads in-memory signals for collections managed outside FinancialEngineService.
+   * Called after each Firestore snapshot merge so remote deletes propagate to the UI.
+   */
+  private async reloadServiceSignal(key: string): Promise<void> {
+    switch (key) {
+      case 'credit_cards':
+        await this.cardService.reloadFromStorage();
+        break;
+      case 'categories':
+        await this.categoryService.reloadFromStorage();
+        break;
+      case 'savingsGoals':
+        await this.goalService.reloadFromStorage();
+        break;
+    }
   }
 
   private stopAllListeners(): void {
@@ -213,6 +273,7 @@ export class SyncService {
   ): MergeSyncedRecordsResult<T> {
     const warnings: SyncWarning[] = [];
     const merged = new Map<string, T>();
+    const remoteIds = new Set(incomingRecords.map(r => r.id));
 
     for (const record of currentRecords) {
       merged.set(record.id, record);
@@ -239,6 +300,16 @@ export class SyncService {
       }
     }
 
+    // Any local record that was previously synced to Firestore (serverUpdatedAt set)
+    // but is no longer present in the remote snapshot was hard-deleted from Firestore
+    // (either by our deleteDoc call or by another device). Tombstone it locally so it
+    // is filtered out by filterActiveSyncedEntities and does not reappear after restart.
+    for (const [id, record] of merged.entries()) {
+      if (!remoteIds.has(id) && record.serverUpdatedAt !== null && !isSyncedEntityDeleted(record)) {
+        merged.set(id, tombstoneSyncedEntity(record));
+      }
+    }
+
     return {
       merged: Array.from(merged.values()),
       warnings,
@@ -246,6 +317,13 @@ export class SyncService {
   }
 
   compareSyncedRecords<T extends { id: string } & SyncMetadata>(left: T, right: T): number {
+    // Tombstone always beats an active record, regardless of timestamp.
+    // Once a record is deleted it must stay deleted even if another device
+    // later modified the same record with a newer serverUpdatedAt.
+    if (isSyncedEntityDeleted(left) !== isSyncedEntityDeleted(right)) {
+      return isSyncedEntityDeleted(left) ? 1 : -1;
+    }
+
     const leftAuthority = this.getRecordAuthority(left);
     const rightAuthority = this.getRecordAuthority(right);
 
@@ -253,19 +331,10 @@ export class SyncService {
       return leftAuthority - rightAuthority;
     }
 
-    const timestampComparison = this.compareIsoTimestamps(
+    return this.compareIsoTimestamps(
       this.getAuthorityTimestamp(left),
       this.getAuthorityTimestamp(right)
     );
-    if (timestampComparison !== 0) {
-      return timestampComparison;
-    }
-
-    if (isSyncedEntityDeleted(left) !== isSyncedEntityDeleted(right)) {
-      return isSyncedEntityDeleted(left) ? 1 : -1;
-    }
-
-    return 0;
   }
 
   canCompactTombstone(
@@ -340,6 +409,31 @@ export class SyncService {
       return { scanned, compacted, failed };
     } finally {
       this.compactionInFlight = false;
+    }
+  }
+
+  /**
+   * Deletes every record in all synced Firestore collections for the given user.
+   * Must be called before clearing local storage so the IDs are still available.
+   * After this completes, signing back in will NOT restore the deleted data.
+   */
+  async wipeFirestoreData(uid: string): Promise<void> {
+    this.stopAllListeners();
+    this.suppressSync = true;
+    try {
+      for (const key of SYNC_KEYS) {
+        const colRef = collection(firestoreDb, `users/${uid}/${key}`);
+        const snapshot = await getDocs(colRef);
+        for (const docSnap of snapshot.docs) {
+          try {
+            await deleteDoc(docSnap.ref);
+          } catch {
+            // best-effort — don't block the wipe if a single delete fails
+          }
+        }
+      }
+    } finally {
+      this.suppressSync = false;
     }
   }
 

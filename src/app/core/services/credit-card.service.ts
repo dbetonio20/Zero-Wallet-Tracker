@@ -60,6 +60,12 @@ export class CreditCardService {
     this._allCards.set(updated);
   }
 
+  /** Reloads the cards signal from IndexedDB. Called by SyncService after a Firestore merge. */
+  async reloadFromStorage(): Promise<void> {
+    const cards = await this.storage.getList<CreditCard>(KEY);
+    this._allCards.set(cards.map(card => normalizeSyncedEntity(card)));
+  }
+
   /** Returns the card with the given id, or undefined. */
   getById(id: string): CreditCard | undefined {
     return this.cards().find(c => c.id === id);
