@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "734353150517",
+    "firebase_url": "https://project-salapi-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "project-salapi",
     "storage_bucket": "project-salapi.firebasestorage.app"
   },
@@ -13,6 +14,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "734353150517-99f7gp7k18ib903bi85h9lfj8ib9d2th.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.salapi.tracker",
+            "certificate_hash": "68196d3cbe67e8732650e4cc2a718a02d5c01fde"
+          }
+        },
         {
           "client_id": "734353150517-iff3l68lgf0rj1t7fl821ebhk9nfcq52.apps.googleusercontent.com",
           "client_type": 1,

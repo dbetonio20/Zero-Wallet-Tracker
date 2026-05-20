@@ -252,7 +252,7 @@ The `/ai` route is defined and functional but **`TabsComponent` template is miss
 
 ## 9. Building the APK
 
-> Always use `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64` — system default is Java 17, Capacitor Android requires **Java 21**.
+> Always use `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.11/libexec/openjdk.jdk/Contents/Home` — system default has no Java, Capacitor Android requires **Java 21**.
 
 ### One-command build
 ```bash

@@ -5,8 +5,8 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "build:apk": "ng build && npx cap sync android && cd android && JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew assembleDebug",
-    "build:apk:release": "ng build && npx cap sync android && cd android && JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./gradlew assembleRelease",
+    "build:apk": "ng build && npx cap sync android && cd android && JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.11/libexec/openjdk.jdk/Contents/Home ./gradlew assembleDebug",
+    "build:apk:release": "ng build && npx cap sync android && cd android && JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.11/libexec/openjdk.jdk/Contents/Home ./gradlew assembleRelease",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
