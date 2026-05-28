@@ -45,6 +45,7 @@ interface OverdueCardVM {
   dueDate: Date;
   unpaidAmount: number;
   lines: { transaction: string; amount: number; paymentId: string; dueDate: string }[];
+  cardExpenses: Expense[];
 }
 
 interface UpcomingCardVM {
@@ -52,6 +53,7 @@ interface UpcomingCardVM {
   dueDate: Date;
   pendingAmount: number;
   lines: { transaction: string; amount: number; paymentId: string; dueDate: string }[];
+  cardExpenses: Expense[];
 }
 
 interface OverduePaymentVM extends InstallmentPayment {
@@ -412,7 +414,7 @@ export class DashboardComponent implements OnInit {
               return { transaction: inst?.transaction ?? 'Installment', amount: p.amount, paymentId: p.id, dueDate: p.dueDate };
             });
             const dueDate = new Date(currentYear, currentMonth, c.dueDate);
-            return { card: c, dueDate, unpaidAmount, lines };
+            return { card: c, dueDate, unpaidAmount, lines, cardExpenses: [] };
           })
           .filter(occ => occ.unpaidAmount > 0);
 
@@ -610,31 +612,70 @@ export class DashboardComponent implements OnInit {
         // Build card-group transaction items for the selected month (all unpaid card-linked payments,
         // regardless of 7-day window — classifies by whether the card due date has passed in selYear/selMonth).
         const selMonthCardItems: MonthTransactionVM[] = [];
+        const processedCardIds = new Set<string>();
+
+        // Cards with installment payments in the selected month
         for (const { card: c, cardPayments } of selMonthCardPaymentMap.values()) {
           const cardInstallments = installments.filter((inst: Installment) => inst.cardId === c.id);
           const cardDueDate = new Date(selYear, selMonth, c.dueDate);
           const isOverdue = cardDueDate < today;
           const unpaidPayments = cardPayments.filter(p => p.status !== 'paid');
-          // Only create a card-group row when there are still unpaid items to show
-          if (!unpaidPayments.length) continue;
           const lines = unpaidPayments.map(p => {
             const inst = cardInstallments.find((i: Installment) => i.id === p.installmentId);
             return { transaction: inst?.transaction ?? 'Installment', amount: p.amount, paymentId: p.id, dueDate: p.dueDate };
           });
           const unpaidAmount = unpaidPayments.reduce((s, p) => s + p.amount, 0);
+          // Include regular CC expenses whose billing-cycle due date falls in the selected month
+          const ccExpenses = expenses.filter(e => {
+            if (e.creditCardId !== c.id || e.status === 'paid') return false;
+            const due = this.cardService.getBillingCycleDueDate(e.date, c);
+            return due.getFullYear() === selYear && due.getMonth() === selMonth;
+          });
+          const totalAmount = unpaidAmount + ccExpenses.reduce((s, e) => s + e.amount, 0);
+          if (!unpaidPayments.length && !ccExpenses.length) continue;
+          processedCardIds.add(c.id);
           if (isOverdue) {
             selMonthCardItems.push({
               kind: 'overdueCard',
               statusLabel: 'overdue',
               sortDate: cardDueDate.toISOString(),
-              item: { card: c, dueDate: cardDueDate, unpaidAmount, lines },
+              item: { card: c, dueDate: cardDueDate, unpaidAmount: totalAmount, lines, cardExpenses: ccExpenses },
             });
           } else {
             selMonthCardItems.push({
               kind: 'upcomingCard',
               statusLabel: 'upcoming',
               sortDate: cardDueDate.toISOString(),
-              item: { card: c, dueDate: cardDueDate, pendingAmount: unpaidAmount, lines },
+              item: { card: c, dueDate: cardDueDate, pendingAmount: totalAmount, lines, cardExpenses: ccExpenses },
+            });
+          }
+        }
+
+        // Cards with only regular CC expenses (no installment payments this month)
+        for (const card of cards) {
+          if (processedCardIds.has(card.id)) continue;
+          const ccExpenses = expenses.filter(e => {
+            if (e.creditCardId !== card.id || e.status === 'paid') return false;
+            const due = this.cardService.getBillingCycleDueDate(e.date, card);
+            return due.getFullYear() === selYear && due.getMonth() === selMonth;
+          });
+          if (!ccExpenses.length) continue;
+          const cardDueDate = new Date(selYear, selMonth, card.dueDate);
+          const isOverdue = cardDueDate < today;
+          const totalAmount = ccExpenses.reduce((s, e) => s + e.amount, 0);
+          if (isOverdue) {
+            selMonthCardItems.push({
+              kind: 'overdueCard',
+              statusLabel: 'overdue',
+              sortDate: cardDueDate.toISOString(),
+              item: { card, dueDate: cardDueDate, unpaidAmount: totalAmount, lines: [], cardExpenses: ccExpenses },
+            });
+          } else {
+            selMonthCardItems.push({
+              kind: 'upcomingCard',
+              statusLabel: 'upcoming',
+              sortDate: cardDueDate.toISOString(),
+              item: { card, dueDate: cardDueDate, pendingAmount: totalAmount, lines: [], cardExpenses: ccExpenses },
             });
           }
         }

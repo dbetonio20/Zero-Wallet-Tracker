@@ -16,6 +16,7 @@ import {
   fastFoodOutline, carOutline, flashOutline, homeOutline, filmOutline,
   medkitOutline, cartOutline, giftOutline, ellipsisHorizontalOutline,
   pricetagOutline, repeatOutline, colorPaletteOutline, closeOutline,
+  chevronBackOutline, chevronForwardOutline, todayOutline,
 } from 'ionicons/icons';
 import { Router } from '@angular/router';
 import { Subject, combineLatest, BehaviorSubject } from 'rxjs';
@@ -30,12 +31,18 @@ import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal
 
 export type PeriodFilter = 'month' | 'year' | 'all';
 
+/** Expense extended with a preview flag for future-month recurring forecasts */
+export interface ExpenseDisplay extends Expense {
+  isPreview?: boolean;
+}
+
 export interface ExpenseGroup {
   category: string;
   icon: string;
   color: string;
-  expenses: Expense[];
+  expenses: ExpenseDisplay[];
   total: number;
+  previewTotal: number;
   budget?: number;
   budgetPercent?: number;
 }
@@ -78,6 +85,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   searchText$ = new BehaviorSubject<string>('');
   period$ = new BehaviorSubject<PeriodFilter>('month');
   categoryFilter$ = new BehaviorSubject<string>('');
+  selectedMonth$ = new BehaviorSubject<{ year: number; month: number }>(
+    { year: new Date().getFullYear(), month: new Date().getMonth() }
+  );
+  selectedYear$ = new BehaviorSubject<number>(new Date().getFullYear());
 
   // ── Derived grouped list ──────────────────────────────────────────────
   groups$ = combineLatest([
@@ -86,17 +97,48 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.searchText$,
     this.period$,
     this.categoryFilter$,
+    this.selectedMonth$,
+    this.selectedYear$,
   ]).pipe(
-    map(([expenses, cats, search, period, catFilter]) => {
+    map(([expenses, cats, search, period, catFilter, selMonth, selYear]) => {
       const now = new Date();
-      let filtered = expenses.filter(e => {
+
+      // Is the selected view a future month?
+      const isFutureMonth =
+        period === 'month' &&
+        (selMonth.year > now.getFullYear() ||
+          (selMonth.year === now.getFullYear() && selMonth.month > now.getMonth()));
+
+      let filtered: ExpenseDisplay[] = expenses.filter(e => {
         const d = new Date(e.date);
         if (period === 'month') {
-          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+          return d.getFullYear() === selMonth.year && d.getMonth() === selMonth.month;
         }
-        if (period === 'year') return d.getFullYear() === now.getFullYear();
+        if (period === 'year') return d.getFullYear() === selYear;
         return true;
       });
+
+      // ── Inject recurring previews for future months ──────────────────
+      if (isFutureMonth) {
+        // Take the most-recent occurrence of each unique recurring expense
+        const recurringByKey = new Map<string, Expense>();
+        for (const e of [...expenses].filter(x => x.recurring).sort((a, b) => b.date.localeCompare(a.date))) {
+          const key = `${e.category}||${e.name || ''}`;
+          if (!recurringByKey.has(key)) recurringByKey.set(key, e);
+        }
+
+        // Only add previews not already present as real entries this month
+        const realKeys = new Set(filtered.map(e => `${e.category}||${e.name || ''}`));
+        for (const [key, e] of recurringByKey) {
+          if (realKeys.has(key)) continue;
+          // Keep the original day-of-month, capped to last day of target month
+          const origDay = new Date(e.date).getDate();
+          const lastDay = new Date(selMonth.year, selMonth.month + 1, 0).getDate();
+          const day = Math.min(origDay, lastDay);
+          const projectedDate = `${selMonth.year}-${String(selMonth.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          filtered.push({ ...e, id: `preview_${e.id}`, date: projectedDate, status: 'pending', isPreview: true });
+        }
+      }
       if (catFilter) filtered = filtered.filter(e => e.category === catFilter);
       if (search.trim()) {
         const q = search.trim().toLowerCase();
@@ -106,8 +148,12 @@ export class ExpensesComponent implements OnInit, OnDestroy {
           (e.notes || '').toLowerCase().includes(q)
         );
       }
-      filtered = [...filtered].sort((a, b) => b.date.localeCompare(a.date));
-      const groupMap = new Map<string, Expense[]>();
+      filtered = [...filtered].sort((a, b) => {
+        if (a.isPreview && !b.isPreview) return 1;
+        if (!a.isPreview && b.isPreview) return -1;
+        return b.date.localeCompare(a.date);
+      });
+      const groupMap = new Map<string, ExpenseDisplay[]>();
       filtered.forEach(e => {
         const list = groupMap.get(e.category) ?? [];
         list.push(e);
@@ -116,7 +162,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       return [...groupMap.entries()]
         .map(([catName, items]): ExpenseGroup => {
           const cat = cats.find(c => c.name === catName);
-          const total = items.reduce((s, x) => s + x.amount, 0);
+          const realItems = items.filter(i => !i.isPreview);
+          const total = realItems.reduce((s, x) => s + x.amount, 0);
+          const previewTotal = items.filter(i => i.isPreview).reduce((s, x) => s + x.amount, 0);
           const budget = cat?.budget;
           const budgetPercent = budget && budget > 0 ? Math.min(100, (total / budget) * 100) : undefined;
           return {
@@ -125,6 +173,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
             color: cat?.color ?? '#94a3b8',
             expenses: items,
             total,
+            previewTotal,
             budget,
             budgetPercent,
           };
@@ -164,6 +213,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       fastFoodOutline, carOutline, flashOutline, homeOutline, filmOutline,
       medkitOutline, cartOutline, giftOutline, ellipsisHorizontalOutline,
       pricetagOutline, repeatOutline, colorPaletteOutline, closeOutline,
+      chevronBackOutline, chevronForwardOutline, todayOutline,
     });
   }
 
@@ -192,6 +242,55 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   get categoryFilter(): string { return this.categoryFilter$.value; }
   set categoryFilter(v: string) { this.categoryFilter$.next(v); }
+
+  get selectedMonth(): { year: number; month: number } { return this.selectedMonth$.value; }
+  get selectedYear(): number { return this.selectedYear$.value; }
+
+  readonly MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
+  get selectedMonthLabel(): string {
+    return `${this.MONTH_NAMES[this.selectedMonth.month]} ${this.selectedMonth.year}`;
+  }
+
+  get isCurrentMonth(): boolean {
+    const now = new Date();
+    return this.selectedMonth.year === now.getFullYear() && this.selectedMonth.month === now.getMonth();
+  }
+
+  get isCurrentYear(): boolean {
+    return this.selectedYear === new Date().getFullYear();
+  }
+
+  prevMonth(): void {
+    const { year, month } = this.selectedMonth$.value;
+    const d = new Date(year, month - 1);
+    this.selectedMonth$.next({ year: d.getFullYear(), month: d.getMonth() });
+  }
+
+  nextMonth(): void {
+    const { year, month } = this.selectedMonth$.value;
+    const d = new Date(year, month + 1);
+    this.selectedMonth$.next({ year: d.getFullYear(), month: d.getMonth() });
+  }
+
+  goToCurrentMonth(): void {
+    this.selectedMonth$.next({ year: new Date().getFullYear(), month: new Date().getMonth() });
+  }
+
+  prevYear(): void {
+    this.selectedYear$.next(this.selectedYear$.value - 1);
+  }
+
+  nextYear(): void {
+    this.selectedYear$.next(this.selectedYear$.value + 1);
+  }
+
+  goToCurrentYear(): void {
+    this.selectedYear$.next(new Date().getFullYear());
+  }
 
   // ── Expense CRUD ──────────────────────────────────────────────────────
   goToSettings(): void { this.router.navigate(['/settings']); }

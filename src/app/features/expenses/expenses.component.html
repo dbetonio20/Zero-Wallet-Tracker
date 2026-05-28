@@ -39,6 +39,44 @@
     </ion-segment>
   </ion-toolbar>
 
+  <!-- Month / Year navigator -->
+  @if (period === 'month') {
+    <ion-toolbar class="period-nav-toolbar">
+      <div class="period-nav">
+        <ion-button fill="clear" size="small" (click)="prevMonth()">
+          <ion-icon name="chevron-back-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <span class="period-nav-label">{{ selectedMonthLabel }}</span>
+        <ion-button fill="clear" size="small" (click)="nextMonth()">
+          <ion-icon name="chevron-forward-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        @if (!isCurrentMonth) {
+          <ion-button fill="clear" size="small" color="primary" (click)="goToCurrentMonth()">
+            <ion-icon name="today-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        }
+      </div>
+    </ion-toolbar>
+  }
+  @if (period === 'year') {
+    <ion-toolbar class="period-nav-toolbar">
+      <div class="period-nav">
+        <ion-button fill="clear" size="small" (click)="prevYear()">
+          <ion-icon name="chevron-back-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <span class="period-nav-label">{{ selectedYear }}</span>
+        <ion-button fill="clear" size="small" (click)="nextYear()">
+          <ion-icon name="chevron-forward-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        @if (!isCurrentYear) {
+          <ion-button fill="clear" size="small" color="primary" (click)="goToCurrentYear()">
+            <ion-icon name="today-outline" slot="icon-only"></ion-icon>
+          </ion-button>
+        }
+      </div>
+    </ion-toolbar>
+  }
+
   <!-- Category filter chips -->
   <ion-toolbar class="chips-toolbar">
     <div class="chips-row">
@@ -79,6 +117,7 @@
           <span class="group-title">{{ group.category }}</span>
           <span class="group-total">{{ group.total | currency:currencyCode:'symbol':'1.0-0' }}
             @if (group.budget) { <span class="group-budget-label"> / {{ group.budget | currency:currencyCode:'symbol':'1.0-0' }}</span> }
+            @if (group.previewTotal > 0) { <span class="group-preview-total"> +{{ group.previewTotal | currency:currencyCode:'symbol':'1.0-0' }} upcoming</span> }
           </span>
         </div>
         @if (group.budget && group.budgetPercent !== undefined) {
@@ -94,8 +133,8 @@
 
       <ion-list lines="full" class="group-list">
         @for (e of group.expenses; track e.id) {
-          <ion-item-sliding>
-            <ion-item>
+          <ion-item-sliding [disabled]="e.isPreview">
+            <ion-item [class.expense-preview]="e.isPreview">
               <ion-label>
                 <h3>{{ displayName(e) }}</h3>
                 <p>{{ e.date | date:'MMM d, y' }} · {{ e.paymentMethod }}{{ e.creditCardId ? ' (' + (creditCardService.getById(e.creditCardId)?.bank + ' – ' + creditCardService.getById(e.creditCardId)?.name) + ')' : '' }}</p>
@@ -103,6 +142,9 @@
                   <ion-badge color="tertiary" class="recurring-badge">
                     <ion-icon name="repeat-outline" /> Recurring
                   </ion-badge>
+                }
+                @if (e.isPreview) {
+                  <ion-badge color="medium" class="preview-badge">Upcoming</ion-badge>
                 }
                 @if (e.notes) {
                   <p>{{ e.notes }}</p>
@@ -117,25 +159,29 @@
               <ion-note slot="end" [color]="badgeColor(e.status)">
                 {{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}
               </ion-note>
-              <ion-badge slot="end" [color]="badgeColor(e.status)">{{ e.status }}</ion-badge>
-            </ion-item>
-            <ion-item-options side="end">
-              <ion-item-option color="primary" (click)="openEditExpense(e)">
-                <ion-icon name="create-outline" slot="icon-only" />
-              </ion-item-option>
-              @if (e.status !== 'paid') {
-                <ion-item-option color="success" (click)="markPaid(e)">
-                  <ion-icon name="checkmark-outline" slot="icon-only" />
-                </ion-item-option>
-              } @else {
-                <ion-item-option color="warning" (click)="markUnpaid(e)">
-                  <ion-icon name="refresh-outline" slot="icon-only" />
-                </ion-item-option>
+              @if (!e.isPreview) {
+                <ion-badge slot="end" [color]="badgeColor(e.status)">{{ e.status }}</ion-badge>
               }
-              <ion-item-option color="danger" (click)="delete(e.id)">
-                <ion-icon name="trash-outline" slot="icon-only" />
-              </ion-item-option>
-            </ion-item-options>
+            </ion-item>
+            @if (!e.isPreview) {
+              <ion-item-options side="end">
+                <ion-item-option color="primary" (click)="openEditExpense(e)">
+                  <ion-icon name="create-outline" slot="icon-only" />
+                </ion-item-option>
+                @if (e.status !== 'paid') {
+                  <ion-item-option color="success" (click)="markPaid(e)">
+                    <ion-icon name="checkmark-outline" slot="icon-only" />
+                  </ion-item-option>
+                } @else {
+                  <ion-item-option color="warning" (click)="markUnpaid(e)">
+                    <ion-icon name="refresh-outline" slot="icon-only" />
+                  </ion-item-option>
+                }
+                <ion-item-option color="danger" (click)="delete(e.id)">
+                  <ion-icon name="trash-outline" slot="icon-only" />
+                </ion-item-option>
+              </ion-item-options>
+            }
           </ion-item-sliding>
         }
       </ion-list>

@@ -370,9 +370,9 @@
                   <div class="transaction-name-row">
                     <span class="transaction-name">{{ t.item.card.bank }} – {{ t.item.card.name }}</span>
                     <span class="tx-status-badge badge-overdue">Overdue</span>
-                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + t.item.lines[0]?.paymentId)" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.unpaidAmount, $event, vm.cardCharges.find(cc => cc.card.id === t.item.card.id)?.expenses ?? [])">Pay All</button>
+                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + t.item.lines[0]?.paymentId)" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.unpaidAmount, $event, t.item.cardExpenses)">Pay All</button>
                   </div>
-                  <div class="transaction-date">Card Due: {{ t.item.dueDate | date:'MMM d, y' }} · {{ t.item.lines.length }} item{{ t.item.lines.length !== 1 ? 's' : '' }}</div>
+                  <div class="transaction-date">Card Due: {{ t.item.dueDate | date:'MMM d, y' }} · {{ t.item.lines.length + t.item.cardExpenses.length }} item{{ (t.item.lines.length + t.item.cardExpenses.length) !== 1 ? 's' : '' }}</div>
                 </div>
                 <div class="overdue-card-end">
                   <span class="transaction-amount danger-text">{{ t.item.unpaidAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
@@ -389,6 +389,14 @@
                       <button class="pay-btn pay-btn-sm" [class.paying]="payingIds.has(line.paymentId)" (click)="markInstallmentPaid(line.paymentId, line.transaction, line.amount, line.dueDate, $event)">Pay</button>
                     </div>
                   }
+                  @for (e of t.item.cardExpenses; track e.id) {
+                    <div class="overdue-card-line">
+                      <ion-icon name="receipt-outline" class="line-icon"></ion-icon>
+                      <span class="line-name">{{ e.name || e.category }}</span>
+                      <span class="line-amount danger-text">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                      <button class="pay-btn pay-btn-sm" (click)="markExpensePaid(e, $event)">Pay</button>
+                    </div>
+                  }
                 </div>
               }
             }
@@ -402,9 +410,9 @@
                   <div class="transaction-name-row">
                     <span class="transaction-name">{{ t.item.card.bank }} – {{ t.item.card.name }}</span>
                     <span class="tx-status-badge badge-upcoming">Upcoming</span>
-                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + t.item.lines[0]?.paymentId)" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.pendingAmount, $event, vm.cardCharges.find(cc => cc.card.id === t.item.card.id)?.expenses ?? [])">Pay All</button>
+                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + t.item.lines[0]?.paymentId)" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.pendingAmount, $event, t.item.cardExpenses)">Pay All</button>
                   </div>
-                  <div class="transaction-date">Card Due: {{ t.item.dueDate | date:'MMM d, y' }} · {{ t.item.lines.length }} item{{ t.item.lines.length !== 1 ? 's' : '' }}</div>
+                  <div class="transaction-date">Card Due: {{ t.item.dueDate | date:'MMM d, y' }} · {{ t.item.lines.length + t.item.cardExpenses.length }} item{{ (t.item.lines.length + t.item.cardExpenses.length) !== 1 ? 's' : '' }}</div>
                 </div>
                 <div class="overdue-card-end">
                   <span class="transaction-amount warning-text">{{ t.item.pendingAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
@@ -419,6 +427,14 @@
                       <span class="line-name">{{ line.transaction }}</span>
                       <span class="line-amount warning-text">{{ line.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
                       <button class="pay-btn pay-btn-sm" [class.paying]="payingIds.has(line.paymentId)" (click)="markInstallmentPaid(line.paymentId, line.transaction, line.amount, line.dueDate, $event)">Pay</button>
+                    </div>
+                  }
+                  @for (e of t.item.cardExpenses; track e.id) {
+                    <div class="overdue-card-line">
+                      <ion-icon name="receipt-outline" class="line-icon"></ion-icon>
+                      <span class="line-name">{{ e.name || e.category }}</span>
+                      <span class="line-amount warning-text">{{ e.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                      <button class="pay-btn pay-btn-sm" (click)="markExpensePaid(e, $event)">Pay</button>
                     </div>
                   }
                 </div>
