@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe, NgFor, NgIf, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -32,6 +32,7 @@ const PALETTES = [
     IonButtons, IonBackButton, IonSpinner,
   ],
   templateUrl: './settings.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styles: [`
     .palette-section { padding: 8px 16px 16px; }
     .palette-grid {

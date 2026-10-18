@@ -1,6 +1,6 @@
 # ZeroWalletTracker
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.7.
+This project uses [Angular CLI](https://github.com/angular/angular-cli) 22 and requires Node.js `^22.22.3 || ^24.15.0 || >=26.0.0`.
 
 ## Documentation
 

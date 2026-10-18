@@ -370,7 +370,7 @@
                   <div class="transaction-name-row">
                     <span class="transaction-name">{{ t.item.card.bank }} – {{ t.item.card.name }}</span>
                     <span class="tx-status-badge badge-overdue">Overdue</span>
-                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + t.item.lines[0]?.paymentId)" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.unpaidAmount, $event, t.item.cardExpenses)">Pay All</button>
+                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + $safeNavigationMigration(t.item.lines[0]?.paymentId))" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.unpaidAmount, $event, t.item.cardExpenses)">Pay All</button>
                   </div>
                   <div class="transaction-date">Card Due: {{ t.item.dueDate | date:'MMM d, y' }} · {{ t.item.lines.length + t.item.cardExpenses.length }} item{{ (t.item.lines.length + t.item.cardExpenses.length) !== 1 ? 's' : '' }}</div>
                 </div>
@@ -410,7 +410,7 @@
                   <div class="transaction-name-row">
                     <span class="transaction-name">{{ t.item.card.bank }} – {{ t.item.card.name }}</span>
                     <span class="tx-status-badge badge-upcoming">Upcoming</span>
-                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + t.item.lines[0]?.paymentId)" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.pendingAmount, $event, t.item.cardExpenses)">Pay All</button>
+                    <button class="pay-btn pay-btn-inline" [class.paying]="payingIds.has('card-' + $safeNavigationMigration(t.item.lines[0]?.paymentId))" (click)="markAllCardPaid(t.item.lines, t.item.card.bank + ' – ' + t.item.card.name, t.item.pendingAmount, $event, t.item.cardExpenses)">Pay All</button>
                   </div>
                   <div class="transaction-date">Card Due: {{ t.item.dueDate | date:'MMM d, y' }} · {{ t.item.lines.length + t.item.cardExpenses.length }} item{{ (t.item.lines.length + t.item.cardExpenses.length) !== 1 ? 's' : '' }}</div>
                 </div>

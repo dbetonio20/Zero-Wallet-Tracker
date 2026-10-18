@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, effect } from '@angular/core';
+import { Component, OnInit, inject, effect, ChangeDetectionStrategy } from '@angular/core';
 import { IonApp, IonRouterOutlet, ToastController } from '@ionic/angular/standalone';
 import { PreferencesService } from './core/services/preferences.service';
 import { NotificationService } from './core/services/notification.service';
@@ -7,6 +7,7 @@ import { SyncService } from './core/services/sync.service';
 @Component({
   selector: 'app-root',
   imports: [IonApp, IonRouterOutlet],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `<ion-app><ion-router-outlet /></ion-app>`,
 })
 export class App implements OnInit {

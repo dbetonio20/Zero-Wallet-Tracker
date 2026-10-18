@@ -1,6 +1,6 @@
 # zero-wallet-tracker — Copilot Skills
 
-A zero-based budgeting personal finance tracker for Android, built with Angular 21 + Ionic 8 + Capacitor 8.  
+A zero-based budgeting personal finance tracker for Android, built with Angular 22 + Ionic 8 + Capacitor 8.
 This file is the single authoritative reference for AI coding assistance on this project.
 
 ---
@@ -9,13 +9,13 @@ This file is the single authoritative reference for AI coding assistance on this
 
 | Concern | Technology |
 |---|---|
-| Framework | **Angular 21** — standalone components only, no NgModules |
+| Framework | **Angular 22** — standalone components only, no NgModules |
 | UI library | **Ionic 8** (`@ionic/angular/standalone`), `mode: 'md'` forced globally |
 | Charts | chart.js 4.5.1 + ng2-charts 10.0.0 |
 | Storage | `@ionic/storage-angular` 4.0.0 — IndexedDB via localforage |
 | Native layer | **Capacitor 8** — `@capacitor/filesystem`, `@capacitor/share`, `@capacitor/local-notifications`, custom `LlmPlugin` |
 | Package manager | **Bun** (use `bun` and `bun run`, never `npm` or `yarn`) |
-| Language | TypeScript 5.9 — strict mode |
+| Language | TypeScript 6.0 — strict mode |
 | Linting / Formatting | **Prettier**: `singleQuote: true`, `printWidth: 100`, `trailingComma: 'es5'` |
 | Platform | Android only (Capacitor APK) |
 

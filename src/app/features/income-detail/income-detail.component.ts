@@ -1,10 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
-  IonIcon, IonLabel, IonBadge, IonItem, IonItemSliding, IonItemOptions, IonItemOption,
+  IonIcon, IonLabel, IonItem, IonItemSliding, IonItemOptions, IonItemOption,
   IonModal, IonInput, IonSelect, IonSelectOption, IonToggle,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -34,9 +34,10 @@ interface LinkedItem {
   imports: [
     CommonModule, CurrencyPipe, DatePipe, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonContent, IonButton, IonButtons,
-    IonIcon, IonLabel, IonBadge, IonItem, IonItemSliding, IonItemOptions, IonItemOption,
+    IonIcon, IonLabel, IonItem, IonItemSliding, IonItemOptions, IonItemOption,
     IonModal, IonInput, IonSelect, IonSelectOption, IonToggle,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './income-detail.component.html',
 })
 export class IncomeDetailComponent implements OnInit, OnDestroy {

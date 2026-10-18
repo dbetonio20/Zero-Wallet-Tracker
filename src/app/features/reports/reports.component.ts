@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CurrencyPipe, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -90,6 +90,7 @@ interface CardUtilizationVM extends CreditCard {
     IonSegment, IonSegmentButton, IonLabel, IonProgressBar, IonBadge, IonList, IonItem,
     BaseChartDirective,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './reports.component.html',
 })
 export class ReportsComponent implements OnInit {

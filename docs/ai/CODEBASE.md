@@ -8,13 +8,13 @@
 
 | Concern | Technology |
 |---|---|
-| Framework | Angular 21 (standalone components) |
+| Framework | Angular 22 (standalone components) |
 | UI library | Ionic 8 (`@ionic/angular/standalone`, forced MD mode) |
 | Charts | chart.js 4.5.1 + ng2-charts 10.0.0 |
 | Storage | @ionic/storage-angular 4.0.0 (IndexedDB via localforage) |
 | Native | Capacitor 8 (Android target) |
 | Package manager | Bun |
-| Language | TypeScript 5.9 |
+| Language | TypeScript 6.0 |
 | Build | Angular CLI / @angular/build |
 
 `provideIonicAngular({ mode: 'md' })` set globally — MD mode forced everywhere.

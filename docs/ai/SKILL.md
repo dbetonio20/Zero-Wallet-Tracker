@@ -2,7 +2,7 @@
 
 ## 📌 Overview
 
-Zero Wallet Tracker is a mobile-first personal finance app built with Angular 21, Ionic 8, and Capacitor 8.
+Zero Wallet Tracker is a mobile-first personal finance app built with Angular 22, Ionic 8, and Capacitor 8.
 
 The app focuses on:
 
@@ -94,12 +94,12 @@ Never:
 
 | Layer | Technology |
 |---|---|
-| Framework | Angular 21 (standalone APIs only) |
+| Framework | Angular 22 (standalone APIs only) |
 | UI | Ionic 8 |
 | Mobile | Capacitor 8 |
 | Storage | `@ionic/storage-angular` with IndexedDB/localforage |
 | Charts | chart.js + ng2-charts |
-| Language | TypeScript 5.9 |
+| Language | TypeScript 6.0 |
 | Package Manager | Bun |
 | Testing | Jasmine + Karma |
 
@@ -532,4 +532,4 @@ This project enforces:
 - strict typing
 - high-performance Angular patterns
 
-If there is a conflict between older documentation and current implementation, prefer the current Angular 21 standalone + signal-first architecture used in the codebase.
+If there is a conflict between older documentation and current implementation, prefer the current Angular 22 standalone + signal-first architecture used in the codebase.

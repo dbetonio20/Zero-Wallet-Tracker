@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -31,6 +31,7 @@ interface IncomeOption {
     IonHeader, IonToolbar, IonTitle, IonContent,
     IonModal, IonButton, IonButtons, IonIcon, IonInput, IonCheckbox,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <ion-modal [isOpen]="isOpen" (didDismiss)="onDismiss()" [breakpoints]="[0, 0.85]" [initialBreakpoint]="0.85">
       <ng-template>

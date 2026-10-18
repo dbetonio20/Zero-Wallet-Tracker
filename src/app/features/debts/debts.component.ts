@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -60,6 +60,7 @@ interface CardWithExpensesVM {
     IonCardSubtitle, IonCardContent,
     PayModalComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './debts.component.html',
 })
 export class DebtsComponent implements OnInit {

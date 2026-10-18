@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonContent, IonFooter,
@@ -34,6 +34,7 @@ interface DisplayMessage {
     IonProgressBar,
   ],
   templateUrl: './ai.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './ai.component.css',
 })
 export class AiComponent implements OnInit, OnDestroy {
