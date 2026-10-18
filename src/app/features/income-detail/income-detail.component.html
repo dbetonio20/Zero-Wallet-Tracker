@@ -76,6 +76,16 @@
                   }
                 </ion-label>
                 <div slot="end" class="idc-item-amount">{{ item.allocatedAmount | currency:currencyCode:'symbol':'1.0-0' }}</div>
+                <ion-buttons slot="end" class="desktop-item-actions">
+                  <ion-button
+                    fill="clear"
+                    color="danger"
+                    aria-label="Unlink payment allocation"
+                    (click)="unlinkAllocation(item.allocationId)"
+                  >
+                    <ion-icon name="close-outline" slot="icon-only" />
+                  </ion-button>
+                </ion-buttons>
               </ion-item>
               <ion-item-options side="end">
                 <ion-item-option color="danger" (click)="unlinkAllocation(item.allocationId)">
@@ -95,7 +105,7 @@
     </div>
   }
 
-  <div style="height: 100px;"></div>
+  <div class="page-bottom-spacer" aria-hidden="true"></div>
 
   <!-- Edit Income Modal -->
   <ion-modal [isOpen]="isEditModalOpen" (didDismiss)="closeEditModal()" [breakpoints]="[0, 0.65]" [initialBreakpoint]="0.65">
@@ -164,7 +174,16 @@
         } @else {
           <div class="pay-income-list">
             @for (e of allocPlannerExpenses; track e.id) {
-              <div class="pay-income-item" [class.selected]="e.selected" (click)="toggleAllocExpense(e.id)">
+              <div
+                class="pay-income-item"
+                role="checkbox"
+                tabindex="0"
+                [class.selected]="e.selected"
+                [attr.aria-checked]="e.selected"
+                (click)="toggleAllocExpense(e.id)"
+                (keydown.enter)="toggleAllocExpense(e.id)"
+                (keydown.space)="$event.preventDefault(); toggleAllocExpense(e.id)"
+              >
                 <div class="pay-income-radio">
                   @if (e.selected) {
                     <ion-icon name="checkmark-circle-outline" class="radio-checked"></ion-icon>

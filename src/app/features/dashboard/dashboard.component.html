@@ -3,7 +3,7 @@
     <div class="page-header">
       <div class="user-avatar">{{ userInitial }}</div>
       <span class="page-title">Home</span>
-      <ion-button fill="clear" (click)="goToSettings()">
+      <ion-button fill="clear" aria-label="Open settings" (click)="goToSettings()">
         <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
       </ion-button>
     </div>
@@ -57,7 +57,12 @@
       </div>
       @if (vm.recurringTotal > 0) {
         <div class="hero-stat-divider"></div>
-        <div class="hero-stat" (click)="openRecurringModal()" style="cursor:pointer;">
+        <button
+          type="button"
+          class="hero-stat hero-stat-action"
+          aria-label="View recurring expenses"
+          (click)="openRecurringModal()"
+        >
           <div class="hero-stat-icon pending-icon">
             <ion-icon name="repeat-outline"></ion-icon>
           </div>
@@ -65,7 +70,7 @@
             <span class="hero-stat-label">Recurring</span>
             <span class="hero-stat-value pending-value">{{ vm.recurringTotal | currency:currencyCode:'symbol':'1.0-0' }}</span>
           </div>
-        </div>
+        </button>
       }
     </div>
   </div>
@@ -245,7 +250,13 @@
       </div>
       @for (cc of vm.cardCharges; track cc.card.id) {
         <div class="card-glass">
-          <div class="transaction-item overdue-card-header" (click)="toggleCardExpand('c-' + cc.card.id)">
+          <button
+            type="button"
+            class="transaction-item overdue-card-header"
+            [attr.aria-expanded]="expandedCardIds.has('c-' + cc.card.id)"
+            [attr.aria-label]="'Toggle charges for ' + cc.card.bank + ' ' + cc.card.name"
+            (click)="toggleCardExpand('c-' + cc.card.id)"
+          >
             <div class="transaction-icon primary-bg">
               <ion-icon name="card-outline"></ion-icon>
             </div>
@@ -261,7 +272,7 @@
                 [class.expanded]="expandedCardIds.has('c-' + cc.card.id)">
               </ion-icon>
             </div>
-          </div>
+          </button>
           @if (expandedCardIds.has('c-' + cc.card.id)) {
             @for (cycle of cc.cycles; track cycle.label) {
               <div class="cc-cycle-header">
@@ -362,7 +373,9 @@
             }
 
             @if (t.kind === 'overdueCard') {
-              <div class="transaction-item overdue-card-header" (click)="toggleCardExpand(t.item.card.id)">
+              <div
+                class="transaction-item overdue-card-header"
+              >
                 <div class="transaction-icon danger-bg">
                   <ion-icon name="card-outline"></ion-icon>
                 </div>
@@ -376,7 +389,15 @@
                 </div>
                 <div class="overdue-card-end">
                   <span class="transaction-amount danger-text">{{ t.item.unpaidAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
-                  <ion-icon [name]="expandedCardIds.has(t.item.card.id) ? 'chevron-down-outline' : 'chevron-forward-outline'" class="expand-chevron" [class.expanded]="expandedCardIds.has(t.item.card.id)"></ion-icon>
+                  <button
+                    type="button"
+                    class="expand-toggle"
+                    [attr.aria-expanded]="expandedCardIds.has(t.item.card.id)"
+                    [attr.aria-label]="(expandedCardIds.has(t.item.card.id) ? 'Hide' : 'Show') + ' overdue items for ' + t.item.card.bank + ' ' + t.item.card.name"
+                    (click)="toggleCardExpand(t.item.card.id)"
+                  >
+                    <ion-icon [name]="expandedCardIds.has(t.item.card.id) ? 'chevron-down-outline' : 'chevron-forward-outline'" class="expand-chevron" [class.expanded]="expandedCardIds.has(t.item.card.id)"></ion-icon>
+                  </button>
                 </div>
               </div>
               @if (expandedCardIds.has(t.item.card.id)) {
@@ -402,7 +423,9 @@
             }
 
             @if (t.kind === 'upcomingCard') {
-              <div class="transaction-item overdue-card-header" (click)="toggleCardExpand(t.item.card.id)">
+              <div
+                class="transaction-item overdue-card-header"
+              >
                 <div class="transaction-icon warning-bg">
                   <ion-icon name="card-outline"></ion-icon>
                 </div>
@@ -416,7 +439,15 @@
                 </div>
                 <div class="overdue-card-end">
                   <span class="transaction-amount warning-text">{{ t.item.pendingAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
-                  <ion-icon [name]="expandedCardIds.has(t.item.card.id) ? 'chevron-down-outline' : 'chevron-forward-outline'" class="expand-chevron" [class.expanded]="expandedCardIds.has(t.item.card.id)"></ion-icon>
+                  <button
+                    type="button"
+                    class="expand-toggle"
+                    [attr.aria-expanded]="expandedCardIds.has(t.item.card.id)"
+                    [attr.aria-label]="(expandedCardIds.has(t.item.card.id) ? 'Hide' : 'Show') + ' upcoming items for ' + t.item.card.bank + ' ' + t.item.card.name"
+                    (click)="toggleCardExpand(t.item.card.id)"
+                  >
+                    <ion-icon [name]="expandedCardIds.has(t.item.card.id) ? 'chevron-down-outline' : 'chevron-forward-outline'" class="expand-chevron" [class.expanded]="expandedCardIds.has(t.item.card.id)"></ion-icon>
+                  </button>
                 </div>
               </div>
               @if (expandedCardIds.has(t.item.card.id)) {
@@ -520,7 +551,7 @@
       } @else {
         <ion-list lines="none" class="transparent-list">
           @for (i of vm.incomes; track i.id) {
-            <ion-item class="transaction-item-ionic" (click)="goToIncomeDetail(i.id)" detail="false">
+            <ion-item class="transaction-item-ionic" button="true" (click)="goToIncomeDetail(i.id)" detail="false">
               <div class="transaction-icon success-bg" slot="start">
                 <ion-icon name="arrow-down-outline"></ion-icon>
               </div>
@@ -549,11 +580,11 @@
     </div>
   </div>
 
-  <div style="height: 100px;"></div>
+  <div class="page-bottom-spacer" aria-hidden="true"></div>
 
   <!-- Quick-Log FAB -->
   <ion-fab slot="fixed" vertical="bottom" horizontal="end">
-    <ion-fab-button color="success" (click)="quickLogExpense()" title="Quick log expense">
+    <ion-fab-button color="success" (click)="quickLogExpense()" title="Quick log expense" aria-label="Quick log expense">
       <ion-icon name="add-outline"></ion-icon>
     </ion-fab-button>
   </ion-fab>
@@ -629,7 +660,16 @@
         } @else {
           <div class="pay-income-list">
             @for (inc of latestIncomes; track inc.id) {
-              <div class="pay-income-item" [class.selected]="selectedIncomeId === inc.id" (click)="selectedIncomeId = inc.id">
+              <div
+                class="pay-income-item"
+                role="radio"
+                tabindex="0"
+                [class.selected]="selectedIncomeId === inc.id"
+                [attr.aria-checked]="selectedIncomeId === inc.id"
+                (click)="selectedIncomeId = inc.id"
+                (keydown.enter)="selectedIncomeId = inc.id"
+                (keydown.space)="$event.preventDefault(); selectedIncomeId = inc.id"
+              >
                 <div class="pay-income-radio">
                   @if (selectedIncomeId === inc.id) {
                     <ion-icon name="checkmark-circle-outline" class="radio-checked"></ion-icon>
@@ -702,15 +742,30 @@
         <div class="form-section-label">Icon</div>
         <div class="icon-picker">
           @for (ic of goalIcons; track ic) {
-            <div class="icon-option" [class.selected]="goalForm.icon === ic" (click)="goalForm.icon = ic">
+            <button
+              type="button"
+              class="icon-option"
+              [class.selected]="goalForm.icon === ic"
+              [attr.aria-label]="'Select ' + ic.replace('-outline', '') + ' icon'"
+              [attr.aria-pressed]="goalForm.icon === ic"
+              (click)="goalForm.icon = ic"
+            >
               <ion-icon [name]="ic" [style.color]="goalForm.icon === ic ? goalForm.color : ''"></ion-icon>
-            </div>
+            </button>
           }
         </div>
         <div class="form-section-label">Color</div>
         <div class="color-swatches">
           @for (c of goalColors; track c) {
-            <div class="color-swatch" [style.background]="c" [class.swatch-selected]="goalForm.color === c" (click)="goalForm.color = c"></div>
+            <button
+              type="button"
+              class="color-swatch"
+              [style.background]="c"
+              [class.swatch-selected]="goalForm.color === c"
+              [attr.aria-label]="'Select goal color ' + c"
+              [attr.aria-pressed]="goalForm.color === c"
+              (click)="goalForm.color = c"
+            ></button>
           }
         </div>
         <ion-button expand="block" class="save-btn" (click)="saveGoal()">
@@ -782,7 +837,16 @@
         } @else {
           <div class="pay-income-list">
             @for (e of allocPlannerExpenses; track e.id) {
-              <div class="pay-income-item" [class.selected]="e.selected" (click)="toggleAllocExpense(e.id)">
+              <div
+                class="pay-income-item"
+                role="checkbox"
+                tabindex="0"
+                [class.selected]="e.selected"
+                [attr.aria-checked]="e.selected"
+                (click)="toggleAllocExpense(e.id)"
+                (keydown.enter)="toggleAllocExpense(e.id)"
+                (keydown.space)="$event.preventDefault(); toggleAllocExpense(e.id)"
+              >
                 <div class="pay-income-radio">
                   @if (e.selected) {
                     <ion-icon name="checkmark-circle-outline" class="radio-checked"></ion-icon>

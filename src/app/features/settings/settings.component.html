@@ -27,10 +27,13 @@
   <div class="section-header">Color Theme</div>
   <div class="settings-group palette-section">
     <div class="palette-grid">
-      <div
+      <button
+        type="button"
         *ngFor="let p of PALETTES"
         class="palette-card"
         [class.palette-selected]="colorPalette === p.id"
+        [attr.aria-label]="p.name + ' color palette'"
+        [attr.aria-pressed]="colorPalette === p.id"
         (click)="selectPalette(p.id)"
       >
         <div class="palette-preview">
@@ -42,7 +45,7 @@
           </div>
         </div>
         <div class="palette-name">{{ p.name }}</div>
-      </div>
+      </button>
     </div>
   </div>
 
@@ -159,5 +162,5 @@
     </ion-item>
   </div>
 
-  <div style="height: 100px;"></div>
+  <div class="page-bottom-spacer" aria-hidden="true"></div>
 </ion-content>

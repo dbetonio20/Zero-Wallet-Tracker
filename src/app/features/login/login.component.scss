@@ -14,6 +14,8 @@
   min-height: 100vh;
   padding: 32px 28px 48px;
   gap: 0;
+  max-width: 560px;
+  margin-inline: auto;
 }
 
 .login-brand {
@@ -74,4 +76,10 @@
   text-align: center;
   max-width: 280px;
   line-height: 1.5;
+}
+
+@media (min-width: 768px) {
+  .login-wrapper {
+    padding-inline: 48px;
+  }
 }

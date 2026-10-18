@@ -41,11 +41,15 @@ const PALETTES = [
       gap: 10px;
     }
     .palette-card {
-      border-radius: 14px;
+      appearance: none;
+      border-radius: 10px;
       overflow: hidden;
       cursor: pointer;
       border: 2px solid transparent;
       transition: border-color 0.2s, transform 0.15s;
+      font: inherit;
+      background: var(--card-bg);
+      color: var(--text-primary);
     }
     .palette-card:active { transform: scale(0.96); }
     .palette-card.palette-selected { border-color: var(--accent-green); }
@@ -74,7 +78,10 @@ const PALETTES = [
       letter-spacing: 0.2px;
     }
     .palette-card.palette-selected .palette-name {
-      color: var(--accent-green);
+      color: var(--plan-accent-ink);
+    }
+    @media (min-width: 1024px) {
+      .palette-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
     }
     .sync-notice {
       padding: 12px 16px 0;

@@ -153,15 +153,16 @@
         class="ai-input"
         [(ngModel)]="userInput"
         placeholder="Ask about your finances..."
+        aria-label="Ask about your finances"
         [disabled]="isGenerating"
         (keydown.enter)="sendMessage()"
       />
       @if (isGenerating) {
-        <button class="ai-send ai-send-stop" (click)="abortGeneration()">
+        <button class="ai-send ai-send-stop" aria-label="Stop generating" (click)="abortGeneration()">
           <ion-icon name="stop-circle-outline"></ion-icon>
         </button>
       } @else {
-        <button class="ai-send" [disabled]="!userInput.trim()" (click)="sendMessage()">
+        <button class="ai-send" aria-label="Send message" [disabled]="!userInput.trim()" (click)="sendMessage()">
           <ion-icon name="send-outline"></ion-icon>
         </button>
       }

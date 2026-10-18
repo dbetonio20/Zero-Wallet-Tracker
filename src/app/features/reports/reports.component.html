@@ -3,7 +3,7 @@
     <div class="page-header">
       <div class="user-avatar">{{ userInitial }}</div>
       <span class="page-title">Reports</span>
-      <ion-button fill="clear" (click)="goToSettings()">
+      <ion-button fill="clear" aria-label="Open settings" (click)="goToSettings()">
         <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
       </ion-button>
     </div>
@@ -14,10 +14,22 @@
   <!-- Year + Month Selector -->
   <div class="month-selector">
     @for (y of years; track y) {
-      <span class="month-chip" [class.active]="y === selectedYear" (click)="selectYear(y)">{{ y }}</span>
+      <button
+        type="button"
+        class="month-chip"
+        [class.active]="y === selectedYear"
+        [attr.aria-pressed]="y === selectedYear"
+        (click)="selectYear(y)"
+      >{{ y }}</button>
     }
     @for (m of months; track m; let i = $index) {
-      <span class="month-chip" [class.active]="i === selectedMonth" (click)="selectMonth(i)">{{ m }}</span>
+      <button
+        type="button"
+        class="month-chip"
+        [class.active]="i === selectedMonth"
+        [attr.aria-pressed]="i === selectedMonth"
+        (click)="selectMonth(i)"
+      >{{ m }}</button>
     }
   </div>
 
@@ -79,7 +91,7 @@
       <div class="rpt-section-title">Income vs Expenses</div>
       <p class="report-section-subtitle" style="margin-top:0">Last 6 months</p>
       <div class="bar-chart-container">
-        <canvas baseChart [data]="incomeVsExpensesData" type="bar" [options]="incomeVsExpensesOptions"></canvas>
+        <canvas baseChart [data]="incomeVsExpensesData" type="bar" [options]="incomeVsExpensesOptions" role="img" aria-label="Income compared with expenses over the last six months"></canvas>
       </div>
     </div>
 
@@ -89,7 +101,7 @@
         <div class="rpt-section-title">Spending Breakdown</div>
         <p class="report-section-subtitle" style="margin-top:0">{{ months[selectedMonth] }} {{ selectedYear }}</p>
         <div class="chart-container">
-          <canvas baseChart [data]="donutData" type="doughnut" [options]="donutOptions"></canvas>
+          <canvas baseChart [data]="donutData" type="doughnut" [options]="donutOptions" role="img" aria-label="Expense breakdown by category"></canvas>
         </div>
         <!-- Top Categories ranked list -->
         <div class="top-categories">
@@ -122,7 +134,7 @@
       <div class="rpt-section-title">Balance Trend</div>
       <p class="report-section-subtitle" style="margin-top:0">Last 6 months</p>
       <div class="bar-chart-container">
-        <canvas baseChart [data]="cashFlowData" type="line" [options]="cashFlowOptions"></canvas>
+        <canvas baseChart [data]="cashFlowData" type="line" [options]="cashFlowOptions" role="img" aria-label="Balance trend over the last six months"></canvas>
       </div>
     </div>
 
@@ -175,7 +187,7 @@
 
     @if (categories.length) {
       <div class="chart-container">
-        <canvas baseChart [data]="donutData" type="doughnut" [options]="donutOptions"></canvas>
+        <canvas baseChart [data]="donutData" type="doughnut" [options]="donutOptions" role="img" aria-label="Expense breakdown by category"></canvas>
       </div>
       <div class="chart-legend">
         @for (c of categories; track c.category) {
@@ -226,7 +238,7 @@
 
     @if (incomeSourceBreakdown.length) {
       <div class="chart-container">
-        <canvas baseChart [data]="incomeDonutData" type="doughnut" [options]="incomeDonutOptions"></canvas>
+        <canvas baseChart [data]="incomeDonutData" type="doughnut" [options]="incomeDonutOptions" role="img" aria-label="Income sources for this month"></canvas>
       </div>
       <div class="chart-legend">
         @for (s of incomeSourceBreakdown; track s.source) {
@@ -248,7 +260,7 @@
   @if (activeSegment === 'comparison') {
     <p class="report-section-subtitle">Income vs Expenses — last 6 months</p>
     <div class="bar-chart-container">
-      <canvas baseChart [data]="incomeVsExpensesData" type="bar" [options]="incomeVsExpensesOptions"></canvas>
+      <canvas baseChart [data]="incomeVsExpensesData" type="bar" [options]="incomeVsExpensesOptions" role="img" aria-label="Income compared with expenses over the last six months"></canvas>
     </div>
 
     <div class="report-month-header">
@@ -272,7 +284,7 @@
   @if (activeSegment === 'cash-flow') {
     <p class="report-section-subtitle">Balance trend — last 6 months</p>
     <div class="bar-chart-container">
-      <canvas baseChart [data]="cashFlowData" type="line" [options]="cashFlowOptions"></canvas>
+      <canvas baseChart [data]="cashFlowData" type="line" [options]="cashFlowOptions" role="img" aria-label="Balance trend over the last six months"></canvas>
     </div>
 
     <div class="summary-row" style="margin-top: 8px;">
@@ -417,7 +429,7 @@
         </div>
       </div>
       <div class="bar-chart-container">
-        <canvas baseChart [data]="paymentMethodData" type="bar" [options]="paymentMethodOptions"></canvas>
+        <canvas baseChart [data]="paymentMethodData" type="bar" [options]="paymentMethodOptions" role="img" aria-label="Expenses grouped by payment method"></canvas>
       </div>
       <div class="chart-legend" style="margin-top: 8px;">
         @for (m of paymentMethodBreakdown; track m.method) {
@@ -464,5 +476,5 @@
     }
   }
 
-  <div style="height: 100px;"></div>
+  <div class="page-bottom-spacer" aria-hidden="true"></div>
 </ion-content>

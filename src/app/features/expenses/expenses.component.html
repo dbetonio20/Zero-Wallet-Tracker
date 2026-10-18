@@ -7,7 +7,7 @@
         <ion-button fill="clear" (click)="openAddCategory()">
           <ion-icon name="layers-outline" slot="icon-only" color="medium"></ion-icon>
         </ion-button>
-        <ion-button fill="clear" (click)="goToSettings()">
+        <ion-button fill="clear" aria-label="Open settings" (click)="goToSettings()">
           <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
         </ion-button>
       </div>
@@ -81,15 +81,19 @@
   <ion-toolbar class="chips-toolbar">
     <div class="chips-row">
       <ion-chip
+        button="true"
         [color]="categoryFilter === '' ? 'primary' : 'medium'"
         [outline]="categoryFilter !== ''"
+        [attr.aria-pressed]="categoryFilter === ''"
         (click)="categoryFilter = ''"
       >All</ion-chip>
       @if (categories$ | async; as cats) {
         @for (c of cats; track c.id) {
           <ion-chip
+            button="true"
             [color]="categoryFilter === c.name ? 'primary' : 'medium'"
             [outline]="categoryFilter !== c.name"
+            [attr.aria-pressed]="categoryFilter === c.name"
             (click)="categoryFilter = categoryFilter === c.name ? '' : c.name"
           >
             <ion-icon [name]="c.icon" [style.color]="c.color" style="margin-right:4px" />
@@ -161,6 +165,27 @@
               </ion-note>
               @if (!e.isPreview) {
                 <ion-badge slot="end" [color]="badgeColor(e.status)">{{ e.status }}</ion-badge>
+                <ion-buttons slot="end" class="desktop-item-actions">
+                  <ion-button
+                    fill="clear"
+                    aria-label="Edit expense"
+                    (click)="openEditExpense(e)"
+                  >
+                    <ion-icon name="create-outline" slot="icon-only" />
+                  </ion-button>
+                  @if (e.status !== 'paid') {
+                    <ion-button fill="clear" aria-label="Mark expense paid" (click)="markPaid(e)">
+                      <ion-icon name="checkmark-outline" slot="icon-only" />
+                    </ion-button>
+                  } @else {
+                    <ion-button fill="clear" aria-label="Mark expense unpaid" (click)="markUnpaid(e)">
+                      <ion-icon name="refresh-outline" slot="icon-only" />
+                    </ion-button>
+                  }
+                  <ion-button fill="clear" color="danger" aria-label="Delete expense" (click)="delete(e.id)">
+                    <ion-icon name="trash-outline" slot="icon-only" />
+                  </ion-button>
+                </ion-buttons>
               }
             </ion-item>
             @if (!e.isPreview) {
@@ -190,7 +215,7 @@
 
   <!-- Add FAB -->
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-    <ion-fab-button (click)="openModal()">
+    <ion-fab-button (click)="openModal()" aria-label="Add expense">
       <ion-icon name="add-outline" />
     </ion-fab-button>
   </ion-fab>
@@ -310,26 +335,32 @@
           <p class="picker-label">Icon</p>
           <div class="icon-grid">
             @for (ico of iconOptions; track ico) {
-              <div
+              <button
+                type="button"
                 class="icon-option"
                 [class.selected]="categoryForm.icon === ico"
+                [attr.aria-label]="'Select ' + ico.replace('-outline', '') + ' icon'"
+                [attr.aria-pressed]="categoryForm.icon === ico"
                 (click)="categoryForm.icon = ico"
                 [style.color]="categoryForm.color || '#94a3b8'"
               >
                 <ion-icon [name]="ico" />
-              </div>
+              </button>
             }
           </div>
           <!-- Color picker -->
           <p class="picker-label">Color</p>
           <div class="color-grid">
             @for (col of colorSwatches; track col) {
-              <div
+              <button
+                type="button"
                 class="color-swatch"
                 [style.background-color]="col"
                 [class.selected]="categoryForm.color === col"
+                [attr.aria-label]="'Select category color ' + col"
+                [attr.aria-pressed]="categoryForm.color === col"
                 (click)="categoryForm.color = col"
-              ></div>
+              ></button>
             }
           </div>
           <ion-button expand="block" class="ion-margin-top" (click)="saveCategory()">Save Category</ion-button>
@@ -344,25 +375,31 @@
           <p class="picker-label">Icon</p>
           <div class="icon-grid">
             @for (ico of iconOptions; track ico) {
-              <div
+              <button
+                type="button"
                 class="icon-option"
                 [class.selected]="categoryForm.icon === ico"
+                [attr.aria-label]="'Select ' + ico.replace('-outline', '') + ' icon'"
+                [attr.aria-pressed]="categoryForm.icon === ico"
                 (click)="categoryForm.icon = ico"
                 [style.color]="categoryForm.color || '#94a3b8'"
               >
                 <ion-icon [name]="ico" />
-              </div>
+              </button>
             }
           </div>
           <p class="picker-label">Color</p>
           <div class="color-grid">
             @for (col of colorSwatches; track col) {
-              <div
+              <button
+                type="button"
                 class="color-swatch"
                 [style.background-color]="col"
                 [class.selected]="categoryForm.color === col"
+                [attr.aria-label]="'Select category color ' + col"
+                [attr.aria-pressed]="categoryForm.color === col"
                 (click)="categoryForm.color = col"
-              ></div>
+              ></button>
             }
           </div>
           <ion-button expand="block" class="ion-margin-top" (click)="saveCategory()">Update Category</ion-button>
@@ -382,4 +419,3 @@
     (paid)="onPayResult($event)"
   />
 </ion-content>
-

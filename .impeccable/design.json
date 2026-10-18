@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-18T18:17:32Z",
+  "title": "Design System: Salapi",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Selected accent",
+        "canonical": "var(--ion-color-primary)"
+      },
+      "primary-ink": {
+        "role": "primary",
+        "displayName": "Accent ink",
+        "canonical": "var(--plan-accent-ink)"
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "var(--plan-paper)"
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "var(--plan-surface)"
+      },
+      "surface-muted": {
+        "role": "neutral",
+        "displayName": "Muted surface",
+        "canonical": "var(--plan-surface-muted)"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "var(--plan-ink)"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted text",
+        "canonical": "var(--plan-muted)"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "var(--plan-rule)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Financial total",
+        "purpose": "Responsive balance and summary totals."
+      },
+      "body": {
+        "displayName": "System sans-serif",
+        "purpose": "Readable application text and controls across Android and browsers."
+      }
+    },
+    "shadows": [
+      {
+        "name": "bottom-navigation",
+        "value": "0 -4px 16px rgba(24, 42, 29, 0.06)",
+        "purpose": "Separate persistent bottom navigation from scrolling content."
+      },
+      {
+        "name": "floating-action",
+        "value": "0 3px 10px rgba(20, 36, 25, 0.2)",
+        "purpose": "Keep the floating primary action distinct from the page surface."
+      }
+    ],
+    "motion": [
+      {
+        "name": "control-state",
+        "value": "150ms ease",
+        "purpose": "Subtle color and border transitions for interactive controls."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "tablet",
+        "value": "640px"
+      },
+      {
+        "name": "ai-wide-chat",
+        "value": "768px"
+      },
+      {
+        "name": "navigation-rail",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action with the user's current palette accent.",
+      "html": "<button class=\"ds-button-primary\" type=\"button\">Add expense</button>",
+      "css": ".ds-button-primary { min-height: 48px; padding: 12px 16px; border: 0; border-radius: 8px; background: var(--ion-color-primary); color: var(--ion-color-primary-contrast); font-family: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; } .ds-button-primary:focus-visible { outline: 3px solid var(--ion-color-primary); outline-offset: 2px; }"
+    },
+    {
+      "name": "Surface Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Flat container for a related set of budget details.",
+      "html": "<section class=\"ds-panel\" aria-labelledby=\"ds-panel-title\"><h2 id=\"ds-panel-title\">Monthly overview</h2><p>Income and obligations</p></section>",
+      "css": ".ds-panel { padding: 14px; border: 1px solid var(--plan-rule); border-radius: 10px; background: var(--plan-surface); color: var(--plan-ink); } .ds-panel h2 { margin: 0 0 8px; font-family: inherit; font-size: 1.1rem; font-weight: 600; } .ds-panel p { margin: 0; color: var(--plan-muted); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Labeled field on a semantic surface, with an accent focus state.",
+      "html": "<label class=\"ds-field\">Amount<input type=\"text\" inputmode=\"decimal\" placeholder=\"0.00\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: var(--plan-ink); font-family: inherit; font-size: 0.9rem; font-weight: 500; } .ds-field input { width: 100%; min-height: 48px; padding: 12px 14px; border: 1px solid var(--plan-rule); border-radius: 8px; background: var(--plan-surface); color: var(--plan-ink); font-family: inherit; font-size: 1rem; } .ds-field input:focus-visible { outline: 3px solid var(--ion-color-primary); outline-offset: 2px; }"
+    },
+    {
+      "name": "Selected Filter Chip",
+      "kind": "chip",
+      "refersTo": "selected-chip",
+      "description": "Compact selected state for a month or filter choice.",
+      "html": "<button class=\"ds-chip\" type=\"button\" aria-pressed=\"true\">This month</button>",
+      "css": ".ds-chip { min-height: 44px; padding: 8px 12px; border: 1px solid var(--plan-rule); border-radius: 7px; background: var(--plan-surface-muted); color: var(--plan-ink); font-family: inherit; font-size: 0.9rem; font-weight: 500; cursor: pointer; } .ds-chip:focus-visible { outline: 3px solid var(--ion-color-primary); outline-offset: 2px; }"
+    },
+    {
+      "name": "Compact Navigation",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Labeled bottom destinations for compact screens.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Primary navigation\"><a href=\"/dashboard\" aria-current=\"page\">Home</a><a href=\"/expenses\">Expenses</a><a href=\"/reports\">Reports</a><a href=\"/debts\">Debts</a></nav>",
+      "css": ".ds-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 8px; border-top: 1px solid var(--plan-rule); background: var(--plan-surface); } .ds-nav a { display: grid; min-height: 48px; place-items: center; border-radius: 8px; color: var(--plan-muted); font-family: inherit; font-size: 0.8rem; font-weight: 500; text-decoration: none; } .ds-nav a[aria-current='page'] { background: var(--plan-surface-muted); color: var(--plan-accent-ink); } .ds-nav a:focus-visible { outline: 3px solid var(--ion-color-primary); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Residential planning sheets",
+    "overview": "Salapi presents household finances as calm, legible planning pages. Paper-like canvases, fine rules, and aligned amounts make income, spending, and obligations easy to compare. A compact bottom navigation bar becomes a persistent rail on wide screens, while semantic colors follow user-selected palettes and appearance settings.",
+    "keyCharacteristics": [
+      "Information-first layouts with tabular financial amounts.",
+      "Flat, ruled surfaces and a restrained accent palette.",
+      "Responsive navigation and content composition."
+    ],
+    "rules": [
+      {
+        "name": "Accent Follows Preference",
+        "body": "Primary actions and selected states follow the palette and light/dark settings chosen by the user.",
+        "section": "colors"
+      },
+      {
+        "name": "Rule-First Panels",
+        "body": "Use surface contrast and fine borders before elevation; reserve shadows for persistent or floating controls.",
+        "section": "elevation"
+      },
+      {
+        "name": "Planning-Grid Totals",
+        "body": "Reserve the low-contrast 28px grid for the balance hero and financial snapshots.",
+        "section": "layout"
+      },
+      {
+        "name": "Adaptive Shell",
+        "body": "Keep destinations consistent while adapting bottom tabs into a left rail on wide screens.",
+        "section": "layout"
+      }
+    ],
+    "dos": [
+      "Use semantic plan tokens for surfaces, text, rules, and status.",
+      "Keep touch-sized controls and visible keyboard focus."
+    ],
+    "donts": [
+      "Do not hard-code a single accent color into shared components.",
+      "Do not use elevation or the planning grid as default decoration."
+    ]
+  }
+}

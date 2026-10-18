@@ -3,7 +3,7 @@
     <div class="page-header">
       <div class="user-avatar">{{ userInitial }}</div>
       <span class="page-title">Debts</span>
-      <ion-button fill="clear" (click)="goToSettings()">
+      <ion-button fill="clear" aria-label="Open settings" (click)="goToSettings()">
         <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
       </ion-button>
     </div>
@@ -11,7 +11,7 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-segment [(ngModel)]="activeSegment" class="ion-margin">
+  <ion-segment [(ngModel)]="activeSegment" class="debts-segment">
     <ion-segment-button value="installments">
       <ion-label>Installments</ion-label>
     </ion-segment-button>
@@ -68,7 +68,7 @@
             @for (inst of pendingList; track inst.id) {
               <ion-accordion-group class="inst-card-group">
                 <ion-accordion [value]="inst.id">
-                  <div slot="header" class="inst-card-header">
+                  <button type="button" slot="header" class="inst-card-header">
                     <div class="inst-card-top">
                       <div class="inst-card-title-row">
                         <span class="inst-card-name">{{ inst.transaction }}</span>
@@ -87,7 +87,7 @@
                       <span class="inst-amount-left">{{ inst.remainingAmount | currency:currencyCode:'symbol':'1.0-0' }} left</span>
                       <span class="inst-months-left">{{ inst.remainingMonths }}{{ inst.frequency === 'weekly' ? ' wks' : ' mos' }} to go</span>
                     </div>
-                  </div>
+                  </button>
 
                   <div slot="content" class="inst-card-content">
                     <ion-list lines="full">
@@ -109,6 +109,28 @@
                               <span class="inst-payment-amount">{{ p.amount | currency:currencyCode:'symbol':'1.0-0' }}</span>
                               <ion-badge [color]="badgeColor(p.status)" class="inst-status-badge">{{ p.status }}</ion-badge>
                             </div>
+                            <ion-buttons slot="end" class="desktop-item-actions">
+                              @if (p.status !== 'paid') {
+                                <ion-button
+                                  fill="clear"
+                                  aria-label="Mark installment payment paid"
+                                  (click)="markPaid(p, inst.transaction)"
+                                >
+                                  <ion-icon name="checkmark-outline" slot="icon-only" />
+                                </ion-button>
+                              }
+                              <ion-button fill="clear" aria-label="Edit installment payment" (click)="openEditPayment(p)">
+                                <ion-icon name="create-outline" slot="icon-only" />
+                              </ion-button>
+                              <ion-button
+                                fill="clear"
+                                color="danger"
+                                aria-label="Delete installment payment"
+                                (click)="deletePayment(p, inst.transaction)"
+                              >
+                                <ion-icon name="trash-outline" slot="icon-only" />
+                              </ion-button>
+                            </ion-buttons>
                           </ion-item>
                           <ion-item-options side="end">
                             @if (p.status !== 'paid') {
@@ -155,7 +177,7 @@
             @for (inst of completedList; track inst.id) {
               <ion-accordion-group class="inst-card-group inst-card-group--done">
                 <ion-accordion [value]="inst.id">
-                  <div slot="header" class="inst-card-header">
+                  <button type="button" slot="header" class="inst-card-header">
                     <div class="inst-card-top">
                       <div class="inst-card-title-row">
                         <span class="inst-card-name">{{ inst.transaction }}</span>
@@ -172,7 +194,7 @@
                     <div class="inst-card-amounts">
                       <span class="inst-amount-total">Total paid: {{ inst.totalCost | currency:currencyCode:'symbol':'1.0-0' }}</span>
                     </div>
-                  </div>
+                  </button>
 
                   <div slot="content" class="inst-card-content">
                     <ion-list lines="full">
@@ -281,7 +303,7 @@
 
   <!-- FAB -->
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-    <ion-fab-button (click)="openAddModal()">
+    <ion-fab-button (click)="openAddModal()" aria-label="Add installment or credit card">
       <ion-icon name="add-outline" />
     </ion-fab-button>
   </ion-fab>
@@ -408,5 +430,5 @@
     (paid)="onPayResult($event)"
   />
 
-  <div style="height: 100px;"></div>
+  <div class="page-bottom-spacer" aria-hidden="true"></div>
 </ion-content>
