@@ -8,6 +8,7 @@ import {
   onSnapshot,
   serverTimestamp,
   setDoc,
+  waitForPendingWrites,
 } from 'firebase/firestore';
 
 import { firestoreDb } from '../config/firebase.config';
@@ -38,6 +39,40 @@ const SYNC_KEYS = [
 ] as const;
 
 const TOMBSTONE_RETENTION_DAYS = 60;
+const MANUAL_SYNC_TIMEOUT_MS = 15_000;
+
+/**
+ * Waits for an operation to finish, rejecting if it exceeds the supplied timeout.
+ */
+export function waitForPendingWritesWithTimeout(
+  waitForWrites: () => Promise<void>,
+  timeoutMs: number
+): Promise<void> {
+  let timeoutId: number | undefined;
+  return Promise.race([
+    waitForWrites(),
+    new Promise<never>((_resolve, reject) => {
+      timeoutId = window.setTimeout(
+        () => reject(new Error('Sync timed out. Check your connection and try again.')),
+        timeoutMs
+      );
+    }),
+  ]).finally(() => {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  });
+}
+
+/** Returns only records that are new or changed compared with the previous list. */
+export function getChangedSyncedRecords<T extends { id: string }>(
+  records: readonly T[],
+  previousRecords: readonly T[]
+): T[] {
+  const previousById = new Map(previousRecords.map(record => [record.id, record]));
+  return records.filter(record => {
+    const previous = previousById.get(record.id);
+    return previous === undefined || JSON.stringify(record) !== JSON.stringify(previous);
+  });
+}
 
 type SyncKey = (typeof SYNC_KEYS)[number];
 
@@ -63,13 +98,6 @@ export class SyncService {
   private readonly keyUnsubscribers = new Map<SyncKey, () => void>();
   private activeUid: string | null = null;
   private compactionInFlight = false;
-
-  /**
-   * Whether a pull operation is in progress.
-   * Suppresses the storage-save callback during pullAll to avoid
-   * immediately pushing the data we just pulled from Firestore.
-   */
-  private suppressSync = false;
 
   /**
    * Counts in-flight local pushes per key. While > 0, snapshot-triggered
@@ -98,16 +126,20 @@ export class SyncService {
 
     // Register a callback on StorageService so every saveList() call
     // automatically pushes the updated collection to Firestore in the background.
-    this.storage.registerSyncCallback((key, data) => {
-      if (this.suppressSync) return;
+    this.storage.registerSyncCallback((key, data, previousData) => {
       if (!this.isSyncKey(key)) return;
       const uid = this.auth.currentUser()?.uid;
       if (!uid) return;
+      const changedRecords = getChangedSyncedRecords(
+        data as RawSyncedRecord[],
+        previousData as RawSyncedRecord[]
+      );
+      if (changedRecords.length === 0) return;
       // Increment counter so the snapshot handler skips reloadFromStorage
       // while our own writes are still in flight (prevents intermediate
       // Firestore snapshots from reverting local UI state).
       this.pushInFlight.set(key, (this.pushInFlight.get(key) ?? 0) + 1);
-      this.pushKey(uid, key, data as RawSyncedRecord[])
+      this.pushKey(uid, key, changedRecords)
         .then(() => this.syncError.set(null))
         .catch(err => {
           const msg = err instanceof Error ? err.message : 'Cloud sync failed';
@@ -164,37 +196,23 @@ export class SyncService {
   }
 
   /**
-   * Reads all synced collections from local storage and pushes them to Firestore.
-   * Used to initialize the cloud account with local data.
-   * setDoc is used so writes are queued offline and flushed when online.
+   * Waits for local Firestore writes to be acknowledged.
+   * Realtime listeners already pull remote changes and local saves already push
+   * updates, so a manual sync must not restart listeners or rewrite collections.
    */
-  async pushAll(uid: string): Promise<void> {
-    for (const key of SYNC_KEYS) {
-      const data = await this.storage.getList<RawSyncedRecord>(key);
-      await this.pushKey(uid, key, data);
-    }
-  }
-
-  /**
-   * Forces a full bidirectional sync: restarts all real-time Firestore listeners
-   * (pull) and pushes the entire local dataset up to Firestore (push).
-   * Safe to call at any time while logged in.
-   */
-  async forceSync(): Promise<void> {
+  async syncPendingWrites(): Promise<void> {
     const uid = this.auth.currentUser()?.uid;
-    if (!uid) return;
-
-    // Restart listeners to immediately pull latest remote state.
-    this.stopAllListeners();
-    this.activeUid = null; // reset so bindRealtimeSync doesn't short-circuit
-    for (const key of SYNC_KEYS) {
-      this.startKeyListener(uid, key);
+    if (!uid) {
+      throw new Error('Sign in to sync your data.');
     }
-    this.activeUid = uid;
 
-    // Push local data up so any missing records are sent to Firestore.
-    await this.pushAll(uid);
-    this.syncError.set(null);
+    await waitForPendingWritesWithTimeout(
+      () => waitForPendingWrites(firestoreDb),
+      MANUAL_SYNC_TIMEOUT_MS
+    );
+
+    const error = this.syncError();
+    if (error) throw new Error(error);
   }
 
   private async bindRealtimeSync(uid: string | null): Promise<void> {
@@ -231,9 +249,7 @@ export class SyncService {
         const mergeResult = this.mergeSyncedRecords(localRecords, remoteRecords, key);
         this.appendWarnings(mergeResult.warnings);
 
-        await this.runWithSuppressedSync(async () => {
-          await this.storage.saveList(key, mergeResult.merged);
-        });
+        await this.storage.saveList(key, mergeResult.merged, { sync: false });
 
         // Skip reloading signals if we triggered this snapshot ourselves via a
         // local push — the in-memory signals already have the correct state and
@@ -279,15 +295,6 @@ export class SyncService {
       unsubscribe();
     }
     this.keyUnsubscribers.clear();
-  }
-
-  private async runWithSuppressedSync(task: () => Promise<void>): Promise<void> {
-    this.suppressSync = true;
-    try {
-      await task();
-    } finally {
-      this.suppressSync = false;
-    }
   }
 
   mergeSyncedRecords<T extends { id: string } & SyncMetadata>(
@@ -421,9 +428,7 @@ export class SyncService {
           failedIds.has(record.id)
         );
 
-        await this.runWithSuppressedSync(async () => {
-          await this.storage.saveList(key, remaining);
-        });
+        await this.storage.saveList(key, remaining, { sync: false });
       }
 
       this.lastCompactionAt.set(now.toISOString());
@@ -440,21 +445,16 @@ export class SyncService {
    */
   async wipeFirestoreData(uid: string): Promise<void> {
     this.stopAllListeners();
-    this.suppressSync = true;
-    try {
-      for (const key of SYNC_KEYS) {
-        const colRef = collection(firestoreDb, `users/${uid}/${key}`);
-        const snapshot = await getDocs(colRef);
-        for (const docSnap of snapshot.docs) {
-          try {
-            await deleteDoc(docSnap.ref);
-          } catch {
-            // best-effort — don't block the wipe if a single delete fails
-          }
+    for (const key of SYNC_KEYS) {
+      const colRef = collection(firestoreDb, `users/${uid}/${key}`);
+      const snapshot = await getDocs(colRef);
+      for (const docSnap of snapshot.docs) {
+        try {
+          await deleteDoc(docSnap.ref);
+        } catch {
+          // best-effort — don't block the wipe if a single delete fails
         }
       }
-    } finally {
-      this.suppressSync = false;
     }
   }
 

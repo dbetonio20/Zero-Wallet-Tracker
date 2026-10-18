@@ -147,7 +147,7 @@
     <ion-item button (click)="manualSync()" [detail]="false" [disabled]="syncing()">
       <ion-label color="primary">
         <h3>Sync Now</h3>
-        <p>Force a full pull &amp; push with the cloud</p>
+        <p>Wait for pending uploads; incoming changes sync automatically.</p>
       </ion-label>
       <ion-spinner *ngIf="syncing()" slot="end" name="crescent"></ion-spinner>
     </ion-item>

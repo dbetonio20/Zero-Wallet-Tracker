@@ -4,7 +4,11 @@ import { BehaviorSubject, Observable, from } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 /** Callback type registered by SyncService to push data after each saveList. */
-type SyncCallback = (key: string, data: unknown[]) => void;
+type SyncCallback = (key: string, data: unknown[], previousData: unknown[]) => void;
+
+interface SaveListOptions {
+  sync?: boolean;
+}
 
 @Injectable({ providedIn: 'root' })
 export class StorageService {
@@ -43,9 +47,11 @@ export class StorageService {
     return data ?? [];
   }
 
-  async saveList<T>(key: string, list: T[]): Promise<void> {
+  async saveList<T>(key: string, list: T[], options: SaveListOptions = {}): Promise<void> {
+    const shouldSync = options.sync ?? true;
+    const previousList = shouldSync && this.syncCallback ? await this.getList<unknown>(key) : [];
     await this.set(key, list);
-    this.syncCallback?.(key, list as unknown[]);
+    if (shouldSync) this.syncCallback?.(key, list as unknown[], previousList);
   }
 
   /**

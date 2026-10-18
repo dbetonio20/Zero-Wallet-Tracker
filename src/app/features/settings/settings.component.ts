@@ -356,9 +356,9 @@ export class SettingsComponent implements OnInit {
     if (this.syncing()) return;
     this.syncing.set(true);
     try {
-      await this.syncService.forceSync();
+      await this.syncService.syncPendingWrites();
       const toast = await this.toastCtrl.create({
-        message: 'Sync complete! Your data is up to date.',
+        message: 'Pending uploads are synced. Incoming changes sync automatically.',
         duration: 3000,
         color: 'success',
         position: 'bottom',
