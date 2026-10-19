@@ -8,11 +8,11 @@ adaptive
 
 ## Users
 
-Individuals managing their household budget and tracking income, spending, bills, installment payments, and savings goals.
+Individuals managing their household budget and tracking income, spending, bills, installment payments, and savings accounts.
 
 ## Product Purpose
 
-Salapi is a zero-based personal budgeting tracker. It helps people understand income and obligations, record expenses and installment payments, plan savings goals, and review their finances over time.
+Salapi is a zero-based personal budgeting tracker. It helps people understand income and obligations, record expenses and installment payments, plan goal-based savings, manage flexible reserves, and review their finances over time.
 
 ## Positioning
 
@@ -20,11 +20,11 @@ The app centers budgeting around allocating income to expenses and installment p
 
 ## Operating Context
 
-People use Salapi to review their current financial picture, record and pay expenses, monitor recurring and installment obligations, manage credit cards and savings goals, and analyze spending. It supports individual use on Android and, as confirmed for this redesign, first-class browser layouts on tablets and larger screens.
+People use Salapi to review their current financial picture, record and pay expenses, monitor recurring and installment obligations, manage credit cards and goal, flexible, and general savings accounts, and analyze spending. It supports individual use on Android and, as confirmed for this redesign, first-class browser layouts on tablets and larger screens.
 
 ## Capabilities and Constraints
 
-- Existing features include income, expenses, categories, recurring items, installment schedules, credit cards, payment allocations, savings goals, reports, settings, and an on-device AI assistant.
+- Existing features include income, expenses, categories, recurring items, installment schedules, credit cards, payment allocations, savings accounts with transaction history, reports, settings, and an on-device AI assistant.
 - The app supports guest use with local data and Google sign-in with optional cloud sync.
 - The AI assistant runs on-device on Android; the native AI integration is not available in a browser.
 - Preserve existing finance calculations, stored data, authentication and sync behavior, routes, and feature interactions during the UI redesign.

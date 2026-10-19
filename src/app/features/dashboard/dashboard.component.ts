@@ -7,7 +7,7 @@ import {
   IonRefresher, IonRefresherContent, IonIcon,
   IonModal, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption,
   IonToggle, IonProgressBar,
-  IonTextarea, IonFab, IonFabButton,
+  IonTextarea, IonFab, IonFabButton, IonFooter,
   AlertController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -19,6 +19,7 @@ import {
   trendingUpOutline, trendingDownOutline, saveOutline, bulbOutline,
   barbellOutline, leafOutline, ribbonOutline, flagOutline, removeOutline, addCircleOutline,
   receiptOutline, funnelOutline, calendarOutline,
+  homeOutline, carOutline, cartOutline, airplaneOutline, schoolOutline, heartOutline,
 } from 'ionicons/icons';
 import { Observable, BehaviorSubject, combineLatest } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -30,7 +31,7 @@ import { NotificationService } from '../../core/services/notification.service';
 import { CategoryService } from '../../core/services/category.service';
 import { SavingsGoalService } from '../../core/services/savings-goal.service';
 import { QuickAddService } from '../../core/services/quick-add.service';
-import { FinancialSummary, Expense, InstallmentPayment, CreditCard, Income, PaymentAllocation, Installment, SavingsGoal } from '../../core/models';
+import { FinancialSummary, Expense, InstallmentPayment, CreditCard, Income, PaymentAllocation, Installment, SavingsAccount, SavingsAccountType, SavingsGoal } from '../../core/models';
 
 const INCOME_SOURCES = ['Salary', 'Freelance', 'Business', 'Investment', 'Bonus', 'Other'];
 
@@ -82,7 +83,7 @@ interface InsightItem {
   sub?: string;
 }
 
-interface SavingsGoalVM extends SavingsGoal {
+interface SavingsAccountVM extends SavingsAccount {
   progressPercent: number;
   daysLeft?: number;
 }
@@ -102,7 +103,7 @@ interface DashboardVM {
   monthlyTotal: number;
   overdueTotal: number;
   insights: InsightItem[];
-  savingsGoals: SavingsGoalVM[];
+  savingsGoals: SavingsAccountVM[];
   cardCharges: CardChargesVM[];
   recurringTotal: number;
   recurringExpenses: Expense[];
@@ -124,7 +125,7 @@ type PayTarget =
     IonRefresher, IonRefresherContent, IonIcon,
     IonModal, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption,
     IonToggle,
-    IonProgressBar, IonTextarea, IonFab, IonFabButton,
+    IonProgressBar, IonTextarea, IonFab, IonFabButton, IonFooter,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './dashboard.component.html',
@@ -151,10 +152,17 @@ export class DashboardComponent implements OnInit {
   isGoalModalOpen = false;
   editingGoal: SavingsGoal | null = null;
   goalForm: Partial<SavingsGoal> = this.blankGoal();
+  goalFormMode: 'create' | 'edit' = 'create';
+  goalFormType: SavingsAccountType = 'goal';
+  initialSavingsAmount: number | null = null;
+  isGoalSaving = false;
+  goalFormError = '';
   isContributeModalOpen = false;
-  contributeGoal: SavingsGoalVM | null = null;
+  contributeGoal: SavingsAccountVM | null = null;
   contributeAmount = 0;
   contributeMode: 'add' | 'withdraw' = 'add';
+  contributeError = '';
+  isContributeSaving = false;
 
   readonly goalIcons = [
     'flag-outline', 'ribbon-outline', 'leaf-outline', 'barbell-outline',
@@ -331,6 +339,7 @@ export class DashboardComponent implements OnInit {
       trendingUpOutline, trendingDownOutline, saveOutline, bulbOutline,
       barbellOutline, leafOutline, ribbonOutline, flagOutline, removeOutline, addCircleOutline,
       receiptOutline, funnelOutline, calendarOutline,
+      homeOutline, carOutline, cartOutline, airplaneOutline, schoolOutline, heartOutline,
     });
   }
 
@@ -364,7 +373,7 @@ export class DashboardComponent implements OnInit {
       this.cardService.getCards(),
       this.engine.getAllocations(),
       this.engine.getInstallments(),
-      this.goalService.getGoals(),
+      this.goalService.getAccounts(),
       this._viewYear$,
       this._viewMonth$,
       this._txSortBy$,
@@ -490,7 +499,7 @@ export class DashboardComponent implements OnInit {
           .filter(cc => cc.cycles.length > 0);
 
         // ─── Savings Goals VM ──────────────────────────────────────────
-        const savingsGoals: SavingsGoalVM[] = goals.map(g => {
+        const savingsGoals: SavingsAccountVM[] = goals.map(g => {
           const progressPercent = g.targetAmount > 0 ? Math.min(100, (g.currentAmount / g.targetAmount) * 100) : 0;
           let daysLeft: number | undefined;
           if (g.deadline) {
@@ -794,13 +803,21 @@ export class DashboardComponent implements OnInit {
   // ─── Savings Goals CRUD ──────────────────────────────────────────────
   openAddGoal(): void {
     this.editingGoal = null;
+    this.goalFormMode = 'create';
+    this.goalFormType = 'goal';
+    this.initialSavingsAmount = null;
     this.goalForm = this.blankGoal();
+    this.goalFormError = '';
     this.isGoalModalOpen = true;
   }
 
-  openEditGoal(goal: SavingsGoal): void {
+  openEditGoal(goal: SavingsAccountVM): void {
     this.editingGoal = goal;
+    this.goalFormMode = 'edit';
+    this.goalFormType = goal.type ?? 'goal';
+    this.initialSavingsAmount = null;
     this.goalForm = { ...goal };
+    this.goalFormError = '';
     this.isGoalModalOpen = true;
   }
 
@@ -810,36 +827,89 @@ export class DashboardComponent implements OnInit {
   }
 
   async saveGoal(): Promise<void> {
+    if (this.isGoalSaving) return;
     const { name, targetAmount, icon, color, deadline, notes } = this.goalForm;
-    if (!name || !targetAmount) return;
-    if (this.editingGoal) {
-      await this.goalService.updateGoal({ ...this.editingGoal, name, targetAmount: +targetAmount, icon: icon || 'flag-outline', color: color || '#4ade80', deadline, notes });
-    } else {
-      await this.goalService.addGoal({ name, targetAmount: +targetAmount, icon: icon || 'flag-outline', color: color || '#4ade80', deadline, notes });
+    const target = Number(targetAmount);
+    const initialAmount = Number(this.initialSavingsAmount ?? 0);
+    if (!name?.trim()) {
+      this.goalFormError = 'Enter a name for this savings account.';
+      return;
     }
-    this.closeGoalModal();
+    if (this.goalFormType === 'goal') {
+      if (!Number.isFinite(target) || target <= 0) {
+        this.goalFormError = 'Enter a target amount greater than zero.';
+        return;
+      }
+      if (!deadline || Number.isNaN(Date.parse(deadline))) {
+        this.goalFormError = 'Choose a valid target deadline.';
+        return;
+      }
+    }
+    if (!Number.isFinite(initialAmount) || initialAmount < 0) {
+      this.goalFormError = 'The initial deposit cannot be negative.';
+      return;
+    }
+    this.goalFormError = '';
+    this.isGoalSaving = true;
+    try {
+      if (this.goalFormMode === 'edit') {
+        if (!this.editingGoal) {
+          this.goalFormError = 'This savings account is no longer available.';
+          return;
+        }
+        await this.goalService.updateAccount({
+          ...this.editingGoal,
+          name: name.trim(),
+          targetAmount: this.goalFormType === 'goal' ? target : 0,
+          deadline: this.goalFormType === 'goal' ? deadline : undefined,
+          description: this.goalForm.description?.trim() || undefined,
+          notes,
+          icon: icon || 'flag-outline',
+          color: color || '#4ade80',
+        });
+      } else {
+        await this.goalService.addAccount({
+          name: name.trim(),
+          type: this.goalFormType,
+          targetAmount: this.goalFormType === 'goal' ? target : undefined,
+          initialAmount,
+          deadline: this.goalFormType === 'goal' ? deadline : undefined,
+          description: this.goalForm.description?.trim() || undefined,
+          notes,
+          icon: this.goalFormType === 'goal' ? icon || 'flag-outline' : undefined,
+          color: this.goalFormType === 'goal' ? color || '#4ade80' : undefined,
+        });
+      }
+      this.closeGoalModal();
+    } catch (error) {
+      this.goalFormError = error instanceof Error ? error.message : 'Could not save this savings account.';
+    } finally {
+      this.isGoalSaving = false;
+    }
   }
 
-  async deleteGoal(id: string, name: string): Promise<void> {
+  async deleteGoal(goal: SavingsAccountVM): Promise<void> {
+    const transactionCount = goal.transactions?.length ?? 0;
     const alert = await this.alertCtrl.create({
-      header: 'Delete Goal',
-      message: `Are you sure you want to delete "${name}"? This cannot be undone.`,
+      header: 'Delete Savings Account',
+      message: `Delete "${goal.name}"? This cannot be undone.${transactionCount ? ` The account has ${transactionCount} transaction${transactionCount === 1 ? '' : 's'} that will no longer appear in savings history.` : ''}`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
           text: 'Delete',
           role: 'destructive',
-          handler: () => this.goalService.deleteGoal(id),
+          handler: () => this.goalService.deleteAccount(goal.id),
         },
       ],
     });
     await alert.present();
   }
 
-  openContribute(goal: SavingsGoalVM, mode: 'add' | 'withdraw'): void {
+  openContribute(goal: SavingsAccountVM, mode: 'add' | 'withdraw'): void {
     this.contributeGoal = goal;
     this.contributeAmount = 0;
     this.contributeMode = mode;
+    this.contributeError = '';
     this.isContributeModalOpen = true;
   }
 
@@ -849,17 +919,33 @@ export class DashboardComponent implements OnInit {
   }
 
   async confirmContribute(): Promise<void> {
-    if (!this.contributeGoal || !this.contributeAmount) return;
-    if (this.contributeMode === 'add') {
-      await this.goalService.contribute(this.contributeGoal.id, +this.contributeAmount);
-    } else {
-      await this.goalService.withdraw(this.contributeGoal.id, +this.contributeAmount);
+    if (!this.contributeGoal || this.isContributeSaving) return;
+    if (!Number.isFinite(this.contributeAmount) || this.contributeAmount <= 0) {
+      this.contributeError = 'Enter an amount greater than zero.';
+      return;
     }
-    this.closeContributeModal();
+    if (this.contributeMode === 'withdraw' && this.contributeAmount > this.contributeGoal.currentAmount) {
+      this.contributeError = 'The withdrawal cannot exceed the available balance.';
+      return;
+    }
+    this.contributeError = '';
+    this.isContributeSaving = true;
+    try {
+      if (this.contributeMode === 'add') {
+        await this.goalService.contribute(this.contributeGoal.id, +this.contributeAmount);
+      } else {
+        await this.goalService.withdraw(this.contributeGoal.id, +this.contributeAmount);
+      }
+      this.closeContributeModal();
+    } catch (error) {
+      this.contributeError = error instanceof Error ? error.message : 'Could not save this transaction.';
+    } finally {
+      this.isContributeSaving = false;
+    }
   }
 
   private blankGoal(): Partial<SavingsGoal> {
-    return { name: '', targetAmount: undefined, icon: 'flag-outline', color: '#4ade80', deadline: '', notes: '' };
+    return { name: '', targetAmount: undefined, icon: 'flag-outline', color: '#4ade80', deadline: '', description: '', notes: '' };
   }
 
   // ─── Month / Sort Filter ──────────────────────────────────────────────

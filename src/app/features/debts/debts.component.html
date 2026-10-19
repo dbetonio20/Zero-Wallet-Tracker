@@ -2,7 +2,7 @@
   <ion-toolbar>
     <div class="page-header">
       <div class="user-avatar">{{ userInitial }}</div>
-      <span class="page-title">Debts</span>
+      <span class="page-title">Money</span>
       <ion-button fill="clear" aria-label="Open settings" (click)="goToSettings()">
         <ion-icon name="settings-outline" slot="icon-only" color="medium"></ion-icon>
       </ion-button>
@@ -11,7 +11,17 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-segment [(ngModel)]="activeSegment" class="debts-segment">
+  <ion-segment [(ngModel)]="activeMainTab" class="money-main-segment" aria-label="Money sections">
+    <ion-segment-button value="debts">
+      <ion-label>Debts</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="savings">
+      <ion-label>Savings</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  @if (activeMainTab === 'debts') {
+  <ion-segment [(ngModel)]="activeSegment" class="debts-segment" aria-label="Debt types">
     <ion-segment-button value="installments">
       <ion-label>Installments</ion-label>
     </ion-segment-button>
@@ -300,10 +310,16 @@
       }
     }
   }
+  } @else {
+    <app-savings [currencyCode]="currencyCode"></app-savings>
+  }
 
   <!-- FAB -->
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-    <ion-fab-button (click)="openAddModal()" aria-label="Add installment or credit card">
+    <ion-fab-button
+      (click)="openAddModal()"
+      [attr.aria-label]="activeMainTab === 'savings' ? 'Add savings account' : activeSegment === 'installments' ? 'Add installment' : 'Add credit card'"
+    >
       <ion-icon name="add-outline" />
     </ion-fab-button>
   </ion-fab>

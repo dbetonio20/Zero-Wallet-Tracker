@@ -148,7 +148,7 @@ Panels use a restrained `10px` radius, standard Ionic controls use `8px`, and co
 - **Error / Disabled:** Preserve Ionic semantic error and disabled states; pair color with readable text or control state.
 
 ### Navigation
-- **Style:** Use the same labeled Home, Expenses, Reports, and Debts destinations at every width. The AI destination is present only on native platforms, where its on-device integration is supported.
+- **Style:** Use the same labeled Home, Expenses, Reports, and Money destinations at every width. Money contains Debts and Savings. The AI destination is present only on native platforms, where its on-device integration is supported.
 - **Mobile:** Bottom tabs with stacked icon and label, safe-area padding, and a thin top rule.
 - **Wide screens:** A fixed `224px` left rail with horizontal icon/label rows and a right-hand divider.
 

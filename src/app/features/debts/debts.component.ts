@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ViewChild } from '@angular/core';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -22,6 +22,7 @@ import { CreditCardService } from '../../core/services/credit-card.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { Installment, InstallmentPayment, CreditCard, PaymentStatus, Income, Expense } from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
+import { SavingsComponent } from '../savings/savings.component';
 
 interface InstallmentVM extends Installment {
   cardName: string;
@@ -58,12 +59,13 @@ interface CardWithExpensesVM {
     IonItemSliding, IonItemOptions, IonItemOption, IonNote,
     IonSegment, IonSegmentButton, IonCard, IonCardHeader, IonCardTitle,
     IonCardSubtitle, IonCardContent,
-    PayModalComponent,
+    PayModalComponent, SavingsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './debts.component.html',
 })
 export class DebtsComponent implements OnInit {
+  activeMainTab: 'debts' | 'savings' = 'debts';
   activeSegment = 'installments';
   installmentSegment: 'pending' | 'completed' = 'pending';
   userName = 'U';
@@ -87,6 +89,7 @@ export class DebtsComponent implements OnInit {
 
   installmentForm: Partial<Installment & { cardName: string }> = this.blankInstallmentForm();
   cardForm: Partial<CreditCard> = this.blankCardForm();
+  @ViewChild(SavingsComponent) private savingsComponent?: SavingsComponent;
 
   constructor(
     private engine: FinancialEngineService,
@@ -388,6 +391,10 @@ export class DebtsComponent implements OnInit {
   }
 
   openAddModal(): void {
+    if (this.activeMainTab === 'savings') {
+      this.savingsComponent?.openCreate();
+      return;
+    }
     if (this.activeSegment === 'installments') {
       this.openInstallmentModal();
     } else {

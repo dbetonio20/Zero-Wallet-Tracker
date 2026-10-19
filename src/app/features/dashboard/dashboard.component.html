@@ -132,11 +132,11 @@
     </div>
   }
 
-  <!-- Savings Goals -->
+  <!-- Savings Accounts -->
   <div class="section">
     <div class="section-header">
       <div class="section-title">
-        <span class="section-dot dot-success"></span> Savings Goals
+        <span class="section-dot dot-success"></span> Savings Accounts
       </div>
       <ion-button fill="clear" size="small" class="add-btn" (click)="openAddGoal()">
         <ion-icon name="add-outline" slot="icon-only" />
@@ -146,8 +146,8 @@
       <div class="card-glass">
         <div class="empty-state">
           <ion-icon name="flag-outline" class="empty-icon"></ion-icon>
-          <p>No savings goals yet</p>
-          <ion-button fill="outline" size="small" (click)="openAddGoal()">Create Goal</ion-button>
+          <p>No savings accounts yet</p>
+          <ion-button fill="outline" size="small" (click)="openAddGoal()">Create Savings Account</ion-button>
         </div>
       </div>
     } @else {
@@ -160,9 +160,16 @@
               </div>
               <div class="goal-info">
                 <div class="goal-name">{{ g.name }}</div>
+                <div class="goal-type-label">
+                  {{ g.type === 'goal' ? 'Goal Savings' : g.type === 'flexible' ? 'Flexible Savings' : 'General Savings' }}
+                </div>
                 <div class="goal-meta">
                   {{ g.currentAmount | currency:currencyCode:'symbol':'1.0-0' }}
-                  <span class="goal-target"> / {{ g.targetAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                  @if (g.type === 'goal') {
+                    <span class="goal-target"> / {{ g.targetAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+                  } @else {
+                    <span class="goal-target"> saved</span>
+                  }
                   @if (g.daysLeft !== undefined) {
                     <span class="goal-days" [class.goal-days-warn]="g.daysLeft < 30"> · {{ g.daysLeft }}d left</span>
                   }
@@ -172,14 +179,18 @@
                 <ion-button fill="clear" size="small" (click)="openEditGoal(g)">
                   <ion-icon name="create-outline" slot="icon-only"></ion-icon>
                 </ion-button>
-                <ion-button fill="clear" size="small" color="danger" (click)="deleteGoal(g.id, g.name)">
+                <ion-button fill="clear" size="small" color="danger" (click)="deleteGoal(g)">
                   <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
                 </ion-button>
               </div>
             </div>
-            <ion-progress-bar [value]="g.progressPercent / 100" [color]="g.progressPercent >= 100 ? 'success' : 'primary'"></ion-progress-bar>
+            @if (g.type === 'goal') {
+              <ion-progress-bar [value]="g.progressPercent / 100" [color]="g.progressPercent >= 100 ? 'success' : 'primary'"></ion-progress-bar>
+            }
             <div class="goal-progress-row">
-              <span class="goal-pct">{{ g.progressPercent | number:'1.0-0' }}%</span>
+              @if (g.type === 'goal') {
+                <span class="goal-pct">{{ g.progressPercent | number:'1.0-0' }}%</span>
+              }
               <div class="goal-contribute-btns">
                 <ion-button fill="outline" size="small" (click)="openContribute(g, 'add')">
                   <ion-icon name="add-circle-outline" slot="start"></ion-icon> Add
@@ -714,11 +725,11 @@
   </ion-modal>
 
   <!-- Savings Goal Add/Edit Modal -->
-  <ion-modal [isOpen]="isGoalModalOpen" (didDismiss)="closeGoalModal()" [breakpoints]="[0, 0.85]" [initialBreakpoint]="0.85">
+  <ion-modal [isOpen]="isGoalModalOpen" (didDismiss)="closeGoalModal()" [breakpoints]="[0, 0.95, 1]" [initialBreakpoint]="0.95">
     <ng-template>
       <ion-header class="ion-no-border">
         <ion-toolbar class="modal-toolbar">
-          <ion-title>{{ editingGoal ? 'Edit Goal' : 'New Savings Goal' }}</ion-title>
+          <ion-title>{{ goalFormMode === 'edit' ? 'Edit Savings Account' : 'Create Savings Account' }}</ion-title>
           <ion-buttons slot="end">
             <ion-button (click)="closeGoalModal()" class="modal-close-btn">
               <ion-icon name="close-outline" slot="icon-only"></ion-icon>
@@ -727,56 +738,92 @@
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding modal-content">
-        <ion-item class="form-item">
-          <ion-input label="Goal Name" [(ngModel)]="goalForm.name" placeholder="e.g. Emergency Fund" />
-        </ion-item>
-        <ion-item class="form-item">
-          <ion-input label="Target Amount ({{ currencyCode }})" type="number" [(ngModel)]="goalForm.targetAmount" placeholder="0.00" />
-        </ion-item>
-        <ion-item class="form-item">
-          <ion-input label="Deadline (optional)" type="date" [(ngModel)]="goalForm.deadline" />
-        </ion-item>
-        <ion-item class="form-item">
-          <ion-textarea label="Notes (optional)" [(ngModel)]="goalForm.notes" rows="2" placeholder="What's this goal for?" />
-        </ion-item>
-        <div class="form-section-label">Icon</div>
-        <div class="icon-picker">
-          @for (ic of goalIcons; track ic) {
-            <button
-              type="button"
-              class="icon-option"
-              [class.selected]="goalForm.icon === ic"
-              [attr.aria-label]="'Select ' + ic.replace('-outline', '') + ' icon'"
-              [attr.aria-pressed]="goalForm.icon === ic"
-              (click)="goalForm.icon = ic"
-            >
-              <ion-icon [name]="ic" [style.color]="goalForm.icon === ic ? goalForm.color : ''"></ion-icon>
+        @if (goalFormMode === 'create') {
+          <div class="form-section-label">Savings type</div>
+          <div class="goal-type-picker">
+            <button type="button" class="goal-type-option" [class.selected]="goalFormType === 'goal'" [attr.aria-pressed]="goalFormType === 'goal'" (click)="goalFormType = 'goal'">
+              <span class="goal-type-icon">🎯</span>
+              <span class="goal-type-copy"><strong>Goal Savings</strong><small>Set a target amount and deadline.</small></span>
             </button>
-          }
-        </div>
-        <div class="form-section-label">Color</div>
-        <div class="color-swatches">
-          @for (c of goalColors; track c) {
-            <button
-              type="button"
-              class="color-swatch"
-              [style.background]="c"
-              [class.swatch-selected]="goalForm.color === c"
-              [attr.aria-label]="'Select goal color ' + c"
-              [attr.aria-pressed]="goalForm.color === c"
-              (click)="goalForm.color = c"
-            ></button>
-          }
-        </div>
-        <ion-button expand="block" class="save-btn" (click)="saveGoal()">
-          {{ editingGoal ? 'Update Goal' : 'Create Goal' }}
-        </ion-button>
+            <button type="button" class="goal-type-option" [class.selected]="goalFormType === 'flexible'" [attr.aria-pressed]="goalFormType === 'flexible'" (click)="goalFormType = 'flexible'">
+              <span class="goal-type-icon">💰</span>
+              <span class="goal-type-copy"><strong>Flexible Savings</strong><small>No target amount; save as much as you want.</small></span>
+            </button>
+            <button type="button" class="goal-type-option" [class.selected]="goalFormType === 'general'" [attr.aria-pressed]="goalFormType === 'general'" (click)="goalFormType = 'general'">
+              <span class="goal-type-icon">🌱</span>
+              <span class="goal-type-copy"><strong>General Savings</strong><small>For future expenses or unexpected needs.</small></span>
+            </button>
+          </div>
+        }
+        <ion-item class="form-item">
+          <ion-input label="Account name" [(ngModel)]="goalForm.name" placeholder="e.g. Emergency Fund" />
+        </ion-item>
+        @if (goalFormType === 'goal') {
+          <ion-item class="form-item">
+            <ion-input label="Target Amount ({{ currencyCode }})" type="number" [(ngModel)]="goalForm.targetAmount" placeholder="0.00" />
+          </ion-item>
+          <ion-item class="form-item">
+            <ion-input label="Target deadline" type="date" [(ngModel)]="goalForm.deadline" />
+          </ion-item>
+        }
+        @if (goalFormMode === 'create') {
+          <ion-item class="form-item">
+            <ion-input label="Initial deposit (optional)" type="number" [(ngModel)]="initialSavingsAmount" placeholder="0.00" />
+          </ion-item>
+        }
+        <ion-item class="form-item">
+          <ion-textarea label="Description (optional)" [(ngModel)]="goalForm.description" rows="2" placeholder="What are you saving for?" />
+        </ion-item>
+        @if (goalFormType !== 'flexible') {
+          <ion-item class="form-item">
+            <ion-textarea label="Notes (optional)" [(ngModel)]="goalForm.notes" rows="2" placeholder="Add any helpful details." />
+          </ion-item>
+        }
+        @if (goalFormType === 'goal') {
+          <div class="form-section-label">Icon</div>
+          <div class="icon-picker">
+            @for (ic of goalIcons; track ic) {
+              <button
+                type="button"
+                class="icon-option"
+                [class.selected]="goalForm.icon === ic"
+                [attr.aria-label]="'Select ' + ic.replace('-outline', '') + ' icon'"
+                [attr.aria-pressed]="goalForm.icon === ic"
+                (click)="goalForm.icon = ic"
+              >
+                <ion-icon [name]="ic" [style.color]="goalForm.icon === ic ? goalForm.color : ''"></ion-icon>
+              </button>
+            }
+          </div>
+          <div class="form-section-label">Color</div>
+          <div class="color-swatches">
+            @for (c of goalColors; track c) {
+              <button
+                type="button"
+                class="color-swatch"
+                [style.background]="c"
+                [class.swatch-selected]="goalForm.color === c"
+                [attr.aria-label]="'Select goal color ' + c"
+                [attr.aria-pressed]="goalForm.color === c"
+                (click)="goalForm.color = c"
+              ></button>
+            }
+          </div>
+        }
+        @if (goalFormError) {
+          <p class="savings-form-error" role="alert">{{ goalFormError }}</p>
+        }
       </ion-content>
+      <ion-footer class="goal-form-footer">
+        <ion-button expand="block" class="save-btn" [disabled]="isGoalSaving" (click)="saveGoal()">
+          {{ isGoalSaving ? 'Saving…' : goalFormMode === 'edit' ? 'Save Changes' : 'Create Account' }}
+        </ion-button>
+      </ion-footer>
     </ng-template>
   </ion-modal>
 
   <!-- Contribute / Withdraw Modal -->
-  <ion-modal [isOpen]="isContributeModalOpen" (didDismiss)="closeContributeModal()" [breakpoints]="[0, 0.5]" [initialBreakpoint]="0.5">
+  <ion-modal [isOpen]="isContributeModalOpen" [canDismiss]="!isContributeSaving" (didDismiss)="closeContributeModal()" [breakpoints]="[0, 0.5]" [initialBreakpoint]="0.5">
     <ng-template>
       <ion-header class="ion-no-border">
         <ion-toolbar class="modal-toolbar">
@@ -794,15 +841,25 @@
             <div class="pay-target-label">{{ contributeGoal.name }}</div>
             <div class="pay-target-amount">
               {{ contributeGoal.currentAmount | currency:currencyCode:'symbol':'1.0-0' }}
-              <span class="goal-target"> / {{ contributeGoal.targetAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+              @if (contributeGoal.type === 'goal') {
+                <span class="goal-target"> / {{ contributeGoal.targetAmount | currency:currencyCode:'symbol':'1.0-0' }}</span>
+              } @else {
+                <span class="goal-target"> saved</span>
+              }
             </div>
           </div>
         }
         <ion-item class="form-item">
           <ion-input label="Amount" type="number" [(ngModel)]="contributeAmount" placeholder="0.00" />
         </ion-item>
-        <ion-button expand="block" class="save-btn" [disabled]="!contributeAmount" (click)="confirmContribute()">
-          {{ contributeMode === 'add' ? 'Add to Goal' : 'Withdraw from Goal' }}
+        @if (contributeMode === 'withdraw' && contributeAmount > (contributeGoal?.currentAmount ?? 0)) {
+          <p class="savings-form-error" role="alert">The withdrawal cannot exceed the available balance.</p>
+        }
+        @if (contributeError) {
+          <p class="savings-form-error" role="alert">{{ contributeError }}</p>
+        }
+        <ion-button expand="block" class="save-btn" [disabled]="!contributeAmount || isContributeSaving" (click)="confirmContribute()">
+          {{ isContributeSaving ? 'Saving…' : contributeMode === 'add' ? 'Add to Savings' : 'Withdraw from Savings' }}
         </ion-button>
       </ion-content>
     </ng-template>

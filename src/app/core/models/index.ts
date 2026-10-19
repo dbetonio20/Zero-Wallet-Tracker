@@ -67,8 +67,11 @@ export interface SavingsGoal extends SyncMetadata {
   color: string;       // hex color
   targetAmount: number;
   currentAmount: number;
+  type?: SavingsAccountType;
   deadline?: string;   // ISO date string (optional target date)
   notes?: string;
+  description?: string;
+  transactions?: SavingsTransaction[];
 }
 
 export type NewSyncedEntityInput<T extends { id: string } & SyncMetadata> = Omit<
@@ -78,6 +81,32 @@ export type NewSyncedEntityInput<T extends { id: string } & SyncMetadata> = Omit
 
 export type NewCategoryInput = NewSyncedEntityInput<Category>;
 export type NewSavingsGoalInput = Omit<NewSyncedEntityInput<SavingsGoal>, 'currentAmount'>;
+
+export type SavingsAccountType = 'goal' | 'flexible' | 'general';
+export type SavingsTransactionType = 'deposit' | 'withdrawal';
+
+export interface SavingsTransaction {
+  id: string;
+  accountId: string;
+  type: SavingsTransactionType;
+  amount: number;
+  date: string; // ISO 8601 timestamp
+  description?: string;
+}
+
+export type SavingsAccount = SavingsGoal;
+
+export interface NewSavingsAccountInput {
+  name: string;
+  type: SavingsAccountType;
+  targetAmount?: number;
+  initialAmount?: number;
+  deadline?: string;
+  description?: string;
+  notes?: string;
+  icon?: string;
+  color?: string;
+}
 
 export const DEFAULT_CATEGORIES: NewCategoryInput[] = [
   { name: 'Food',          icon: 'fast-food-outline',     color: '#4ade80' },

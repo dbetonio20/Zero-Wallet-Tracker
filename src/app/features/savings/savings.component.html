@@ -1,0 +1,284 @@
+<section class="savings-page" aria-labelledby="savings-heading">
+  <div class="savings-summary">
+    <div>
+      <h2 id="savings-heading">Savings</h2>
+      <p class="savings-summary-label">Across your accounts</p>
+    </div>
+    <div class="savings-summary-total">
+      <span class="savings-total-label">Total saved</span>
+      <strong>{{ totalBalance | currency:currencyCode:'symbol':'1.0-2' }}</strong>
+    </div>
+    <div class="savings-account-count">
+      <span>{{ accounts().length }}</span>
+      <span>{{ accounts().length === 1 ? 'account' : 'accounts' }}</span>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <p class="savings-loading" role="status">Loading savings accounts…</p>
+  } @else if (loadError()) {
+    <div class="savings-load-error" role="alert">
+      <p>{{ loadError() }}</p>
+      <ion-button fill="outline" (click)="retryLoad()">Try again</ion-button>
+    </div>
+  } @else if (accounts().length) {
+    <div class="savings-type-counts" aria-label="Savings accounts by type">
+      <span><ion-icon name="flag-outline" aria-hidden="true"></ion-icon>{{ goalAccountsCount }} goals</span>
+      <span><ion-icon name="wallet-outline" aria-hidden="true"></ion-icon>{{ flexibleAccountsCount }} flexible</span>
+      <span><ion-icon name="leaf-outline" aria-hidden="true"></ion-icon>{{ generalAccountsCount }} general</span>
+    </div>
+
+    <div class="savings-account-list">
+      @for (account of accounts(); track account.id) {
+        <button
+          type="button"
+          class="savings-account-card"
+          [attr.aria-label]="'View ' + account.name + ', ' + typeLabel(account.type) + ', balance ' + (account.currentAmount | currency:currencyCode:'symbol':'1.0-2')"
+          (click)="openAccount(account)"
+        >
+          <span
+            class="savings-account-icon"
+            [class.type-goal]="account.type === 'goal'"
+            [class.type-flexible]="account.type === 'flexible'"
+            [class.type-general]="account.type === 'general'"
+          >
+            <ion-icon [name]="typeIcon(account.type)" aria-hidden="true"></ion-icon>
+          </span>
+          <span class="savings-account-main">
+            <span class="savings-account-name">{{ account.name }}</span>
+            <span class="savings-account-type">{{ typeLabel(account.type) }}</span>
+            @if (account.type === 'goal') {
+              <span class="savings-progress-track" role="progressbar" [attr.aria-valuenow]="goalProgress(account)" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="account.name + ' goal progress'">
+                <span class="savings-progress-fill" [style.width.%]="goalProgress(account)"></span>
+              </span>
+              <span class="savings-goal-meta">
+                <span>{{ account.currentAmount | currency:currencyCode:'symbol':'1.0-2' }} of {{ account.targetAmount | currency:currencyCode:'symbol':'1.0-2' }}</span>
+                @if (isGoalComplete(account)) {
+                  <span class="savings-status complete"><ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>Complete</span>
+                } @else if (isGoalOverdue(account)) {
+                  <span class="savings-status overdue">Overdue</span>
+                } @else {
+                  <span>{{ goalProgress(account) }}%</span>
+                }
+              </span>
+              <span class="savings-goal-meta savings-goal-deadline">
+                <span>{{ goalRemaining(account) | currency:currencyCode:'symbol':'1.0-2' }} to go</span>
+                @if (account.deadline) {
+                  <span><ion-icon name="calendar-outline" aria-hidden="true"></ion-icon>{{ account.deadline | date:'MMM d, y' }}</span>
+                }
+              </span>
+            }
+            @if (account.type !== 'goal' && (account.description || account.notes)) {
+              <span class="savings-account-description">{{ account.description || account.notes }}</span>
+            }
+          </span>
+          <span class="savings-account-balance">{{ account.currentAmount | currency:currencyCode:'symbol':'1.0-2' }}</span>
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="savings-empty-state">
+      <span class="savings-empty-icon" aria-hidden="true">
+        <ion-icon name="wallet-outline"></ion-icon>
+      </span>
+      <h3>No savings accounts yet</h3>
+      <p>Start saving by creating your first account.</p>
+      <ion-button fill="outline" (click)="openCreate()">Create savings account</ion-button>
+    </div>
+  }
+</section>
+
+<ion-modal [isOpen]="isDetailsOpen" [canDismiss]="!isSaving()" (didDismiss)="isDetailsOpen = false" [breakpoints]="[0, 0.72, 0.92]" [initialBreakpoint]="0.72">
+  <ng-template>
+    @if (selectedAccount; as account) {
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>{{ account.name }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button aria-label="Close account details" (click)="isDetailsOpen = false">
+              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding savings-modal-content">
+        <div class="savings-detail-summary">
+          <div class="savings-detail-type">
+            <ion-icon [name]="typeIcon(account.type)" aria-hidden="true"></ion-icon>
+            <span>{{ typeLabel(account.type) }}</span>
+          </div>
+          <strong>{{ account.currentAmount | currency:currencyCode:'symbol':'1.0-2' }}</strong>
+          @if (account.type === 'goal') {
+            <div class="savings-progress-track detail-progress" role="progressbar" [attr.aria-valuenow]="goalProgress(account)" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="account.name + ' goal progress'">
+              <span class="savings-progress-fill" [style.width.%]="goalProgress(account)"></span>
+            </div>
+            <div class="savings-goal-meta">
+              <span>{{ goalProgress(account) }}% · {{ goalRemaining(account) | currency:currencyCode:'symbol':'1.0-2' }} remaining</span>
+              @if (isGoalComplete(account)) {
+                <span class="savings-status complete">Goal complete</span>
+              } @else if (isGoalOverdue(account)) {
+                <span class="savings-status overdue">Past deadline</span>
+              } @else if (account.deadline) {
+                <span>Target {{ account.deadline | date:'MMM d, y' }}</span>
+              }
+            </div>
+          }
+          @if (account.description) {
+            <p class="savings-detail-description">{{ account.description }}</p>
+          }
+          @if (account.notes) {
+            <p class="savings-detail-description">{{ account.notes }}</p>
+          }
+        </div>
+
+        <div class="savings-detail-actions">
+          <ion-button expand="block" (click)="openTransaction('deposit', account)">
+            <ion-icon name="arrow-down-outline" slot="start"></ion-icon>Deposit
+          </ion-button>
+          <ion-button expand="block" fill="outline" [disabled]="account.currentAmount <= 0" (click)="openTransaction('withdrawal', account)">
+            <ion-icon name="arrow-up-outline" slot="start"></ion-icon>Withdraw
+          </ion-button>
+        </div>
+
+        <div class="savings-history-heading">
+          <h3>Transaction history</h3>
+          <span>{{ account.transactions?.length ?? 0 }}</span>
+        </div>
+        @if (sortedTransactions(account).length) {
+          <div class="savings-transaction-list">
+            @for (transaction of sortedTransactions(account); track transaction.id) {
+              <div class="savings-transaction-row">
+                <span class="savings-transaction-icon" [class.withdrawal]="transaction.type === 'withdrawal'">
+                  <ion-icon [name]="transaction.type === 'deposit' ? 'arrow-down-outline' : 'arrow-up-outline'" aria-hidden="true"></ion-icon>
+                </span>
+                <span class="savings-transaction-info">
+                  <strong>{{ transaction.type === 'deposit' ? 'Deposit' : 'Withdrawal' }}</strong>
+                  <span>{{ transaction.date | date:'medium' }}</span>
+                  @if (transaction.description) {
+                    <span>{{ transaction.description }}</span>
+                  }
+                </span>
+                <strong class="savings-transaction-amount" [class.withdrawal]="transaction.type === 'withdrawal'">
+                  {{ transaction.type === 'deposit' ? '+' : '−' }}{{ transaction.amount | currency:currencyCode:'symbol':'1.0-2' }}
+                </strong>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="savings-history-empty">No transactions yet. Deposits and withdrawals will appear here.</p>
+        }
+
+        @if (deleteError()) {
+          <p class="savings-form-error" role="alert">{{ deleteError() }}</p>
+        }
+        <div class="savings-management-actions">
+          <ion-button fill="outline" (click)="openEdit(account)">
+            <ion-icon name="create-outline" slot="start"></ion-icon>Edit account
+          </ion-button>
+          <ion-button fill="outline" color="danger" (click)="confirmDelete(account)">
+            <ion-icon name="trash-outline" slot="start"></ion-icon>Delete
+          </ion-button>
+        </div>
+      </ion-content>
+    }
+  </ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="isFormOpen" [canDismiss]="!isSaving()" (didDismiss)="closeForm()" [breakpoints]="[0, 0.85, 0.96]" [initialBreakpoint]="0.85">
+  <ng-template>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <ion-title>{{ editingAccount ? 'Edit savings account' : 'New savings account' }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button [disabled]="isSaving()" (click)="closeForm()">Cancel</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding savings-modal-content">
+      @if (!editingAccount) {
+        <p class="savings-form-intro">Choose how you want to organize this money.</p>
+        <div class="savings-type-picker" role="group" aria-label="Savings account type">
+          <button type="button" [class.selected]="form.type === 'goal'" [attr.aria-pressed]="form.type === 'goal'" (click)="form.type = 'goal'">
+            <ion-icon name="flag-outline" aria-hidden="true"></ion-icon>
+            <strong>Goal savings</strong>
+            <span>Build toward a target by a date.</span>
+          </button>
+          <button type="button" [class.selected]="form.type === 'flexible'" [attr.aria-pressed]="form.type === 'flexible'" (click)="form.type = 'flexible'">
+            <ion-icon name="wallet-outline" aria-hidden="true"></ion-icon>
+            <strong>Flexible savings</strong>
+            <span>Save and use money freely, without a target.</span>
+          </button>
+          <button type="button" [class.selected]="form.type === 'general'" [attr.aria-pressed]="form.type === 'general'" (click)="form.type = 'general'">
+            <ion-icon name="leaf-outline" aria-hidden="true"></ion-icon>
+            <strong>General savings</strong>
+            <span>Set money aside for future or unexpected needs.</span>
+          </button>
+        </div>
+      }
+
+      <ion-item>
+        <ion-input label="Account name" [(ngModel)]="form.name" placeholder="e.g. Emergency fund" />
+      </ion-item>
+      @if (form.type === 'goal') {
+        <ion-item>
+          <ion-input label="Target amount" type="number" min="0.01" [(ngModel)]="form.targetAmount" placeholder="0.00" />
+        </ion-item>
+        <ion-item>
+          <ion-input label="Target deadline" type="date" [(ngModel)]="form.deadline" />
+        </ion-item>
+      }
+      @if (!editingAccount) {
+        <ion-item>
+          <ion-input label="Initial deposit (optional)" type="number" min="0" [(ngModel)]="form.initialAmount" placeholder="0.00" />
+        </ion-item>
+      }
+      <ion-item>
+        <ion-textarea label="Description (optional)" [(ngModel)]="form.description" rows="2" placeholder="What are you saving for?" />
+      </ion-item>
+      @if (form.type === 'goal' || form.type === 'general') {
+        <ion-item>
+          <ion-textarea label="Notes (optional)" [(ngModel)]="form.notes" rows="2" placeholder="Add a note" />
+        </ion-item>
+      }
+      @if (formError()) {
+        <p class="savings-form-error" role="alert">{{ formError() }}</p>
+      }
+      <ion-button expand="block" [disabled]="isSaving()" (click)="saveAccount()">
+        {{ isSaving() ? 'Saving…' : editingAccount ? 'Save changes' : 'Create account' }}
+      </ion-button>
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="isTransactionOpen" [canDismiss]="!isSaving()" (didDismiss)="closeTransaction()" [breakpoints]="[0, 0.55, 0.78]" [initialBreakpoint]="0.55">
+  <ng-template>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <ion-title>{{ transactionType === 'deposit' ? 'Make a deposit' : 'Withdraw money' }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button [disabled]="isSaving()" (click)="closeTransaction()">Cancel</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding savings-modal-content">
+      @if (selectedAccount; as account) {
+        <div class="savings-available-balance">
+          <span>{{ account.name }} · available balance</span>
+          <strong>{{ account.currentAmount | currency:currencyCode:'symbol':'1.0-2' }}</strong>
+        </div>
+      }
+      <ion-item>
+        <ion-input label="Amount" type="number" min="0.01" [(ngModel)]="transactionAmount" placeholder="0.00" />
+      </ion-item>
+      <ion-item>
+        <ion-input label="Description (optional)" [(ngModel)]="transactionDescription" placeholder="e.g. Monthly savings" />
+      </ion-item>
+      @if (transactionError()) {
+        <p class="savings-form-error" role="alert">{{ transactionError() }}</p>
+      }
+      <ion-button expand="block" [disabled]="isSaving()" (click)="saveTransaction()">
+        {{ isSaving() ? 'Saving…' : transactionType === 'deposit' ? 'Confirm deposit' : 'Confirm withdrawal' }}
+      </ion-button>
+    </ion-content>
+  </ng-template>
+</ion-modal>

@@ -30,7 +30,7 @@ import {
         </ion-tab-button>
         <ion-tab-button tab="debts">
           <ion-icon name="wallet-outline" />
-          <ion-label>Debts</ion-label>
+          <ion-label>Money</ion-label>
         </ion-tab-button>
         @if (showAiTab) {
           <ion-tab-button tab="ai">
