@@ -66,7 +66,7 @@ components:
 
 Salapi presents household finances as calm, legible planning pages. Paper-like canvases, fine rules, and aligned amounts make income, spending, and obligations easy to compare without adding visual noise. The same information hierarchy adapts from a compact Android screen to a wide browser window.
 
-The accent follows the user's selected palette; light and dark appearances share the same semantic color roles. Financial records remain the focus, while the interface uses restrained status color, touch-sized controls, and visible keyboard focus.
+The accent follows the user's selected palette; each palette also has its own dark canvas, surface, divider, and text colors instead of sharing one generic dark background. Financial records remain the focus, while the interface uses restrained status color, touch-sized controls, and visible keyboard focus.
 
 **Key Characteristics:**
 - Information-first layouts with tabular financial amounts.
@@ -75,7 +75,7 @@ The accent follows the user's selected palette; light and dark appearances share
 
 ## Colors
 
-The palette is built from semantic surface and text tokens, with the primary accent following the selected color palette and appearance mode.
+The palette is built from semantic surface and text tokens. Each of Emerald, Ocean, Sunset, Forest, Amethyst, and Rose has a coordinated dark canvas and surface treatment; the primary accent also follows the selected palette.
 
 ### Primary
 - **Selected accent** (`var(--ion-color-primary)`): Primary actions and selected navigation, filter, and palette states; the color is user-selectable rather than fixed.
@@ -87,6 +87,8 @@ The palette is built from semantic surface and text tokens, with the primary acc
 - **Ink** (`var(--plan-ink)`) and **muted text** (`var(--plan-muted)`): Primary content and supporting labels.
 - **Rule** (`var(--plan-rule)`) and **grid** (`var(--plan-grid)`): Fine dividers and the low-contrast planning grid.
 - **Success**, **warning**, and **danger** (`--plan-success`, `--plan-warning`, `--plan-danger`): Financial status; these roles are not substitutes for the selected accent.
+
+Dark surfaces stay deep but not black, with a subtly tinted canvas, a lifted content surface, a quieter grouping surface, and palette-tinted grid and rule colors. Maintain readable light foregrounds and supporting text in every dark variant.
 
 ### Named Rules
 **The Accent Follows Preference Rule.** Primary actions and selected states follow the palette and light/dark settings chosen by the user.

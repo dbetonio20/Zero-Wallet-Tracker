@@ -15,12 +15,12 @@ import { GUEST_MODE_KEY } from '../../core/guards/auth.guard';
 import { Router } from '@angular/router';
 
 const PALETTES = [
-  { id: 'default',   name: 'Emerald',   lightBg: '#ffffff', accent: '#2dd36f', darkBg: '#121212', darkAccent: '#2dd36f' },
-  { id: 'ocean',     name: 'Ocean',     lightBg: '#f0f9ff', accent: '#0ea5e9', darkBg: '#0a1628', darkAccent: '#38bdf8' },
-  { id: 'sunset',    name: 'Sunset',    lightBg: '#fffbf0', accent: '#f97316', darkBg: '#1c0f05', darkAccent: '#fb923c' },
-  { id: 'forest',    name: 'Forest',    lightBg: '#f0fdf4', accent: '#16a34a', darkBg: '#052e16', darkAccent: '#4ade80' },
-  { id: 'amethyst',  name: 'Amethyst',  lightBg: '#faf5ff', accent: '#7c3aed', darkBg: '#1e0a3c', darkAccent: '#a78bfa' },
-  { id: 'rose',      name: 'Rose',      lightBg: '#fff5f7', accent: '#e11d48', darkBg: '#1a0a0d', darkAccent: '#fb7185' },
+  { id: 'default',   name: 'Emerald',   lightBg: '#ffffff', accent: '#2dd36f', darkBg: '#111713', darkAccent: '#62d98b' },
+  { id: 'ocean',     name: 'Ocean',     lightBg: '#f0f9ff', accent: '#0ea5e9', darkBg: '#0b1420', darkAccent: '#38bdf8' },
+  { id: 'sunset',    name: 'Sunset',    lightBg: '#fffbf0', accent: '#f97316', darkBg: '#1b120c', darkAccent: '#fb923c' },
+  { id: 'forest',    name: 'Forest',    lightBg: '#f0fdf4', accent: '#16a34a', darkBg: '#0e1712', darkAccent: '#4ade80' },
+  { id: 'amethyst',  name: 'Amethyst',  lightBg: '#faf5ff', accent: '#7c3aed', darkBg: '#171220', darkAccent: '#a78bfa' },
+  { id: 'rose',      name: 'Rose',      lightBg: '#fff5f7', accent: '#e11d48', darkBg: '#1b1115', darkAccent: '#fb7185' },
 ];
 
 @Component({

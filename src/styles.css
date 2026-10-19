@@ -3095,6 +3095,15 @@ html[data-palette='default'] {
   --plan-accent-ink: color-mix(in srgb, var(--ion-color-primary-shade) 58%, #1b2820);
 }
 
+html:not([data-palette]).ion-palette-dark {
+  --ion-color-primary: #62d98b;
+  --ion-color-primary-rgb: 98, 217, 139;
+  --ion-color-primary-contrast: #102015;
+  --ion-color-primary-contrast-rgb: 16, 32, 21;
+  --ion-color-primary-shade: #42bd70;
+  --ion-color-primary-tint: #8de5a9;
+}
+
 .ion-palette-dark {
   --plan-paper: #111713;
   --plan-surface: #19211b;
@@ -3104,12 +3113,10 @@ html[data-palette='default'] {
   --plan-rule: #344239;
   --plan-grid: rgba(205, 225, 210, 0.05);
   --plan-accent-ink: color-mix(in srgb, var(--ion-color-primary-tint) 68%, #e7eee8);
-  --ion-color-medium: #b1beb4;
+  --ion-color-medium: var(--plan-muted);
   --plan-success: #83d39b;
   --plan-warning: #f1c76d;
   --plan-danger: #ff8994;
-  --plan-accent-ink: color-mix(in srgb, var(--ion-color-primary-tint) 68%, #e7eee8);
-  --ion-color-medium: #b1beb4;
   --accent-red: #ff8994;
   --accent-yellow: #f1c76d;
   --accent-blue: #8fd5f4;
@@ -3125,6 +3132,56 @@ html[data-palette='default'] {
   --card-border: var(--plan-rule);
 }
 
+html[data-palette='ocean'].ion-palette-dark {
+  --plan-paper: #0b1420;
+  --plan-surface: #111f30;
+  --plan-surface-muted: #1a2b3e;
+  --plan-ink: #e5f1fb;
+  --plan-muted: #b4c4d5;
+  --plan-rule: #2c4056;
+  --plan-grid: rgba(184, 216, 242, 0.045);
+}
+
+html[data-palette='sunset'].ion-palette-dark {
+  --plan-paper: #1b120c;
+  --plan-surface: #271a12;
+  --plan-surface-muted: #352319;
+  --plan-ink: #f6e9dc;
+  --plan-muted: #cbb5a2;
+  --plan-rule: #4a3527;
+  --plan-grid: rgba(245, 207, 175, 0.045);
+}
+
+html[data-palette='forest'].ion-palette-dark {
+  --plan-paper: #0e1712;
+  --plan-surface: #17231a;
+  --plan-surface-muted: #213126;
+  --plan-ink: #e5efe5;
+  --plan-muted: #b4c2b3;
+  --plan-rule: #34483a;
+  --plan-grid: rgba(195, 225, 198, 0.045);
+}
+
+html[data-palette='amethyst'].ion-palette-dark {
+  --plan-paper: #171220;
+  --plan-surface: #211a2e;
+  --plan-surface-muted: #2e243e;
+  --plan-ink: #efe8f8;
+  --plan-muted: #c1b5d2;
+  --plan-rule: #453858;
+  --plan-grid: rgba(218, 198, 246, 0.045);
+}
+
+html[data-palette='rose'].ion-palette-dark {
+  --plan-paper: #1b1115;
+  --plan-surface: #271a20;
+  --plan-surface-muted: #36232a;
+  --plan-ink: #f5e8eb;
+  --plan-muted: #cbb6bd;
+  --plan-rule: #4a343d;
+  --plan-grid: rgba(245, 198, 211, 0.045);
+}
+
 html[data-palette]:not([data-palette='default']):not(.ion-palette-dark) {
   --plan-paper: color-mix(in srgb, var(--ion-color-primary) 4%, #ffffff);
   --plan-surface: #ffffff;
@@ -3135,26 +3192,6 @@ html[data-palette]:not([data-palette='default']):not(.ion-palette-dark) {
   --plan-grid: color-mix(in srgb, var(--ion-color-primary) 7%, transparent);
   --plan-accent-ink: color-mix(in srgb, var(--ion-color-primary-shade) 58%, #1b2820);
   --ion-color-medium: #526157;
-  --ion-background-color: var(--plan-paper);
-  --ion-text-color: var(--plan-ink);
-  --ion-item-background: var(--plan-surface);
-  --ion-card-background: var(--plan-surface);
-  --ion-toolbar-background: var(--plan-paper);
-  --text-primary: var(--plan-ink);
-  --text-secondary: var(--plan-muted);
-  --dashboard-bg: var(--plan-paper);
-  --card-bg: var(--plan-surface);
-  --card-border: var(--plan-rule);
-}
-
-html[data-palette].ion-palette-dark {
-  --plan-paper: #111713;
-  --plan-surface: #19211b;
-  --plan-surface-muted: #222d25;
-  --plan-ink: #e7eee8;
-  --plan-muted: #b1beb4;
-  --plan-rule: #344239;
-  --plan-grid: rgba(205, 225, 210, 0.05);
   --ion-background-color: var(--plan-paper);
   --ion-text-color: var(--plan-ink);
   --ion-item-background: var(--plan-surface);
