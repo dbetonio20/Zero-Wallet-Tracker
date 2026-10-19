@@ -3044,9 +3044,18 @@ ion-accordion {
 }
 
 .goal-form-footer {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
   padding: 8px 16px calc(8px + var(--ion-safe-area-bottom, 0px));
   border-top: 1px solid var(--plan-rule);
   background: var(--plan-paper);
+  pointer-events: auto;
+}
+
+.goal-form-content {
+  --padding-bottom: 104px;
 }
 
 .goal-form-footer ion-button {

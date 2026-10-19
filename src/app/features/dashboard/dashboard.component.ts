@@ -7,7 +7,7 @@ import {
   IonRefresher, IonRefresherContent, IonIcon,
   IonModal, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption,
   IonToggle, IonProgressBar,
-  IonTextarea, IonFab, IonFabButton, IonFooter,
+  IonTextarea, IonFab, IonFabButton,
   AlertController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -125,7 +125,7 @@ type PayTarget =
     IonRefresher, IonRefresherContent, IonIcon,
     IonModal, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption,
     IonToggle,
-    IonProgressBar, IonTextarea, IonFab, IonFabButton, IonFooter,
+    IonProgressBar, IonTextarea, IonFab, IonFabButton,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './dashboard.component.html',

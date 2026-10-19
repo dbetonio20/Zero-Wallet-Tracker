@@ -737,7 +737,7 @@
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
-      <ion-content class="ion-padding modal-content">
+      <ion-content class="ion-padding modal-content goal-form-content">
         @if (goalFormMode === 'create') {
           <div class="form-section-label">Savings type</div>
           <div class="goal-type-picker">
@@ -813,12 +813,12 @@
         @if (goalFormError) {
           <p class="savings-form-error" role="alert">{{ goalFormError }}</p>
         }
+        <div slot="fixed" class="goal-form-footer">
+          <ion-button expand="block" class="save-btn" [disabled]="isGoalSaving" (click)="saveGoal()">
+            {{ isGoalSaving ? 'Saving…' : goalFormMode === 'edit' ? 'Save Changes' : 'Create Account' }}
+          </ion-button>
+        </div>
       </ion-content>
-      <ion-footer class="goal-form-footer">
-        <ion-button expand="block" class="save-btn" [disabled]="isGoalSaving" (click)="saveGoal()">
-          {{ isGoalSaving ? 'Saving…' : goalFormMode === 'edit' ? 'Save Changes' : 'Create Account' }}
-        </ion-button>
-      </ion-footer>
     </ng-template>
   </ion-modal>
 
