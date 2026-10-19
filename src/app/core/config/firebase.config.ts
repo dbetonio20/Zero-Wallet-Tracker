@@ -17,4 +17,5 @@ export const firebaseAuth = getAuth(firebaseApp);
  */
 export const firestoreDb = initializeFirestore(firebaseApp, {
   localCache: persistentLocalCache(),
+  ignoreUndefinedProperties: true,
 });
