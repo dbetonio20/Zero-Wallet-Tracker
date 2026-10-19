@@ -65,6 +65,16 @@
     </ion-item>
   </div>
 
+  <div class="section-header">Help</div>
+  <div class="settings-group">
+    <ion-item button (click)="replayWalkthrough()" [detail]="false">
+      <ion-label>
+        <h3>App walkthrough</h3>
+        <p>Replay the quick intro tour</p>
+      </ion-label>
+    </ion-item>
+  </div>
+
   <!-- Manage your Data -->
   <div class="section-header">Manage your Data</div>
   <div class="settings-group">
@@ -74,11 +84,12 @@
         <p>Merge data from a JSON file using strict safety rules</p>
       </ion-label>
     </ion-item>
-    <ion-item button (click)="deleteAllData()" [detail]="false">
+    <ion-item button (click)="deleteAllData()" [detail]="false" [disabled]="deleting()">
       <ion-label>
-        <h3>Delete all data</h3>
+        <h3>{{ deleting() ? 'Deleting data…' : 'Delete all data' }}</h3>
         <p>All data associated with Salapi will be deleted</p>
       </ion-label>
+      <ion-spinner *ngIf="deleting()" slot="end" name="crescent"></ion-spinner>
     </ion-item>
   </div>
 

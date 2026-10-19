@@ -3394,6 +3394,7 @@ ion-header::after {
 }
 
 .hero-amount {
+  color: var(--plan-ink);
   font-size: clamp(2rem, 4vw, 2.65rem);
 }
 
@@ -3613,9 +3614,12 @@ ion-segment.debts-segment {
 }
 
 ion-segment-button {
+  --background-checked: color-mix(in srgb, var(--accent-green) 22%, var(--plan-surface-muted));
   --color: var(--plan-muted);
   --color-checked: var(--plan-ink);
-  --indicator-color: var(--plan-surface);
+  --indicator-color: var(--accent-green);
+  --indicator-height: 4px;
+  --border-radius: 6px;
   min-height: 44px;
 }
 

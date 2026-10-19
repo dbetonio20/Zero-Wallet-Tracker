@@ -1,7 +1,9 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, OnInit, inject } from '@angular/core';
 import {
   IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel,
 } from '@ionic/angular/standalone';
+import { OnboardingComponent } from '../onboarding/onboarding.component';
+import { OnboardingService } from '../onboarding/onboarding.service';
 import { Capacitor } from '@capacitor/core';
 import { addIcons } from 'ionicons';
 import {
@@ -11,7 +13,7 @@ import {
 @Component({
   selector: 'app-tabs',
   standalone: true,
-  imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel],
+  imports: [IonTabs, IonTabBar, IonTabButton, IonIcon, IonLabel, OnboardingComponent],
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <ion-tabs>
@@ -40,10 +42,16 @@ import {
         }
       </ion-tab-bar>
     </ion-tabs>
+    <app-onboarding />
   `,
 })
-export class TabsComponent {
+export class TabsComponent implements OnInit {
+  private readonly onboarding = inject(OnboardingService);
   readonly showAiTab = Capacitor.isNativePlatform();
+
+  ngOnInit(): void {
+    void this.onboarding.showIfFirstTime();
+  }
 
   constructor() {
     addIcons({ homeOutline, barChartOutline, receiptOutline, walletOutline, sparklesOutline });

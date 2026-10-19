@@ -26,6 +26,7 @@ const KEYS = {
   CURRENCY_CODE: 'pref_currency_code',
   COLOR_PALETTE: 'pref_color_palette',
   PREFERENCES_META: 'pref_sync_meta',
+  ONBOARDING_DONE: 'pref_onboarding_done',
 };
 
 const IMPORT_LIST_KEYS = [
@@ -153,21 +154,23 @@ export class PreferencesService {
     return (name?.charAt(0) || 'U').toUpperCase();
   }
 
+  /** Whether the first-run walkthrough has been completed or skipped. */
+  async isOnboardingDone(): Promise<boolean> {
+    return (await this.storage.get<boolean>(KEYS.ONBOARDING_DONE)) === true;
+  }
+
+  /** Persists the onboarding completion flag. */
+  async setOnboardingDone(done: boolean): Promise<void> {
+    await this.storage.set(KEYS.ONBOARDING_DONE, done);
+  }
+
   async clearAllData(): Promise<void> {
-    await this.storage.remove('expenses');
-    await this.storage.remove('incomes');
-    await this.storage.remove('installments');
-    await this.storage.remove('installmentPayments');
-    await this.storage.remove('credit_cards');
-    await this.storage.remove('paymentAllocations');
-    await this.storage.remove('savingsGoals');
-    await this.storage.remove('categories');
-    await this.storage.remove(KEYS.USER_NAME);
-    await this.storage.remove(KEYS.THEME);
-    await this.storage.remove(KEYS.CURRENCY_SYMBOL);
-    await this.storage.remove(KEYS.CURRENCY_CODE);
-    await this.storage.remove(KEYS.COLOR_PALETTE);
-    await this.storage.remove(KEYS.PREFERENCES_META);
+    await Promise.all(
+      [...IMPORT_LIST_KEYS, ...Object.values(KEYS)].map(key => this.storage.remove(key))
+    );
+    this.currencyCode.set('PHP');
+    this.currencySymbol.set('₱');
+    this.colorPalette.set('default');
   }
 
   async importAllData(json: string, mode: 'strict' | 'best-effort' = 'strict'): Promise<ImportReport> {

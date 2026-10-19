@@ -1,4 +1,5 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import {
   Timestamp,
   collection,
@@ -8,6 +9,7 @@ import {
   onSnapshot,
   serverTimestamp,
   setDoc,
+  writeBatch,
   waitForPendingWrites,
 } from 'firebase/firestore';
 
@@ -96,8 +98,13 @@ export class SyncService {
   private readonly categoryService = inject(CategoryService);
   private readonly goalService = inject(SavingsGoalService);
   private readonly keyUnsubscribers = new Map<SyncKey, () => void>();
+  private readonly pendingPushes = new Set<Promise<void>>();
+  private readonly pendingSnapshotMerges = new Set<Promise<void>>();
   private activeUid: string | null = null;
+  private compactedUid: string | null = null;
+  private appIsActive = true;
   private compactionInFlight = false;
+  private wipingUid: string | null = null;
 
   /**
    * Counts in-flight local pushes per key. While > 0, snapshot-triggered
@@ -117,11 +124,15 @@ export class SyncService {
 
   constructor() {
     effect(() => {
-      const uid = this.auth.currentUser()?.uid ?? null;
-      this.bindRealtimeSync(uid).catch(err => {
-        const msg = err instanceof Error ? err.message : 'Cloud sync failed';
-        this.syncError.set(msg);
-      });
+      this.bindRealtimeSyncForCurrentUser();
+    });
+
+    void CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (this.appIsActive === isActive) return;
+      this.appIsActive = isActive;
+      this.bindRealtimeSyncForCurrentUser();
+    }).catch(err => {
+      console.warn('[SyncService] unable to monitor app lifecycle', err);
     });
 
     // Register a callback on StorageService so every saveList() call
@@ -129,7 +140,7 @@ export class SyncService {
     this.storage.registerSyncCallback((key, data, previousData) => {
       if (!this.isSyncKey(key)) return;
       const uid = this.auth.currentUser()?.uid;
-      if (!uid) return;
+      if (!uid || uid === this.wipingUid) return;
       const changedRecords = getChangedSyncedRecords(
         data as RawSyncedRecord[],
         previousData as RawSyncedRecord[]
@@ -139,7 +150,7 @@ export class SyncService {
       // while our own writes are still in flight (prevents intermediate
       // Firestore snapshots from reverting local UI state).
       this.pushInFlight.set(key, (this.pushInFlight.get(key) ?? 0) + 1);
-      this.pushKey(uid, key, changedRecords)
+      const push = this.pushKey(uid, key, changedRecords)
         .then(() => this.syncError.set(null))
         .catch(err => {
           const msg = err instanceof Error ? err.message : 'Cloud sync failed';
@@ -147,6 +158,7 @@ export class SyncService {
           console.warn('[SyncService] background push failed', err);
         })
         .finally(() => {
+          this.pendingPushes.delete(push);
           const count = (this.pushInFlight.get(key) ?? 1) - 1;
           if (count <= 0) {
             this.pushInFlight.delete(key);
@@ -154,6 +166,7 @@ export class SyncService {
             this.pushInFlight.set(key, count);
           }
         });
+      this.pendingPushes.add(push);
     });
   }
 
@@ -216,52 +229,79 @@ export class SyncService {
   }
 
   private async bindRealtimeSync(uid: string | null): Promise<void> {
-    if (uid === this.activeUid) return;
-
-    this.stopAllListeners();
-    this.activeUid = uid;
-
-    if (!uid) return;
-
-    for (const key of SYNC_KEYS) {
-      this.startKeyListener(uid, key);
+    if (uid !== this.activeUid) {
+      this.stopAllListeners();
+      this.activeUid = uid;
+      this.compactedUid = null;
     }
 
-    await this.runSafeCompaction();
+    if (!uid || !this.appIsActive) {
+      this.stopAllListeners();
+      return;
+    }
+
+    if (this.keyUnsubscribers.size === 0) {
+      for (const key of SYNC_KEYS) {
+        this.startKeyListener(uid, key);
+      }
+    }
+
+    if (this.compactedUid !== uid) {
+      await this.runSafeCompaction();
+      this.compactedUid = uid;
+    }
+  }
+
+  private bindRealtimeSyncForCurrentUser(): void {
+    const uid = this.auth.currentUser()?.uid ?? null;
+    this.bindRealtimeSync(uid).catch(err => {
+      const msg = err instanceof Error ? err.message : 'Cloud sync failed';
+      this.syncError.set(msg);
+    });
   }
 
   private startKeyListener(uid: string, key: SyncKey): void {
     const ref = collection(firestoreDb, `users/${uid}/${key}`);
     const unsubscribe = onSnapshot(
       ref,
-      async snapshot => {
-        const remoteRecords = snapshot.docs.map(snap =>
-          this.normalizeRecord({
-            id: snap.id,
-            ...(snap.data() as Record<string, unknown>),
-          })
-        );
+      snapshot => {
+        if (this.wipingUid === uid) return;
+        const merge = (async () => {
+          const remoteRecords = snapshot.docs.map(snap =>
+            this.normalizeRecord({
+              id: snap.id,
+              ...(snap.data() as Record<string, unknown>),
+            })
+          );
 
-        const localRecords = (await this.storage.getList<RawSyncedRecord>(key)).map(record =>
-          this.normalizeRecord(record)
-        );
+          const localRecords = (await this.storage.getList<RawSyncedRecord>(key)).map(record =>
+            this.normalizeRecord(record)
+          );
+          if (this.wipingUid === uid) return;
 
-        const mergeResult = this.mergeSyncedRecords(localRecords, remoteRecords, key);
-        this.appendWarnings(mergeResult.warnings);
+          const mergeResult = this.mergeSyncedRecords(localRecords, remoteRecords, key);
+          this.appendWarnings(mergeResult.warnings);
 
-        await this.storage.saveList(key, mergeResult.merged, { sync: false });
+          await this.storage.saveList(key, mergeResult.merged, { sync: false });
 
-        // Skip reloading signals if we triggered this snapshot ourselves via a
-        // local push — the in-memory signals already have the correct state and
-        // reloading from storage at this point would revert optimistic UI updates.
-        if (!this.pushInFlight.has(key)) {
-          // Update in-memory signals so the UI reflects the merged state immediately
-          // (covers deletions propagated from other devices / sessions).
-          await this.engine.reloadFromStorage(key);
-          await this.reloadServiceSignal(key);
-        }
+          if (this.wipingUid === uid) return;
+          // Skip reloading signals if we triggered this snapshot ourselves via a
+          // local push — the in-memory signals already have the correct state and
+          // reloading from storage at this point would revert optimistic UI updates.
+          if (!this.pushInFlight.has(key)) {
+            // Update in-memory signals so the UI reflects the merged state immediately
+            // (covers deletions propagated from other devices / sessions).
+            await this.engine.reloadFromStorage(key);
+            await this.reloadServiceSignal(key);
+          }
 
-        this.syncError.set(null);
+          this.syncError.set(null);
+        })().catch(err => {
+          const msg = err instanceof Error ? err.message : 'Cloud sync failed';
+          this.syncError.set(msg);
+        });
+        this.pendingSnapshotMerges.add(merge);
+        void merge.finally(() => this.pendingSnapshotMerges.delete(merge));
       },
       err => {
         const msg = err instanceof Error ? err.message : 'Cloud sync failed';
@@ -444,17 +484,50 @@ export class SyncService {
    * After this completes, signing back in will NOT restore the deleted data.
    */
   async wipeFirestoreData(uid: string): Promise<void> {
+    if (this.wipingUid) {
+      throw new Error('A data deletion is already in progress.');
+    }
+
+    this.wipingUid = uid;
     this.stopAllListeners();
-    for (const key of SYNC_KEYS) {
-      const colRef = collection(firestoreDb, `users/${uid}/${key}`);
-      const snapshot = await getDocs(colRef);
-      for (const docSnap of snapshot.docs) {
+    let deleted = false;
+
+    try {
+      await Promise.all([...this.pendingPushes, ...this.pendingSnapshotMerges]);
+      await waitForPendingWritesWithTimeout(
+        () => waitForPendingWrites(firestoreDb),
+        MANUAL_SYNC_TIMEOUT_MS
+      );
+
+      let failures = 0;
+      for (const key of SYNC_KEYS) {
         try {
-          await deleteDoc(docSnap.ref);
+          const snapshot = await getDocs(collection(firestoreDb, `users/${uid}/${key}`));
+          for (let offset = 0; offset < snapshot.docs.length; offset += 400) {
+            const batch = writeBatch(firestoreDb);
+            for (const docSnap of snapshot.docs.slice(offset, offset + 400)) {
+              batch.delete(docSnap.ref);
+            }
+            try {
+              await batch.commit();
+            } catch {
+              failures += 1;
+            }
+          }
         } catch {
-          // best-effort — don't block the wipe if a single delete fails
+          failures += 1;
         }
       }
+
+      if (failures > 0) {
+        throw new Error(
+          'Some cloud data could not be deleted. Your local data was kept; check your connection and try again.'
+        );
+      }
+      deleted = true;
+    } finally {
+      this.wipingUid = null;
+      if (!deleted) this.bindRealtimeSyncForCurrentUser();
     }
   }
 

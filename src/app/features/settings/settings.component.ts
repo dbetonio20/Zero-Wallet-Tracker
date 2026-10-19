@@ -6,13 +6,14 @@ import {
   IonButtons, IonBackButton, IonSpinner,
   AlertController, ToastController,
 } from '@ionic/angular/standalone';
-import { signal } from '@angular/core';
+import { inject, signal } from '@angular/core';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { AiService } from '../../core/services/ai.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SyncService } from '../../core/services/sync.service';
 import { GUEST_MODE_KEY } from '../../core/guards/auth.guard';
 import { Router } from '@angular/router';
+import { OnboardingService } from '../onboarding/onboarding.service';
 
 const PALETTES = [
   { id: 'default',   name: 'Emerald',   lightBg: '#ffffff', accent: '#2dd36f', darkBg: '#111713', darkAccent: '#62d98b' },
@@ -143,6 +144,15 @@ export class SettingsComponent implements OnInit {
   lastCompactionAt!: () => string | null;
   syncWarningCount!: () => number;
   readonly syncing = signal(false);
+  readonly deleting = signal(false);
+
+  private readonly onboarding = inject(OnboardingService);
+
+  /** Navigates home and replays the first-run walkthrough. */
+  async replayWalkthrough(): Promise<void> {
+    await this.router.navigateByUrl('/dashboard');
+    this.onboarding.open();
+  }
 
   constructor(
     private prefs: PreferencesService,
@@ -339,6 +349,7 @@ export class SettingsComponent implements OnInit {
   }
 
   async deleteAllData(): Promise<void> {
+    if (this.deleting()) return;
     const alert = await this.alertCtrl.create({
       header: 'Delete All Data',
       message: 'This action cannot be undone. All your data will be permanently deleted.',
@@ -351,12 +362,27 @@ export class SettingsComponent implements OnInit {
     const { role } = await alert.onDidDismiss();
     if (role !== 'destructive') return;
 
-    const uid = this.authService.currentUser()?.uid;
-    if (uid) {
-      await this.syncService.wipeFirestoreData(uid);
+    this.deleting.set(true);
+    try {
+      const uid = this.authService.currentUser()?.uid;
+      if (uid) {
+        await this.syncService.wipeFirestoreData(uid);
+      }
+      await this.prefs.clearAllData();
+      window.location.reload();
+    } catch (err) {
+      const message = err instanceof Error
+        ? err.message
+        : 'Data could not be deleted. Please try again.';
+      const failure = await this.alertCtrl.create({
+        header: 'Delete Failed',
+        message,
+        buttons: ['OK'],
+      });
+      await failure.present();
+    } finally {
+      this.deleting.set(false);
     }
-    await this.prefs.clearAllData();
-    window.location.reload();
   }
 
   async manualSync(): Promise<void> {
