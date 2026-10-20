@@ -128,6 +128,7 @@ export interface Expense extends SyncMetadata {
   date: string; // ISO date string
   paymentMethod: string;
   creditCardId?: string; // set when paymentMethod is 'Credit Card'
+  sourceNotificationFingerprint?: string;
   status: PaymentStatus;
   paidAt?: string; // YYYY-MM-DD date when marked as paid
   recurring: boolean; // marks a monthly repeating expense
@@ -135,6 +136,23 @@ export interface Expense extends SyncMetadata {
 }
 
 export type NewExpenseInput = NewSyncedEntityInput<Expense>;
+
+export type PendingNotificationReviewStatus = 'pending' | 'ignored' | 'imported';
+
+export interface PendingNotificationCandidate {
+  id: string;
+  sourceApplication: string;
+  merchantName: string | null;
+  amount: number | null;
+  currency: string | null;
+  cardLabel: string | null;
+  cardSuffix: string | null;
+  notificationTimestamp: string;
+  transactionTimestamp: string | null;
+  fingerprint: string;
+  reviewStatus: PendingNotificationReviewStatus;
+  importedAt: string;
+}
 
 export interface Income extends SyncMetadata {
   id: string;

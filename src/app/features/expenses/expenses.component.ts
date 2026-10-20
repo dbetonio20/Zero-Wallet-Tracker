@@ -2,7 +2,7 @@ import { Component, OnInit, inject, OnDestroy, ChangeDetectionStrategy } from '@
 import { AsyncPipe, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
+  AlertController, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
   IonBadge, IonFab, IonFabButton, IonIcon, IonModal, IonButton, IonButtons,
   IonInput, IonSelect, IonSelectOption, IonTextarea,
   IonItemSliding, IonItemOptions, IonItemOption, IonNote,
@@ -26,8 +26,16 @@ import { PreferencesService } from '../../core/services/preferences.service';
 import { CategoryService } from '../../core/services/category.service';
 import { QuickAddService } from '../../core/services/quick-add.service';
 import { CreditCardService } from '../../core/services/credit-card.service';
-import { Expense, PaymentStatus, Income, Category } from '../../core/models';
+import {
+  Expense,
+  PaymentStatus,
+  Income,
+  Category,
+  PendingNotificationCandidate,
+} from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
+import { PendingNotificationQueueService } from '../../core/services/pending-notification-queue.service';
+import { GoogleWalletCaptureService } from '../../core/services/google-wallet-capture.service';
 
 export type PeriodFilter = 'month' | 'year' | 'all';
 
@@ -64,6 +72,7 @@ const METHODS = ['Cash', 'GCash', 'Credit Card', 'Debit Card', 'Bank Transfer'];
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './expenses.component.html',
+  styleUrl: './expenses.component.scss',
 })
 export class ExpensesComponent implements OnInit, OnDestroy {
   private engine = inject(FinancialEngineService);
@@ -72,6 +81,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   categoryService = inject(CategoryService);
   private quickAdd = inject(QuickAddService);
   creditCardService = inject(CreditCardService);
+  private alertController = inject(AlertController);
+  readonly pendingQueue = inject(PendingNotificationQueueService);
+  readonly walletCapture = inject(GoogleWalletCaptureService);
 
   // ── UI state ─────────────────────────────────────────────────────────
   isModalOpen = false;
@@ -81,6 +93,12 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   editingExpense: Expense | null = null;
   editingCategory: Category | null = null;
   paidAtForm = '';
+  recordingCandidate: PendingNotificationCandidate | null = null;
+  showPendingCandidates = false;
+  isSavingExpense = false;
+  saveError = '';
+  walletActionError = '';
+  walletMessage = '';
 
   // ── Filters ──────────────────────────────────────────────────────────
   searchText$ = new BehaviorSubject<string>('');
@@ -223,6 +241,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     this.userName = await this.prefs.getUserName();
     this.userInitial = this.prefs.getUserInitial(this.userName);
+    void this.walletCapture.refreshStatus().catch(error => {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not check notification access.';
+    });
     // Open add-expense modal when Quick-Log FAB is tapped from Dashboard
     this.quickAdd.onTrigger$.pipe(takeUntil(this.destroy$)).subscribe(() => {
       setTimeout(() => this.openModal(), 120);
@@ -298,41 +320,203 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   openModal(): void {
     this.editingExpense = null;
+    this.recordingCandidate = null;
+    this.saveError = '';
     this.form = this.blankForm();
     this.isModalOpen = true;
   }
 
   openEditExpense(expense: Expense): void {
     this.editingExpense = expense;
+    this.recordingCandidate = null;
+    this.saveError = '';
     this.form = { ...expense };
     this.paidAtForm = expense.paidAt ?? '';
     this.isModalOpen = true;
   }
 
-  closeModal(): void { this.isModalOpen = false; this.editingExpense = null; this.paidAtForm = ''; }
+  closeModal(): void {
+    this.isModalOpen = false;
+    this.editingExpense = null;
+    this.recordingCandidate = null;
+    this.paidAtForm = '';
+    this.saveError = '';
+  }
 
   async save(): Promise<void> {
-    if (!this.form.category || !this.form.amount || !this.form.date) return;
+    const amount = Number(this.form.amount);
+    if (!this.form.category || !Number.isFinite(amount) || amount <= 0 || !this.form.date) return;
+    if (this.isSavingExpense) return;
+    if (
+      this.recordingCandidate &&
+      !this.pendingQueue.pendingCandidates().some(candidate => candidate.id === this.recordingCandidate?.id)
+    ) {
+      this.saveError = 'This notification is no longer pending review. Close this form and refresh the list.';
+      return;
+    }
     const isCreditCard = this.form.paymentMethod === 'Credit Card';
     const base = {
       name: this.form.name || '',
       category: this.form.category!,
-      amount: +this.form.amount!,
+      amount,
       date: this.form.date!,
       paymentMethod: this.form.paymentMethod || 'Cash',
       creditCardId: isCreditCard ? (this.form.creditCardId || undefined) : undefined,
       notes: this.form.notes || '',
       recurring: this.form.recurring ?? false,
     };
-    if (this.editingExpense) {
-      const paidAt = this.editingExpense.status === 'paid'
-        ? (this.paidAtForm || this.editingExpense.paidAt)
-        : this.editingExpense.paidAt;
-      await this.engine.updateExpense({ ...this.editingExpense, ...base, paidAt });
-    } else {
-      await this.engine.addExpense({ ...base, status: 'pending' });
+    this.isSavingExpense = true;
+    this.saveError = '';
+    try {
+      if (this.editingExpense) {
+        const paidAt = this.editingExpense.status === 'paid'
+          ? (this.paidAtForm || this.editingExpense.paidAt)
+          : this.editingExpense.paidAt;
+        await this.engine.updateExpense({ ...this.editingExpense, ...base, paidAt });
+      } else {
+        await this.engine.addExpense({
+          ...base,
+          status: 'pending',
+          ...(this.recordingCandidate
+            ? { sourceNotificationFingerprint: this.recordingCandidate.fingerprint }
+            : {}),
+        });
+      }
+      if (this.recordingCandidate) {
+        await this.pendingQueue.markImported(this.recordingCandidate.id);
+      }
+      this.closeModal();
+    } catch (error) {
+      this.saveError =
+        error instanceof Error ? error.message : 'Could not save this expense. The notification is still pending.';
+    } finally {
+      this.isSavingExpense = false;
     }
-    this.closeModal();
+  }
+
+  recordCandidate(candidate: PendingNotificationCandidate): void {
+    this.recordingCandidate = candidate;
+    this.editingExpense = null;
+    this.saveError = '';
+    const appCurrency = this.currencyCode.toUpperCase();
+    const candidateCurrency = candidate.currency?.toUpperCase() ?? null;
+    this.form = {
+      name: candidate.merchantName ?? '',
+      category: '',
+      amount: candidate.amount !== null && candidateCurrency === appCurrency
+        ? candidate.amount
+        : undefined,
+      date: this.inputDate(candidate.transactionTimestamp ?? candidate.notificationTimestamp),
+      paymentMethod: candidate.cardLabel || candidate.cardSuffix ? 'Credit Card' : 'Cash',
+      creditCardId: undefined,
+      notes: '',
+      recurring: false,
+    };
+    this.isModalOpen = true;
+  }
+
+  async skipCandidate(candidate: PendingNotificationCandidate): Promise<void> {
+    this.walletActionError = '';
+    try {
+      await this.pendingQueue.skip(candidate.id);
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not skip this notification.';
+    }
+  }
+
+  async setCaptureEnabled(enabled: boolean): Promise<void> {
+    this.walletActionError = '';
+    this.walletMessage = '';
+    try {
+      await this.walletCapture.setEnabled(enabled);
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not update notification capture.';
+    }
+  }
+
+  async openNotificationAccessSettings(): Promise<void> {
+    this.walletActionError = '';
+    try {
+      await this.walletCapture.openAccessSettings();
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not open Android notification settings.';
+    }
+  }
+
+  async confirmNotificationImport(): Promise<void> {
+    const alert = await this.alertController.create({
+      header: 'Import Previous Notifications',
+      message:
+        'Would you like to check for previous Google Wallet purchase notifications and import the transactions we can access?',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { text: 'Check History', role: 'confirm', handler: () => this.importWalletNotifications() },
+      ],
+    });
+    await alert.present();
+  }
+
+  async importWalletNotifications(): Promise<void> {
+    this.walletActionError = '';
+    this.walletMessage = '';
+    try {
+      const result = await this.walletCapture.importPreviousNotifications();
+      if (!result.permissionGranted) {
+        this.walletMessage =
+          'Grant Android notification access to check currently active Google Wallet notifications.';
+      } else if (!result.serviceConnected) {
+        this.walletMessage =
+          'Android notification access is granted, but its listener is not connected yet. Android does not expose the complete notification history.';
+      } else if (!result.accessibleCount) {
+        this.walletMessage =
+          'No active Google Wallet notifications were accessible. Android does not expose the complete notification history; add expenses manually instead.';
+      } else {
+        this.walletMessage =
+          `Checked ${result.accessibleCount} active notification(s); ${result.addedCount} new candidate(s) are ready for review. Android does not expose the complete notification history.`;
+      }
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not check accessible Google Wallet notifications.';
+    }
+  }
+
+  async clearPendingCandidates(): Promise<void> {
+    const alert = await this.alertController.create({
+      header: 'Clear pending transactions?',
+      message: 'Pending candidates will be removed from review. No expenses will be created.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Clear',
+          role: 'destructive',
+          handler: () => {
+            void this.clearPendingCandidatesConfirmed();
+          },
+        },
+      ],
+    });
+    await alert.present();
+  }
+
+  private async clearPendingCandidatesConfirmed(): Promise<void> {
+    this.walletActionError = '';
+    try {
+      await this.pendingQueue.clearPending();
+      await this.walletCapture.clearNativeQueue();
+      this.walletMessage = 'Pending candidates were cleared. No expenses were created.';
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not clear pending notifications.';
+    }
+  }
+
+  private inputDate(timestamp: string): string {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   async markPaid(e: Expense): Promise<void> {

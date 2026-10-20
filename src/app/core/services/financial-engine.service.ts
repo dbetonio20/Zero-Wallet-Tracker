@@ -36,6 +36,7 @@ export class FinancialEngineService {
   private readonly _installments = signal<Installment[]>([]);
   private readonly _installmentPayments = signal<InstallmentPayment[]>([]);
   private readonly _allocations = signal<PaymentAllocation[]>([]);
+  private readonly expenseSaveLocks = new Set<string>();
 
   private readonly activeExpenses = computed(() => filterActiveSyncedEntities(this._expenses()));
   private readonly activeIncomes = computed(() => filterActiveSyncedEntities(this._incomes()));
@@ -172,10 +173,23 @@ export class FinancialEngineService {
   getExpenses() { return this.expenses$; }
 
   async addExpense(e: NewExpenseInput): Promise<void> {
-    const item: Expense = createSyncedEntity({ ...e, id: this.uuid() });
-    const updated = [...this._expenses(), item];
-    await this.storage.saveList(KEYS.EXPENSES, updated);
-    this._expenses.set(updated);
+    const fingerprint = e.sourceNotificationFingerprint;
+    if (
+      fingerprint &&
+      (this.expenseSaveLocks.has(fingerprint) ||
+        this._expenses().some(expense => expense.sourceNotificationFingerprint === fingerprint))
+    ) {
+      return;
+    }
+    if (fingerprint) this.expenseSaveLocks.add(fingerprint);
+    try {
+      const item: Expense = createSyncedEntity({ ...e, id: this.uuid() });
+      const updated = [...this._expenses(), item];
+      await this.storage.saveList(KEYS.EXPENSES, updated);
+      this._expenses.set(updated);
+    } finally {
+      if (fingerprint) this.expenseSaveLocks.delete(fingerprint);
+    }
   }
 
   async updateExpense(e: Expense): Promise<void> {

@@ -80,6 +80,21 @@ interface Expense {
   notes: string
 }
 
+interface PendingNotificationCandidate {
+  id: string
+  sourceApplication: string
+  merchantName: string | null
+  amount: number | null
+  currency: string | null
+  cardLabel: string | null
+  cardSuffix: string | null
+  notificationTimestamp: string
+  transactionTimestamp: string | null
+  fingerprint: string
+  reviewStatus: 'pending' | 'ignored' | 'imported'
+  importedAt: string
+}
+
 interface Income {
   id: string
   source: string        // Salary|Freelance|Business|Investment|Bonus|Other
@@ -171,6 +186,26 @@ Central reactive data service. All data held in `BehaviorSubject` streams and pe
 **Status logic:** On every `loadAll()`, `updateStatuses()` runs: if expense/payment date is before today and status is not `'paid'`, it becomes `'overdue'`; otherwise `'pending'`.
 
 **Known limitation:** `totalCreditDues` is computed from unpaid installment payments linked to credit cards. Credit card balances without installments are not tracked.
+
+### Google Wallet notification capture
+
+Expenses includes an optional Android notification-listener flow. The native listener accepts only
+`com.google.android.apps.walletnfcrel`, stores a compact parsed record in native preferences while
+the web app is not active, and never stores complete notification text. The Capacitor bridge moves
+those records into `PendingNotificationQueueService`, persisted locally under
+`wallet_pending_candidates` with cloud sync disabled. Fingerprints are kept separately under
+`wallet_notification_fingerprints` so skipped or cleared notifications are not immediately recreated.
+
+Candidates do not enter expense calculations. Only the explicit **Record Expense** action calls
+`FinancialEngineService.addExpense()`; `sourceNotificationFingerprint` makes that write idempotent.
+Skipped candidates remain ignored, and closing the record form leaves the candidate pending.
+
+The **Import Previous Notifications** action is explicitly confirmed and queries only currently
+active notifications exposed by Android's public `NotificationListenerService.getActiveNotifications()`.
+Android does not expose its complete system notification-history database through this API.
+Notification access is optional and must be granted by the user in Android settings. Physical-device
+testing is required to verify the Google Wallet package, notification text format, permission
+revocation, process restart delivery, and card/merchant parsing.
 
 ---
 
@@ -267,6 +302,9 @@ Inline template. 4 bottom tabs:
 **Methods:** `openModal / openEditExpense / closeModal / save`, `markPaid(e)`, `delete(id)`, `badgeColor(status)`, `goToSettings()`
 
 **Template:** page-header, sliding expense list (edit + mark-paid + delete swipe actions), FAB add button, add/edit expense modal.
+
+The Expenses page also contains a compact Google Wallet capture panel, access status, history import
+confirmation, and a review queue. The pending queue remains local and separate from `expenses`.
 
 ---
 
