@@ -13,7 +13,7 @@ This file is the single authoritative reference for AI coding assistance on this
 | UI library | **Ionic 8** (`@ionic/angular/standalone`), `mode: 'md'` forced globally |
 | Charts | chart.js 4.5.1 + ng2-charts 10.0.0 |
 | Storage | `@ionic/storage-angular` 4.0.0 — IndexedDB via localforage |
-| Native layer | **Capacitor 8** — `@capacitor/filesystem`, `@capacitor/share`, `@capacitor/local-notifications`, custom `LlmPlugin` |
+| Native layer | **Capacitor 8** — `@capacitor/filesystem`, `@capacitor/share`, `@capacitor/local-notifications` |
 | Package manager | **Bun** (use `bun` and `bun run`, never `npm` or `yarn`) |
 | Language | TypeScript 6.0 — strict mode |
 | Linting / Formatting | **Prettier**: `singleQuote: true`, `printWidth: 100`, `trailingComma: 'es5'` |
@@ -32,7 +32,6 @@ This file is the single authoritative reference for AI coding assistance on this
 - **All services use Angular Signals** (`signal()`, `computed()`, `effect()`) for state.
 - **`Subject` / `Observable` only** for true push streams and one-shot events:
   - `QuickAddService` — `Subject<void>` event bus (not state)
-  - `AiService.tokens$` / `debugLog$` — token streaming (not state)
   - `StorageService.ready$` — async init sequencing (internal only)
 - Use `toObservable()` from `@angular/core/rxjs-interop` to expose signal state as Observables for templates using the `async` pipe.
 - Use `toSignal()` to consume Observables from signals in new components.
@@ -111,8 +110,6 @@ All services are in `src/app/core/services/`. All are `providedIn: 'root'`.
 | `PreferencesService` | User name, theme (`system \| dark \| light`), currency. `currencyCode: Signal<string>`, `currencySymbol: Signal<string>`, `currencyCode$`, `currencySymbol$`, `currentCurrencyCode` (sync getter). `exportAllData()`, `clearAllData()`. |
 | `NotificationService` | Schedules `LocalNotifications` for expense due dates, installment payments, credit card due dates. |
 | `QuickAddService` | Cross-component event bus — `Subject<void>` that triggers the quick-add FAB from anywhere. |
-| `AiContextService` | Builds a budget-constrained (~3 200 chars) plain-text financial snapshot for the AI system prompt. Cascading section budgets in priority order. See `src/app/core/services/ai-context.service.ts`. |
-| `AiService` | Wraps the native `LlmPlugin`. State signals: `aiState`, `modelProgress`, `lastError`, `inferenceDevice`. Observable aliases for backward compat. `tokens$: Observable<string>` for streamed output (Subject). `debugLog$: Observable<string>` for a debug panel (Subject). |
 
 **Storage key constants** (defined in `FinancialEngineService`):
 
@@ -135,7 +132,6 @@ All routes are lazy-loaded children of `TabsComponent` (`src/app/features/tabs/`
 | `/reports` | Monthly analytics — donut chart by category + calendar heatmap | Reports (tab 2) |
 | `/debts` | Segmented — installment schedules + credit card management | Debts (tab 4) |
 | `/settings` | Theme, name, currency, export JSON, clear data | Gear icon |
-| `/ai` | On-device AI financial assistant | ⚠️ Route exists but **tab button NOT yet added** to `TabsComponent` template |
 | `/income/:id` | Income detail view | Deep-link only |
 
 ---
@@ -222,35 +218,7 @@ vm$ = combineLatest([this.engine.summary$, this.prefs.getCurrencyCode$()]).pipe(
 
 ---
 
-## 8. AI Feature
-
-### Architecture
-- `LlmPlugin` (`src/app/core/plugins/llm-plugin.ts`) — custom Capacitor plugin (`registerPlugin('LlmPlugin')`) bridging to `com.zerowallet.tracker.LlmPlugin` on Android.
-- The Android side uses **MediaPipe `LlmInference`** running on GPU/NPU — **not** Transformers.js, **not** WASM.
-- **Android only** — the plugin rejects all calls on web/browser.
-
-### Plugin methods
-```ts
-getModelStatus() → { status: string, exists: boolean }
-downloadModel()  → streams progress events
-initialize()     → loads model into memory
-generate({ prompt: string }) → streams token events
-reset()          → clears KV cache
-deleteModel()    → removes model file from device storage
-```
-
-### AiContextService — prompt budget rules
-- Hard cap: **3 200 characters** total (`MAX_CONTEXT_CHARS`).
-- Sections in priority order: `header (120) → summary (350) → overdue (400) → thisMonth (500) → upcoming (600) → installments (400) → cards (300) → history (200) → goals (200) → incomes (300)`.
-- Leftover budget cascades to later sections.
-- When data exceeds a section's budget → aggregate (counts + totals), never list every item.
-
-### Known TODO
-The `/ai` route is defined and functional but **`TabsComponent` template is missing the `<ion-tab-button>` for the AI tab.** Adding it requires updating `src/app/features/tabs/tabs.component.html`.
-
----
-
-## 9. Building the APK
+## 8. Building the APK
 
 > Always use `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.11/libexec/openjdk.jdk/Contents/Home` — system default has no Java, Capacitor Android requires **Java 21**.
 

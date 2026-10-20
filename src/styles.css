@@ -4300,8 +4300,140 @@ ion-modal {
 
 ion-segment.money-main-segment {
   box-sizing: border-box;
-  width: calc(100% - 32px);
-  margin: 16px 16px 8px;
+  width: min(calc(100% - 32px), var(--page-max-width));
+  margin: 16px auto 0;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.money-main-segment ion-segment-button {
+  --background-checked: var(--ion-color-primary);
+  --color-checked: var(--ion-color-primary-contrast);
+  --indicator-color: transparent;
+  --indicator-height: 0px;
+  --border-radius: 9px;
+  font-weight: 700;
+}
+
+.money-view-heading {
+  width: min(calc(100% - 32px), var(--page-max-width));
+  margin: 20px auto 4px;
+}
+
+.money-view-eyebrow {
+  color: var(--accent-green);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.money-view-heading h1 {
+  margin: 4px 0;
+  color: var(--plan-ink);
+  font-size: clamp(1.35rem, 4vw, 1.7rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+.money-view-heading p {
+  margin: 0;
+  color: var(--plan-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+ion-segment.debts-segment {
+  width: min(calc(100% - 32px), var(--page-max-width));
+  margin: 14px auto 8px;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.debts-segment ion-segment-button {
+  --background-checked: color-mix(in srgb, var(--accent-green) 14%, var(--plan-surface-muted));
+  --color-checked: var(--plan-ink);
+  --indicator-color: var(--accent-green);
+  --indicator-height: 3px;
+  --border-radius: 7px;
+  font-weight: 650;
+}
+
+.inst-pill-tabs {
+  width: min(calc(100% - 32px), var(--page-max-width));
+  margin: 16px auto 8px;
+  gap: 12px;
+}
+
+.inst-pill-tab {
+  min-height: 48px;
+  border-radius: 10px;
+  background: var(--plan-surface);
+  border-color: var(--plan-rule);
+  color: var(--plan-muted);
+}
+
+.inst-pill-tab.active {
+  background: color-mix(in srgb, var(--accent-green) 12%, var(--plan-surface));
+  border-color: var(--accent-green);
+  color: var(--plan-ink);
+}
+
+.inst-pill-count.active {
+  background: var(--accent-green);
+  color: var(--ion-color-primary-contrast);
+}
+
+.inst-empty-state,
+.money-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: min(calc(100% - 32px), 720px);
+  min-height: 250px;
+  box-sizing: border-box;
+  margin: 18px auto;
+  padding: 28px 20px;
+  gap: 10px;
+  color: var(--plan-muted);
+  text-align: center;
+  background: var(--plan-surface);
+  border: 1px dashed var(--plan-rule);
+  border-radius: 16px;
+}
+
+.inst-empty-icon-wrap {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  margin-bottom: 4px;
+  color: var(--accent-green);
+  background: color-mix(in srgb, var(--accent-green) 13%, var(--plan-surface));
+  border-radius: 50%;
+}
+
+.inst-empty-icon {
+  color: inherit;
+  font-size: 1.7rem;
+  opacity: 1;
+}
+
+.inst-empty-state h2,
+.money-empty-state h2 {
+  margin: 0;
+  color: var(--plan-ink);
+  font-size: 1.12rem;
+  font-weight: 700;
+}
+
+.inst-empty-state p,
+.money-empty-state p {
+  max-width: 380px;
+  margin: 0 0 4px;
+  color: var(--plan-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
 }
 
 .savings-page {

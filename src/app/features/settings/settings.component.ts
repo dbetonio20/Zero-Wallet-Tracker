@@ -8,7 +8,6 @@ import {
 } from '@ionic/angular/standalone';
 import { inject, signal } from '@angular/core';
 import { PreferencesService } from '../../core/services/preferences.service';
-import { AiService } from '../../core/services/ai.service';
 import { AuthService } from '../../core/services/auth.service';
 import { SyncService } from '../../core/services/sync.service';
 import { GUEST_MODE_KEY } from '../../core/guards/auth.guard';
@@ -159,7 +158,6 @@ export class SettingsComponent implements OnInit {
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
     private router: Router,
-    private ai: AiService,
     private authService: AuthService,
     private syncService: SyncService,
   ) {
@@ -287,9 +285,6 @@ export class SettingsComponent implements OnInit {
                         {
                           text: 'Reload',
                           handler: async () => {
-                            // Shut down the native AI plugin cleanly before reload to
-                            // prevent MediaPipe double-init crash on next session.
-                            await this.ai.shutdown();
                             window.location.reload();
                           },
                         },
