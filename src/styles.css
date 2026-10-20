@@ -4315,6 +4315,10 @@ ion-segment.money-main-segment {
   font-weight: 700;
 }
 
+.money-main-segment ion-segment-button.segment-button-checked ion-label {
+  color: var(--ion-color-primary-contrast);
+}
+
 .money-view-heading {
   width: min(calc(100% - 32px), var(--page-max-width));
   margin: 20px auto 4px;
