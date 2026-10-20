@@ -70,7 +70,9 @@ export class DebtsComponent implements OnInit {
   installmentSegment: 'pending' | 'completed' = 'pending';
   userName = 'U';
   userInitial = 'U';
-  currencyCode = 'PHP';
+  get currencyCode(): string {
+    return this.prefs.currentCurrencyCode;
+  }
 
   vm$!: Observable<InstallmentVM[]>;
   cards$!: Observable<CreditCard[]>;
@@ -104,8 +106,6 @@ export class DebtsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.userName = await this.prefs.getUserName();
     this.userInitial = this.prefs.getUserInitial(this.userName);
-    this.currencyCode = this.prefs.currentCurrencyCode;
-
     this.cards$ = this.cardService.getCards();
     this.cardsWithExpenses$ = combineLatest([
       this.cardService.getCards(),

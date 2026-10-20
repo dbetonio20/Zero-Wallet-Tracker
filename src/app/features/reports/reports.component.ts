@@ -96,8 +96,13 @@ interface CardUtilizationVM extends CreditCard {
 export class ReportsComponent implements OnInit {
   userName = 'U';
   userInitial = 'U';
-  currencyCode = 'PHP';
-  currencySymbol = '₱';
+  get currencyCode(): string {
+    return this.prefs.currentCurrencyCode;
+  }
+
+  get currencySymbol(): string {
+    return this.prefs.currentCurrencySymbol;
+  }
 
   selectedYear: number;
   selectedMonth: number;
@@ -215,8 +220,6 @@ export class ReportsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.userName = await this.prefs.getUserName();
     this.userInitial = this.prefs.getUserInitial(this.userName);
-    this.currencyCode = this.prefs.currentCurrencyCode;
-    this.currencySymbol = this.prefs.currentCurrencySymbol;
     this.refreshTooltips();
 
     combineLatest([

@@ -138,7 +138,9 @@ export class DashboardComponent implements OnInit {
   incomeForm: Partial<Income> = this.blankIncome();
   userName = 'User';
   userInitial = 'U';
-  currencyCode = 'PHP';
+  get currencyCode(): string {
+    return this.prefs.currentCurrencyCode;
+  }
   expandedCardIds = new Set<string>();
   payingIds = new Set<string>();
   isRecurringListOpen = false;
@@ -346,7 +348,6 @@ export class DashboardComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.userName = await this.prefs.getUserName();
     this.userInitial = this.prefs.getUserInitial(this.userName);
-    this.currencyCode = this.prefs.currentCurrencyCode;
     this.buildVM();
   }
 

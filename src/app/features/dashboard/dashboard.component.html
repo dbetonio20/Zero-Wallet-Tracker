@@ -625,7 +625,12 @@
           </ion-select>
         </ion-item>
         <ion-item class="form-item">
-          <ion-input label="Amount (PHP)" type="number" [(ngModel)]="incomeForm.amount" placeholder="0.00" />
+          <ion-input
+            [label]="'Amount (' + currencyCode + ')'"
+            type="number"
+            [(ngModel)]="incomeForm.amount"
+            placeholder="0.00"
+          />
         </ion-item>
         <ion-item class="form-item">
           <ion-input label="Date" type="date" [(ngModel)]="incomeForm.date" />

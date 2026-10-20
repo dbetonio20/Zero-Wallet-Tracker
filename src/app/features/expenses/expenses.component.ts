@@ -188,7 +188,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   methods = METHODS;
   userName = 'U';
   userInitial = 'U';
-  currencyCode = 'PHP';
+  get currencyCode(): string {
+    return this.prefs.currentCurrencyCode;
+  }
 
   form: Partial<Expense> = this.blankForm();
   categoryForm: Partial<Category> = this.blankCategoryForm();
@@ -221,8 +223,6 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     this.userName = await this.prefs.getUserName();
     this.userInitial = this.prefs.getUserInitial(this.userName);
-    this.currencyCode = this.prefs.currentCurrencyCode;
-
     // Open add-expense modal when Quick-Log FAB is tapped from Dashboard
     this.quickAdd.onTrigger$.pipe(takeUntil(this.destroy$)).subscribe(() => {
       setTimeout(() => this.openModal(), 120);

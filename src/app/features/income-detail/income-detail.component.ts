@@ -46,7 +46,9 @@ export class IncomeDetailComponent implements OnInit, OnDestroy {
   usedAmount = 0;
   remainingAmount = 0;
   usagePercent = 0;
-  currencyCode = 'PHP';
+  get currencyCode(): string {
+    return this.prefs.currentCurrencyCode;
+  }
 
   // Edit modal
   isEditModalOpen = false;
@@ -77,7 +79,6 @@ export class IncomeDetailComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.currencyCode = this.prefs.currentCurrencyCode;
     const id = this.route.snapshot.paramMap.get('id') || '';
 
     this.sub = combineLatest([
