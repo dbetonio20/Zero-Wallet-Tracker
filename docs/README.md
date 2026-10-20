@@ -6,7 +6,6 @@ This folder contains the project reference documents used for engineering work a
 
 - [ai/CODEBASE.md](ai/CODEBASE.md) — codebase architecture, patterns, UI conventions, and feature rules
 - [ai/SKILL.md](ai/SKILL.md) — AI engineering skill guide and coding standards
-- [ai/AI-PLAN.md](ai/AI-PLAN.md) — AI assistant implementation plan and product notes
 
 ## Notes
 

@@ -12,7 +12,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   addOutline, trashOutline, checkmarkOutline, chevronDownOutline,
-  cardOutline, settingsOutline, createOutline,
+  cardOutline, settingsOutline, createOutline, receiptOutline, walletOutline,
 } from 'ionicons/icons';
 import { combineLatest, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -100,7 +100,17 @@ export class DebtsComponent implements OnInit {
     private router: Router,
     private alertCtrl: AlertController,
   ) {
-    addIcons({ addOutline, trashOutline, checkmarkOutline, chevronDownOutline, cardOutline, settingsOutline, createOutline });
+    addIcons({
+      addOutline,
+      trashOutline,
+      checkmarkOutline,
+      chevronDownOutline,
+      cardOutline,
+      settingsOutline,
+      createOutline,
+      receiptOutline,
+      walletOutline,
+    });
   }
 
   async ngOnInit(): Promise<void> {

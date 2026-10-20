@@ -347,15 +347,6 @@ Installment → InstallmentPayment[] → Status tracking
 
 ---
 
-# 🤖 AI Feature Rules
-
-* Uses native `LlmPlugin`
-* Android-first
-* Streaming uses Observables
-* Keep prompt context small
-
----
-
 # 🧪 Testing Strategy
 
 Focus on:

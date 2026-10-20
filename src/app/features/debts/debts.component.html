@@ -12,20 +12,34 @@
 
 <ion-content [fullscreen]="true">
   <ion-segment [(ngModel)]="activeMainTab" class="money-main-segment" aria-label="Money sections">
-    <ion-segment-button value="debts">
+    <ion-segment-button value="debts" layout="icon-start">
+      <ion-icon name="receipt-outline" aria-hidden="true"></ion-icon>
       <ion-label>Debts</ion-label>
     </ion-segment-button>
-    <ion-segment-button value="savings">
+    <ion-segment-button value="savings" layout="icon-start">
+      <ion-icon name="wallet-outline" aria-hidden="true"></ion-icon>
       <ion-label>Savings</ion-label>
     </ion-segment-button>
   </ion-segment>
 
   @if (activeMainTab === 'debts') {
+  <section class="money-view-heading" aria-live="polite">
+    <span class="money-view-eyebrow">DEBT MANAGEMENT</span>
+    <h1>Debt overview</h1>
+    @if (activeSegment === 'installments') {
+      <p>Viewing installments · Track upcoming payments and your progress.</p>
+    } @else {
+      <p>Viewing credit cards · Review billing dates and linked expenses.</p>
+    }
+  </section>
+
   <ion-segment [(ngModel)]="activeSegment" class="debts-segment" aria-label="Debt types">
-    <ion-segment-button value="installments">
+    <ion-segment-button value="installments" layout="icon-start">
+      <ion-icon name="receipt-outline" aria-hidden="true"></ion-icon>
       <ion-label>Installments</ion-label>
     </ion-segment-button>
-    <ion-segment-button value="cards">
+    <ion-segment-button value="cards" layout="icon-start">
+      <ion-icon name="card-outline" aria-hidden="true"></ion-icon>
       <ion-label>Credit Cards</ion-label>
     </ion-segment-button>
   </ion-segment>
@@ -35,12 +49,12 @@
     @if (vm$ | async; as list) {
 
       <!-- Pending / Completed pill tabs -->
-      <div class="inst-pill-tabs">
-        <button class="inst-pill-tab" [class.active]="installmentSegment === 'pending'" (click)="installmentSegment = 'pending'">
+      <div class="inst-pill-tabs" role="group" aria-label="Filter installments">
+        <button type="button" class="inst-pill-tab" [class.active]="installmentSegment === 'pending'" [attr.aria-pressed]="installmentSegment === 'pending'" (click)="installmentSegment = 'pending'">
           Pending
           <span class="inst-pill-count" [class.active]="installmentSegment === 'pending'">{{ pendingInstallments(list).length }}</span>
         </button>
-        <button class="inst-pill-tab" [class.active]="installmentSegment === 'completed'" (click)="installmentSegment = 'completed'">
+        <button type="button" class="inst-pill-tab" [class.active]="installmentSegment === 'completed'" [attr.aria-pressed]="installmentSegment === 'completed'" (click)="installmentSegment = 'completed'">
           Completed
           <span class="inst-pill-count" [class.active]="installmentSegment === 'completed'">{{ completedInstallments(list).length }}</span>
         </button>
@@ -50,9 +64,16 @@
       @if (installmentSegment === 'pending') {
         @let pendingList = pendingInstallments(list);
         @if (!pendingList.length) {
-          <div class="inst-empty-state">
-            <ion-icon name="checkmark-outline" class="inst-empty-icon"></ion-icon>
-            <p>All caught up! No pending installments.</p>
+          <div class="inst-empty-state" role="status">
+            <span class="inst-empty-icon-wrap">
+              <ion-icon name="checkmark-outline" class="inst-empty-icon" aria-hidden="true"></ion-icon>
+            </span>
+            <h2>All caught up</h2>
+            <p>No pending installments. Add one to keep your payment schedule in one place.</p>
+            <ion-button (click)="openAddModal()">
+              <ion-icon name="add-outline" slot="start" aria-hidden="true"></ion-icon>
+              Add installment
+            </ion-button>
           </div>
         } @else {
           <!-- Summary strip -->
@@ -178,9 +199,12 @@
       @if (installmentSegment === 'completed') {
         @let completedList = completedInstallments(list);
         @if (!completedList.length) {
-          <div class="inst-empty-state">
-            <ion-icon name="checkmark-outline" class="inst-empty-icon"></ion-icon>
-            <p>No completed installments yet.</p>
+          <div class="inst-empty-state" role="status">
+            <span class="inst-empty-icon-wrap">
+              <ion-icon name="checkmark-outline" class="inst-empty-icon" aria-hidden="true"></ion-icon>
+            </span>
+            <h2>Nothing completed yet</h2>
+            <p>Paid-off installments will show up here.</p>
           </div>
         } @else {
           <div class="inst-cards-list">
@@ -242,7 +266,17 @@
   @if (activeSegment === 'cards') {
     @if (cardsWithExpenses$ | async; as cardItems) {
       @if (!cardItems.length) {
-        <p class="empty-state">No cards yet. Tap + to add one.</p>
+        <div class="money-empty-state" role="status">
+          <span class="inst-empty-icon-wrap">
+            <ion-icon name="card-outline" class="inst-empty-icon" aria-hidden="true"></ion-icon>
+          </span>
+          <h2>No credit cards yet</h2>
+          <p>Add a card to keep its billing dates and related expenses together.</p>
+          <ion-button (click)="openAddModal()">
+            <ion-icon name="add-outline" slot="start" aria-hidden="true"></ion-icon>
+            Add credit card
+          </ion-button>
+        </div>
       }
       @for (item of cardItems; track item.card.id) {
         <ion-card class="card-item">

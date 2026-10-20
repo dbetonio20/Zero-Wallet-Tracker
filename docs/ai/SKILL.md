@@ -137,10 +137,6 @@ Additional implementation notes:
 - `chart.js`
 - `ng2-charts`
 
-### AI / Native integration
-
-- Custom Capacitor `LlmPlugin`
-
 ---
 
 ## 🏗️ Project Structure
@@ -154,7 +150,6 @@ src/app/
 		plugins/                    Capacitor plugin wrappers
 		services/                   Business logic and persistence orchestration
 	features/
-		ai/                         AI assistant feature
 		dashboard/                  Main summary and income management
 		debts/                      Credit cards and installments
 		expenses/                   Expense CRUD and status handling
@@ -398,31 +393,6 @@ Installment → generated InstallmentPayment[] → payment status tracking
 ```
 
 When updating installment logic, ensure regenerated schedules do not leave stale payments behind.
-
----
-
-## 🤖 AI Feature Rules
-
-The AI assistant is powered by the native `LlmPlugin` wrapper, not browser-based Transformers.
-
-Important rules:
-
-- Android-only behavior is expected
-- treat AI state as service-owned
-- streamed tokens are valid Observable/Subject use cases
-- AI context must remain compact and budgeted
-
-When changing AI features, verify:
-
-- model status flow
-- download/init/generate/reset behavior
-- token streaming UX
-- prompt context size limits
-
-Known product note:
-
-- the AI route exists
-- the bottom tab button may still need to be exposed in the tabs UI depending on the current branch state
 
 ---
 

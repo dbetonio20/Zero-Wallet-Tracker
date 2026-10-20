@@ -10,7 +10,6 @@ Key references:
 
 - [docs/ai/CODEBASE.md](docs/ai/CODEBASE.md)
 - [docs/ai/SKILL.md](docs/ai/SKILL.md)
-- [docs/ai/AI-PLAN.md](docs/ai/AI-PLAN.md)
 
 ## Development server
 

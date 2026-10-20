@@ -60,7 +60,7 @@ export class FinancialEngineService {
     )
   );
 
-  /** Observable alias for async-pipe consumers and AiContextService. */
+  /** Observable alias for async-pipe consumers. */
   readonly summary$ = toObservable(this.summary);
 
   /** Observable accessors — backward compatible with all existing async-pipe consumers. */

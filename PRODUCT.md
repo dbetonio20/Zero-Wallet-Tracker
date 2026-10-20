@@ -24,9 +24,8 @@ People use Salapi to review their current financial picture, record and pay expe
 
 ## Capabilities and Constraints
 
-- Existing features include income, expenses, categories, recurring items, installment schedules, credit cards, payment allocations, savings accounts with transaction history, reports, settings, and an on-device AI assistant.
+- Existing features include income, expenses, categories, recurring items, installment schedules, credit cards, payment allocations, savings accounts with transaction history, reports, and settings.
 - The app supports guest use with local data and Google sign-in with optional cloud sync.
-- The AI assistant runs on-device on Android; the native AI integration is not available in a browser.
 - Preserve existing finance calculations, stored data, authentication and sync behavior, routes, and feature interactions during the UI redesign.
 - The application uses Angular standalone components, Ionic Material mode, and Capacitor for Android. Browser layouts are a first-class target alongside the Android APK.
 
