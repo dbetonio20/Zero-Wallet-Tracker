@@ -51,7 +51,8 @@ export class AuthService {
    * were not returned by the native plugin.
    */
   async signInWithGoogle(): Promise<void> {
-    const result = await FirebaseAuthentication.signInWithGoogle();
+    // Use the native Google Sign-In activity instead of the Credential Manager sheet.
+    const result = await FirebaseAuthentication.signInWithGoogle({ useCredentialManager: false });
 
     if (!result.credential?.idToken) {
       throw new Error('Sign-in was cancelled or no credential was returned.');

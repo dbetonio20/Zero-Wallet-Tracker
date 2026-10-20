@@ -1,5 +1,8 @@
 // Records the real onboarding walkthrough (Settings > App walkthrough) to artifacts/onboarding-demo.webm.
 // Usage: bun run dev server first (`bun run start`), then `node scripts/record-onboarding.mjs`.
+// Prerequisites: install Playwright's Chromium and FFmpeg with
+// `node ./node_modules/playwright-core/cli.js install chromium`. Set CHROME_BIN to use a system
+// Chromium instead of the cached browser; the FFmpeg installation is still required.
 // Env: APP_URL (default http://localhost:4200), CHROME_BIN (optional Chromium path).
 import { chromium } from 'playwright-core';
 import { mkdirSync, renameSync, rmSync } from 'node:fs';
