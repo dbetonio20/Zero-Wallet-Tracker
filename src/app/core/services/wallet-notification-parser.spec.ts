@@ -1,3 +1,4 @@
+import { MESSAGES_PACKAGE } from './notification-sources';
 import { GOOGLE_WALLET_PACKAGE, parseWalletNotification } from './wallet-notification-parser';
 
 describe('parseWalletNotification', () => {
@@ -21,6 +22,30 @@ describe('parseWalletNotification', () => {
       transactionTimestamp: null,
     }));
     expect(candidate?.id).toBe(`wallet-${candidate?.fingerprint}`);
+  });
+
+  it('captures outgoing transfer alerts relayed through the Messages app', () => {
+    const candidate = parseWalletNotification({
+      sourceApplication: MESSAGES_PACKAGE,
+      title: 'My labs ❤️❤️❤️',
+      text: 'You have successfully sent PHP20.00 to Dominique Betonio via Instapay. Reference No.: UB966676.',
+      notificationTimestamp: '2026-10-20T11:26:00.000Z',
+      notificationKey: 'messages-instapay-sent',
+    });
+
+    expect(candidate?.amount).toBe(20);
+    expect(candidate?.transactionType).toBe('transfer');
+    expect(candidate?.direction).toBe('outgoing');
+  });
+
+  it('ignores ordinary chat messages from the Messages app', () => {
+    expect(parseWalletNotification({
+      sourceApplication: MESSAGES_PACKAGE,
+      title: 'Mom',
+      text: 'Are you coming home for dinner tonight?',
+      notificationTimestamp: '2026-10-20T11:26:00.000Z',
+      notificationKey: 'messages-chat',
+    })).toBeNull();
   });
 
   it('does not parse notifications from other applications', () => {

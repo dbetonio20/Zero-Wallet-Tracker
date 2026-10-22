@@ -1,4 +1,5 @@
 export const GOOGLE_WALLET_PACKAGE = 'com.google.android.apps.walletnfcrel';
+export const MESSAGES_PACKAGE = 'com.google.android.apps.messaging';
 
 /**
  * Notification sources the app monitors. Package IDs for banks and e-wallets must be
@@ -15,7 +16,14 @@ export const MONITORED_SOURCES: Readonly<Record<string, string>> = {
   'com.paymaya': 'Maya',
   'com.eastwest.mobile.dxp': 'EastWest',
   'ph.com.metrobank.mcc.mbonline': 'Metrobank',
+  [MESSAGES_PACKAGE]: 'Messages',
 };
+
+/**
+ * Messaging apps relay bank SMS-style alerts. Their notifications are only accepted when they
+ * carry an amount and a recognised transaction type, so ordinary chats are ignored.
+ */
+export const MESSAGING_PACKAGES: ReadonlySet<string> = new Set([MESSAGES_PACKAGE]);
 
 export type NotificationTransactionType =
   | 'payment'

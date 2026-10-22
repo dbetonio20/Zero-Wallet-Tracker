@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 
 final class WalletNotificationParser {
     static final String GOOGLE_WALLET_PACKAGE = "com.google.android.apps.walletnfcrel";
+    static final String MESSAGES_PACKAGE = "com.google.android.apps.messaging";
     static final java.util.Set<String> MONITORED_PACKAGES = new java.util.HashSet<>(java.util.Arrays.asList(
             GOOGLE_WALLET_PACKAGE,
             "com.globe.gcash.android",
@@ -26,7 +27,8 @@ final class WalletNotificationParser {
             "ph.seabank.seabank",
             "com.paymaya",
             "com.eastwest.mobile.dxp",
-            "ph.com.metrobank.mcc.mbonline"
+            "ph.com.metrobank.mcc.mbonline",
+            MESSAGES_PACKAGE
     ));
     private static final Pattern REFERENCE = Pattern.compile(
             "\\b(?:ref(?:erence)?|trace|txn)\\.?\\s*(?:no\\.?|number|#)?\\s*[:#]?\\s*([A-Z0-9][A-Z0-9-]{4,})\\b",
@@ -139,6 +141,8 @@ final class WalletNotificationParser {
             candidate.put("transactionTimestamp", JSONObject.NULL);
             candidate.put("fingerprint", fingerprint);
             String[] classification = classify(content.toLowerCase(Locale.ROOT));
+            // Messaging apps only count when the message carries an amount and a known transaction type.
+            if (MESSAGES_PACKAGE.equals(sourcePackage) && (!hasAmount || "unknown".equals(classification[0]))) return null;
             candidate.put("transactionType", classification[0]);
             candidate.put("direction", classification[1]);
             Matcher referenceMatcher = REFERENCE.matcher(content);

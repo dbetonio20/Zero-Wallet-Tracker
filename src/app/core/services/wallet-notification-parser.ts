@@ -2,6 +2,7 @@ import {
   classifyNotification,
   extractReferenceNumber,
   GOOGLE_WALLET_PACKAGE,
+  MESSAGING_PACKAGES,
   monitoredSourceLabel,
   NotificationDirection,
   NotificationTransactionType,
@@ -58,6 +59,9 @@ export function parseWalletNotification(
       : NaN;
   const amount = Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : null;
   const currency = amount === null ? null : 'PHP';
+  if (MESSAGING_PACKAGES.has(input.sourceApplication) && (amount === null || classification.transactionType === 'unknown')) {
+    return null;
+  }
 
   const merchantMatch = content.match(
     /\b(?:at|to)\s+([^\n,;]+?)(?=\s+(?:for|using|with|on)\b|\s*(?:₱|PHP\b)|\s*[·|]\s*(?=(?:₱|PHP\b|EastWest|BDO|BPI|Metrobank|UnionBank|Security Bank|Citibank|HSBC|Maybank|Visa|Mastercard|Amex|Card\b))|$)/i
