@@ -16,6 +16,7 @@ import { OnboardingService } from '../onboarding/onboarding.service';
 import { PendingNotificationCandidate } from '../../core/models';
 import { PendingNotificationQueueService } from '../../core/services/pending-notification-queue.service';
 import { GoogleWalletCaptureService } from '../../core/services/google-wallet-capture.service';
+import { monitoredSourceLabel } from '../../core/services/notification-sources';
 
 const PALETTES = [
   { id: 'default',   name: 'Emerald',   lightBg: '#ffffff', accent: '#2dd36f', darkBg: '#111713', darkAccent: '#62d98b' },
@@ -289,11 +290,16 @@ export class SettingsComponent implements OnInit {
     }
   }
 
+  /** Returns the bank or e-wallet name for a captured notification's package. */
+  sourceLabel(packageName: string): string {
+    return monitoredSourceLabel(packageName) ?? 'Notification';
+  }
+
   async confirmNotificationImport(): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: 'Import Previous Notifications',
       message:
-        'Check for Google Wallet purchase notifications that are still active. Dismissed notifications are not available.',
+        'Check for bank and e-wallet transaction notifications that are still active. Dismissed notifications are not available.',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         { text: 'Check Active Alerts', role: 'confirm' },
@@ -311,20 +317,20 @@ export class SettingsComponent implements OnInit {
       const result = await this.walletCapture.importPreviousNotifications();
       if (!result.permissionGranted) {
         this.walletMessage =
-          'Grant Android notification access to check currently active Google Wallet notifications.';
+          'Grant Android notification access to check currently active bank and e-wallet notifications.';
       } else if (!result.serviceConnected) {
         this.walletMessage =
           'Android notification access is granted, but its listener is reconnecting. Android does not expose the complete notification history.';
       } else if (!result.accessibleCount) {
         this.walletMessage =
-          'No currently active Google Wallet alerts were accessible. Dismissed entries in Android Notification History cannot be imported.';
+          'No currently active bank and e-wallet alerts were accessible. Dismissed entries in Android Notification History cannot be imported.';
       } else {
         this.walletMessage =
           `Checked ${result.accessibleCount} active notification(s); ${result.addedCount} new candidate(s) are ready for review.`;
       }
     } catch (error) {
       this.walletActionError =
-        error instanceof Error ? error.message : 'Could not check accessible Google Wallet notifications.';
+        error instanceof Error ? error.message : 'Could not check accessible bank and e-wallet notifications.';
     }
   }
 

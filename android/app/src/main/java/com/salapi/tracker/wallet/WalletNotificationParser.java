@@ -23,6 +23,8 @@ final class WalletNotificationParser {
             "com.unionbankph.online",
             "com.rcbc.pulz",
             "com.rcbc.mobilebanking",
+            "ph.seabank.seabank",
+            "com.paymaya",
             "com.eastwest.mobile.dxp",
             "ph.com.metrobank.mcc.mbonline"
     ));

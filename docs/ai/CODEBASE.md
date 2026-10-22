@@ -196,10 +196,11 @@ user confirms the type, records an expense or an external transfer (`WalletServi
 or skips. Candidates saved before classification existed default to expense. Package IDs for GCash,
 GoTyme, UnionBank, RCBC, EastWest, and Metrobank are unverified on a device.
 
-### Google Wallet notification capture
+### Bank and e-wallet notification capture
 
-Expenses includes an optional Android notification-listener flow. The native listener accepts only
-`com.google.android.apps.walletnfcrel`, stores a compact parsed record in native preferences while
+Expenses includes an optional Android notification-listener flow. The native listener accepts only the
+packages in `notification-sources.ts` (Google Wallet, GCash, GoTyme, UnionBank, RCBC, EastWest,
+Metrobank, SeaBank, and Maya), stores a compact parsed record in native preferences while
 the web app is not active, and never stores complete notification text. The Capacitor bridge moves
 those records into `PendingNotificationQueueService`, persisted locally under
 `wallet_pending_candidates` with cloud sync disabled. Fingerprints are kept separately under
@@ -213,7 +214,7 @@ The **Import Previous Notifications** action is explicitly confirmed and queries
 active notifications exposed by Android's public `NotificationListenerService.getActiveNotifications()`.
 Android does not expose its complete system notification-history database through this API.
 Notification access is optional and must be granted by the user in Android settings. Physical-device
-testing is required to verify the Google Wallet package, notification text format, permission
+testing is required to verify each monitored package, notification text format, permission
 revocation, process restart delivery, and card/merchant parsing.
 
 ---
@@ -312,7 +313,7 @@ Inline template. 4 bottom tabs:
 
 **Template:** page-header, sliding expense list (edit + mark-paid + delete swipe actions), FAB add button, add/edit expense modal.
 
-The Expenses page also contains a compact Google Wallet capture panel, access status, history import
+Settings contains a bank and e-wallet capture panel, access status, history import
 confirmation, and a review queue. The pending queue remains local and separate from `expenses`.
 
 ---

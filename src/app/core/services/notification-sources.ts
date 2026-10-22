@@ -11,6 +11,8 @@ export const MONITORED_SOURCES: Readonly<Record<string, string>> = {
   'com.unionbankph.online': 'UnionBank',
   'com.rcbc.pulz': 'RCBC',
   'com.rcbc.mobilebanking': 'RCBC',
+  'ph.seabank.seabank': 'SeaBank',
+  'com.paymaya': 'Maya',
   'com.eastwest.mobile.dxp': 'EastWest',
   'ph.com.metrobank.mcc.mbonline': 'Metrobank',
 };

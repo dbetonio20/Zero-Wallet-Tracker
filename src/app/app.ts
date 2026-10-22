@@ -74,7 +74,7 @@ export class App implements OnInit {
   async ngOnInit(): Promise<void> {
     void this.walletCapture.initialize().catch(error => {
       void this.showToast(
-        error instanceof Error ? error.message : 'Could not start Google Wallet notification capture.',
+        error instanceof Error ? error.message : 'Could not start bank and e-wallet notification capture.',
         'warning'
       );
     });
@@ -126,7 +126,7 @@ export class App implements OnInit {
     this.isWalletAlertOpen = true;
     try {
       const alert = await this.alertCtrl.create({
-        header: 'Google Wallet purchase',
+        header: 'transaction',
         message: this.walletReviewMessage(candidate),
         buttons: [
           { text: 'Review later', role: 'cancel' },
@@ -158,7 +158,7 @@ export class App implements OnInit {
     } catch (error) {
       this.isWalletAlertOpen = false;
       await this.showToast(
-        error instanceof Error ? error.message : 'Could not show the Wallet purchase review.',
+        error instanceof Error ? error.message : 'Could not show the transaction review.',
         'danger'
       );
     }

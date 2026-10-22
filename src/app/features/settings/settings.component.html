@@ -76,14 +76,14 @@
   </div>
 
   <div class="section-header">Notifications</div>
-  <div class="settings-group wallet-settings" aria-label="Google Wallet notification capture">
+  <div class="settings-group wallet-settings" aria-label="Bank and e-wallet notification capture">
     <div class="wallet-settings-heading">
       <div>
-        <h3>Google Wallet</h3>
+        <h3>Bank & e-wallet</h3>
         <p>{{ walletCapture.statusLabel() }}</p>
       </div>
       <ion-toggle
-        aria-label="Enable Google Wallet notification capture"
+        aria-label="Enable bank and e-wallet notification capture"
         [checked]="walletCapture.status().enabled"
         [disabled]="!walletCapture.status().supported"
         (ionChange)="setCaptureEnabled($event.detail.checked)"
@@ -156,7 +156,7 @@
               @if (candidate.cardLabel || candidate.cardSuffix) {
                 <small>Payment method: Credit Card</small>
               }
-              <small>Google Wallet · {{ candidate.notificationTimestamp | date:'MMM d, y, h:mm a' }}</small>
+              <small>{{ sourceLabel(candidate.sourceApplication) }} · {{ candidate.notificationTimestamp | date:'MMM d, y, h:mm a' }}</small>
               @if (candidate.amount === null) {
                 <small>Amount needs manual entry.</small>
               }

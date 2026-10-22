@@ -75,10 +75,10 @@ public class WalletNotificationListenerService extends NotificationListenerServi
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                     REVIEW_CHANNEL_ID,
-                    "Wallet purchase reviews",
+                    "transaction reviews",
                     NotificationManager.IMPORTANCE_HIGH
             );
-            channel.setDescription("Alerts when a Google Wallet purchase is ready to review.");
+            channel.setDescription("Alerts when a transaction is ready to review.");
             manager.createNotificationChannel(channel);
         }
 
@@ -97,7 +97,7 @@ public class WalletNotificationListenerService extends NotificationListenerServi
                 : new Notification.Builder(this);
         Notification reviewNotification = builder
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("Google Wallet purchase")
+                .setContentTitle("transaction")
                 .setContentText("A purchase is ready for review in Salapi.")
                 .setCategory(Notification.CATEGORY_EVENT)
                 .setVisibility(Notification.VISIBILITY_PRIVATE)

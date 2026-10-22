@@ -66,7 +66,7 @@ export class GoogleWalletCaptureService {
     if (!status.supported) return 'Notification capture is available on Android only.';
     if (!status.permissionGranted) return 'Notification access is not granted.';
     if (!status.listenerConnected) return 'Android notification access is granted; listener is reconnecting.';
-    return status.enabled ? 'Google Wallet notification capture is enabled.' : 'Capture is disabled.';
+    return status.enabled ? 'Bank and e-wallet notification capture is enabled.' : 'Capture is disabled.';
   });
 
   constructor(private readonly queue: PendingNotificationQueueService) {
@@ -188,7 +188,7 @@ export class GoogleWalletCaptureService {
 
   private setError(error: unknown): void {
     this._error.set(
-      error instanceof Error ? error.message : 'Could not access Google Wallet notifications.'
+      error instanceof Error ? error.message : 'Could not access bank and e-wallet notifications.'
     );
   }
 }
