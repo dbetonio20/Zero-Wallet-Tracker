@@ -7,12 +7,12 @@ export const GOOGLE_WALLET_PACKAGE = 'com.google.android.apps.walletnfcrel';
 export const MONITORED_SOURCES: Readonly<Record<string, string>> = {
   [GOOGLE_WALLET_PACKAGE]: 'Google Wallet',
   'com.globe.gcash.android': 'GCash',
-  'ph.com.gotyme.android': 'GoTyme',
+  'ph.com.gotyme': 'GoTyme',
   'com.unionbankph.online': 'UnionBank',
-  'com.rcbc.rcbcpulz': 'RCBC',
+  'com.rcbc.pulz': 'RCBC',
   'com.rcbc.mobilebanking': 'RCBC',
-  'com.eastwestbanking.easyway': 'EastWest',
-  'com.metrobank.mobbanking': 'Metrobank',
+  'com.eastwest.mobile.dxp': 'EastWest',
+  'ph.com.metrobank.mcc.mbonline': 'Metrobank',
 };
 
 export type NotificationTransactionType =

@@ -19,12 +19,12 @@ final class WalletNotificationParser {
     static final java.util.Set<String> MONITORED_PACKAGES = new java.util.HashSet<>(java.util.Arrays.asList(
             GOOGLE_WALLET_PACKAGE,
             "com.globe.gcash.android",
-            "ph.com.gotyme.android",
+            "ph.com.gotyme",
             "com.unionbankph.online",
-            "com.rcbc.rcbcpulz",
+            "com.rcbc.pulz",
             "com.rcbc.mobilebanking",
-            "com.eastwestbanking.easyway",
-            "com.metrobank.mobbanking"
+            "com.eastwest.mobile.dxp",
+            "ph.com.metrobank.mcc.mbonline"
     ));
     private static final Pattern REFERENCE = Pattern.compile(
             "\\b(?:ref(?:erence)?|trace|txn)\\.?\\s*(?:no\\.?|number|#)?\\s*[:#]?\\s*([A-Z0-9][A-Z0-9-]{4,})\\b",
