@@ -19,7 +19,13 @@ describe('ExpensesComponent notification expense flow', () => {
     pendingCandidates: () => PendingNotificationCandidate[];
     ready: jasmine.Spy;
     markImported: jasmine.Spy;
+    skip: jasmine.Spy;
     notifyExpenseReviewFinished: jasmine.Spy;
+  };
+  let wallet: {
+    accounts: ReturnType<typeof signal<never[]>>;
+    getAccount: jasmine.Spy;
+    recordExternalTransfer: jasmine.Spy;
   };
 
   const candidate: PendingNotificationCandidate = {
@@ -47,7 +53,14 @@ describe('ExpensesComponent notification expense flow', () => {
       pendingCandidates: () => [candidate],
       ready: jasmine.createSpy('ready').and.resolveTo(undefined),
       markImported: jasmine.createSpy('markImported').and.resolveTo(undefined),
+      skip: jasmine.createSpy('skip').and.resolveTo(undefined),
       notifyExpenseReviewFinished: jasmine.createSpy('notifyExpenseReviewFinished'),
+    };
+
+    wallet = {
+      accounts: signal([]),
+      getAccount: jasmine.createSpy('getAccount').and.returnValue({ id: 'bank-1', name: 'Bank' }),
+      recordExternalTransfer: jasmine.createSpy('recordExternalTransfer').and.resolveTo(undefined),
     };
 
     await TestBed.configureTestingModule({
@@ -64,7 +77,7 @@ describe('ExpensesComponent notification expense flow', () => {
         { provide: QuickAddService, useValue: { onTrigger$: new Subject<void>() } },
         { provide: CreditCardService, useValue: { getCards: () => of([]) } },
         { provide: PendingNotificationQueueService, useValue: queue },
-        { provide: WalletService, useValue: { accounts: signal([]), getAccount: () => undefined } },
+        { provide: WalletService, useValue: wallet },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(ExpensesComponent);
@@ -116,5 +129,49 @@ describe('ExpensesComponent notification expense flow', () => {
     }));
     expect(queue.markImported).toHaveBeenCalledWith(candidate.id);
     expect(component.isModalOpen).toBeFalse();
+  });
+
+  it('requires the user to choose a type for an unclassified notification before saving', async () => {
+    const component = fixture.componentInstance;
+    component.recordCandidate({ ...candidate, transactionType: 'unknown', direction: 'unknown' });
+
+    expect(component.recordingType).toBeNull();
+    expect(component.isSaveDisabled()).toBeTrue();
+    component.form.category = 'Food';
+    await component.save();
+    expect(engine.addExpense).not.toHaveBeenCalled();
+    expect(wallet.recordExternalTransfer).not.toHaveBeenCalled();
+    expect(queue.markImported).not.toHaveBeenCalled();
+  });
+
+  it('records a confirmed transfer as one account change and never as an expense', async () => {
+    const component = fixture.componentInstance;
+    component.recordCandidate({ ...candidate, transactionType: 'transfer', direction: 'outgoing' });
+
+    expect(component.recordingType).toBe('transfer');
+    expect(component.transferDirection).toBe('out');
+    component.form.accountId = 'bank-1';
+    component.form.amount = 250;
+    component.form.date = '2026-10-22';
+    expect(component.isSaveDisabled()).toBeFalse();
+
+    await component.save();
+
+    expect(wallet.recordExternalTransfer).toHaveBeenCalledWith(
+      'bank-1', 'out', 250, '2026-10-22', candidate.merchantName ?? ''
+    );
+    expect(engine.addExpense).not.toHaveBeenCalled();
+    expect(queue.markImported).toHaveBeenCalledWith(candidate.id);
+  });
+
+  it('skips a notification without creating any record', async () => {
+    const component = fixture.componentInstance;
+    component.recordCandidate(candidate);
+
+    await component.skipRecording();
+
+    expect(queue.skip).toHaveBeenCalledWith(candidate.id);
+    expect(engine.addExpense).not.toHaveBeenCalled();
+    expect(wallet.recordExternalTransfer).not.toHaveBeenCalled();
   });
 });

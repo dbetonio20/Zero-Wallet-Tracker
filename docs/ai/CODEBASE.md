@@ -187,6 +187,15 @@ Central reactive data service. All data held in `BehaviorSubject` streams and pe
 
 **Known limitation:** `totalCreditDues` is computed from unpaid installment payments linked to credit cards. Credit card balances without installments are not tracked.
 
+### Financial notification monitoring
+
+`src/app/core/services/notification-sources.ts` is the monitored-source registry. It classifies
+notifications as `payment`, `transfer`, `refund`, `fee`, or `unknown`, and sets direction
+(`outgoing`/`incoming`). Candidates carry `transactionType` and `direction`. In the review modal the
+user confirms the type, records an expense or an external transfer (`WalletService.recordExternalTransfer`),
+or skips. Candidates saved before classification existed default to expense. Package IDs for GCash,
+GoTyme, UnionBank, RCBC, EastWest, and Metrobank are unverified on a device.
+
 ### Google Wallet notification capture
 
 Expenses includes an optional Android notification-listener flow. The native listener accepts only

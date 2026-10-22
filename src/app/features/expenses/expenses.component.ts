@@ -93,6 +93,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   editingCategory: Category | null = null;
   paidAtForm = '';
   recordingCandidate: PendingNotificationCandidate | null = null;
+  /** How the reviewed notification is recorded; null until the user chooses for ambiguous ones. */
+  recordingType: 'expense' | 'transfer' | null = null;
+  transferDirection: 'out' | 'in' | null = null;
   isSavingExpense = false;
   saveError = '';
   notificationReviewError = '';
@@ -338,13 +341,24 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.isModalOpen = false;
     this.editingExpense = null;
     this.recordingCandidate = null;
+    this.recordingType = null;
+    this.transferDirection = null;
     this.paidAtForm = '';
     this.saveError = '';
   }
 
+  /** Blocks saving until a reviewed notification has its type and the fields that type needs. */
+  isSaveDisabled(): boolean {
+    if (this.recordingCandidate && !this.recordingType) return true;
+    if (this.recordingCandidate && this.recordingType === 'transfer') {
+      return !this.transferDirection || !this.form.accountId || !this.form.amount || !this.form.date;
+    }
+    return !this.form.category || !this.form.amount || !this.form.date;
+  }
+
   async save(): Promise<void> {
     const amount = Number(this.form.amount);
-    if (!this.form.category || !Number.isFinite(amount) || amount <= 0 || !this.form.date) return;
+    if (!Number.isFinite(amount) || amount <= 0 || !this.form.date) return;
     if (this.isSavingExpense) return;
     if (
       this.recordingCandidate &&
@@ -353,6 +367,12 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       this.saveError = 'This notification is no longer pending review. Close this form and refresh the list.';
       return;
     }
+    if (this.recordingCandidate && this.recordingType === 'transfer') {
+      await this.saveRecordedTransfer(amount);
+      return;
+    }
+    if (this.recordingCandidate && !this.recordingType) return;
+    if (!this.form.category) return;
     const isCreditCard = this.form.paymentMethod === 'Credit Card';
     const base = {
       name: this.form.name || '',
@@ -394,10 +414,82 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Records a reviewed transfer as a one-sided change to the chosen account.
+   * The candidate is marked imported after the balance change; a failure after that point
+   * is reported so the user does not record it twice.
+   */
+  private async saveRecordedTransfer(amount: number): Promise<void> {
+    const candidate = this.recordingCandidate!;
+    if (
+      !this.transferDirection ||
+      !this.form.accountId ||
+      !Number.isFinite(amount) ||
+      amount <= 0 ||
+      !this.form.date
+    ) {
+      return;
+    }
+    if (this.isSavingExpense) return;
+    if (!this.pendingQueue.pendingCandidates().some(item => item.id === candidate.id)) {
+      this.saveError = 'This notification is no longer pending review. Close this form and refresh the list.';
+      return;
+    }
+    this.isSavingExpense = true;
+    this.saveError = '';
+    let recorded = false;
+    try {
+      await this.walletService.recordExternalTransfer(
+        this.form.accountId,
+        this.transferDirection,
+        amount,
+        this.form.date,
+        this.form.name || candidate.merchantName || ''
+      );
+      recorded = true;
+      await this.pendingQueue.markImported(candidate.id);
+      this.closeModal();
+    } catch (error) {
+      this.saveError = recorded
+        ? 'The transfer was recorded, but the notification could not be updated. Close this form and refresh the list. Do not record it again.'
+        : error instanceof Error
+          ? error.message
+          : 'Could not record this transfer. The notification is still pending.';
+    } finally {
+      this.isSavingExpense = false;
+    }
+  }
+
+  /** Ignores the notification without creating or changing any expense, income, or balance. */
+  async skipRecording(): Promise<void> {
+    const candidate = this.recordingCandidate;
+    if (!candidate || this.isSavingExpense) return;
+    this.isSavingExpense = true;
+    try {
+      await this.pendingQueue.skip(candidate.id);
+      this.closeModal();
+    } catch (error) {
+      this.saveError = error instanceof Error ? error.message : 'Could not skip this notification.';
+    } finally {
+      this.isSavingExpense = false;
+    }
+  }
+
   recordCandidate(candidate: PendingNotificationCandidate): void {
     this.recordingCandidate = candidate;
     this.editingExpense = null;
     this.saveError = '';
+    // Candidates saved before classification existed have no transactionType; they were all expenses.
+    this.recordingType =
+      candidate.transactionType === 'transfer'
+        ? 'transfer'
+        : candidate.transactionType === undefined ||
+            candidate.transactionType === 'payment' ||
+            candidate.transactionType === 'fee'
+          ? 'expense'
+          : null;
+    this.transferDirection =
+      candidate.direction === 'outgoing' ? 'out' : candidate.direction === 'incoming' ? 'in' : null;
     const appCurrency = this.currencyCode.toUpperCase();
     const candidateCurrency = candidate.currency?.toUpperCase() ?? null;
     this.form = {

@@ -229,7 +229,7 @@
     <ng-template>
       <ion-header>
         <ion-toolbar>
-          <ion-title>{{ recordingCandidate ? 'Record Expense' : editingExpense ? 'Edit Expense' : 'Add Expense' }}</ion-title>
+          <ion-title>{{ recordingCandidate ? (recordingType === 'transfer' ? 'Record Transfer' : 'Review Notification') : editingExpense ? 'Edit Expense' : 'Add Expense' }}</ion-title>
           <ion-buttons slot="end">
             <ion-button [disabled]="isSavingExpense" (click)="closeModal()">Cancel</ion-button>
           </ion-buttons>
@@ -237,7 +237,21 @@
       </ion-header>
       <ion-content class="ion-padding">
         @if (recordingCandidate) {
-          <p class="wallet-review-prompt"><strong>Record this expense?</strong> Check the details and choose a category.</p>
+          <p class="wallet-review-prompt"><strong>Confirm this notification.</strong> Choose what it is, then check the details.</p>
+          <ion-item>
+            <ion-select label="This is a" [value]="recordingType" (ionChange)="recordingType = $event.detail.value" placeholder="Choose one" interface="popover">
+              <ion-select-option value="expense">Expense</ion-select-option>
+              <ion-select-option value="transfer">Transfer between accounts</ion-select-option>
+            </ion-select>
+          </ion-item>
+          @if (recordingType === 'transfer') {
+            <ion-item>
+              <ion-select label="Direction" [value]="transferDirection" (ionChange)="transferDirection = $event.detail.value" placeholder="Choose one" interface="popover">
+                <ion-select-option value="out">Money left this account</ion-select-option>
+                <ion-select-option value="in">Money arrived in this account</ion-select-option>
+              </ion-select>
+            </ion-item>
+          }
           @if (
             recordingCandidate.currency &&
             recordingCandidate.currency.toUpperCase() !== currencyCode.toUpperCase()
@@ -251,6 +265,7 @@
         <ion-item>
           <ion-input label="Name" [(ngModel)]="form.name" placeholder="e.g. Jollibee lunch" />
         </ion-item>
+        @if (recordingType !== 'transfer') {
         <ion-item>
           <ion-select label="Category" [(ngModel)]="form.category" placeholder="Select category">
             @if (categories$ | async; as cats) {
@@ -260,6 +275,7 @@
             }
           </ion-select>
         </ion-item>
+        }
         <ion-item>
           <ion-input [label]="'Amount (' + currencyCode + ')'" type="number" [(ngModel)]="form.amount" placeholder="0.00" />
         </ion-item>
@@ -300,9 +316,14 @@
           </ion-item>
         }
         <ion-button expand="block" class="ion-margin-top" (click)="save()"
-          [disabled]="!form.category || !form.amount || !form.date || isSavingExpense">
-          {{ isSavingExpense ? 'Saving…' : recordingCandidate ? 'Record Expense' : editingExpense ? 'Update Expense' : 'Save Expense' }}
+          [disabled]="isSaveDisabled() || isSavingExpense">
+          {{ isSavingExpense ? 'Saving…' : recordingCandidate ? (recordingType === 'transfer' ? 'Record Transfer' : 'Record Expense') : editingExpense ? 'Update Expense' : 'Save Expense' }}
         </ion-button>
+        @if (recordingCandidate) {
+          <ion-button expand="block" fill="outline" color="medium" class="ion-margin-top" [disabled]="isSavingExpense" (click)="skipRecording()">
+            Skip notification
+          </ion-button>
+        }
         @if (saveError) {
           <p class="wallet-error" role="alert">{{ saveError }}</p>
         }
