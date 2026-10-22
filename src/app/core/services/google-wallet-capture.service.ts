@@ -122,8 +122,13 @@ export class GoogleWalletCaptureService {
     const { notifications, serviceConnected } = await nativeCapture.getActiveNotifications();
     let addedCount = 0;
     for (const notification of notifications) {
-      if (await this.addNotification(notification)) addedCount += 1;
-      else this.queue.resurfacePending(notification.fingerprint);
+      if (await this.addNotification(notification)) {
+        addedCount += 1;
+      } else if (await this.queue.reactivateIgnored(notification.fingerprint)) {
+        addedCount += 1;
+      } else {
+        this.queue.resurfacePending(notification.fingerprint);
+      }
     }
     return {
       permissionGranted: true,

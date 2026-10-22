@@ -103,6 +103,17 @@ export class PendingNotificationQueueService {
     return true;
   }
 
+  /** Moves a previously skipped candidate back into pending review when its notification is active again. */
+  async reactivateIgnored(fingerprint: string): Promise<boolean> {
+    await this.ensureLoaded();
+    const existing = this._candidates().find(
+      item => item.fingerprint === fingerprint && item.reviewStatus === 'ignored'
+    );
+    if (!existing) return false;
+    await this.updateStatus(existing.id, 'pending');
+    return true;
+  }
+
   /** Re-surfaces a still-pending candidate for review when its notification is seen again. */
   resurfacePending(fingerprint: string): boolean {
     const existing = this._candidates().find(

@@ -60,6 +60,16 @@ describe('PendingNotificationQueueService', () => {
     await queue.ready();
   });
 
+  it('moves a skipped candidate back to pending review when it is active again', async () => {
+    await queue.add(candidate);
+    await queue.skip(candidate.id);
+    expect(queue.pendingCount()).toBe(0);
+
+    expect(await queue.reactivateIgnored(candidate.fingerprint)).toBeTrue();
+    expect(queue.pendingCount()).toBe(1);
+    expect(await queue.reactivateIgnored(candidate.fingerprint)).toBeFalse();
+  });
+
   it('re-surfaces a pending candidate without adding a duplicate', async () => {
     await queue.add(candidate);
     const emitted: string[] = [];
