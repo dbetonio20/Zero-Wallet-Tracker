@@ -155,6 +155,22 @@ describe('WalletService', () => {
     );
   });
 
+  it('records an external transfer on one account only, without a paired transfer or financial record', async () => {
+    await service.addAccount({
+      name: 'Bank', type: 'bank', openingBalance: 1_000, currency: 'PHP', notes: '', isArchived: false,
+    });
+    const account = service.accounts()[0];
+
+    await service.recordExternalTransfer(account.id, 'out', 300, '2026-10-22', 'Sent to other bank');
+    await service.recordExternalTransfer(account.id, 'in', 50, '2026-10-22');
+
+    const updated = service.getAccount(account.id)!;
+    expect(service.getBalance(updated)).toBe(750);
+    expect(updated.transactions.filter(tx => tx.transferId).length).toBe(0);
+    expect(updated.transactions.filter(tx => tx.type !== 'opening').every(tx => tx.sourceType === 'transfer')).toBeTrue();
+    await expectAsync(service.recordExternalTransfer(account.id, 'out', 900, '2026-10-22')).toBeRejected();
+  });
+
   it('keeps linked savings allocations available when validating expenses and transfers', async () => {
     await service.addAccount({
       name: 'Cash', type: 'cash', openingBalance: 100, currency: 'PHP', notes: '', isArchived: false,

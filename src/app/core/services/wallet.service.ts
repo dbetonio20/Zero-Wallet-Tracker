@@ -289,6 +289,46 @@ export class WalletService {
     });
   }
 
+  /**
+   * Records a transfer whose other side is outside the app (for example, to another bank).
+   * Only the given account changes; no expense or income is created and no paired transfer is written.
+   */
+  async recordExternalTransfer(
+    accountId: string,
+    direction: 'out' | 'in',
+    amount: number,
+    date: string,
+    description = ''
+  ): Promise<void> {
+    await this.ensureReady();
+    const value = this.validateAmount(amount);
+    if (!date || Number.isNaN(Date.parse(date))) throw new Error('Choose a valid transfer date.');
+
+    await this.mutate(async accounts => {
+      const account = accounts.find(item => item.id === accountId && !item.isArchived);
+      if (!account) throw new Error('This account is no longer available.');
+      if (direction === 'out') {
+        const reserved = await this.getReservedAmount(accountId);
+        if (this.round(this.getBalance(account) - value) < reserved) {
+          throw new Error('This transfer would reduce the account below savings reserved from it.');
+        }
+      }
+      const transaction: WalletTransaction = {
+        id: this.uuid(),
+        type: direction === 'out' ? 'transfer-out' : 'transfer-in',
+        amount: direction === 'out' ? -value : value,
+        date,
+        description: description.trim() || 'External transfer',
+        sourceType: 'transfer',
+      };
+      return accounts.map(item =>
+        item.id === accountId
+          ? touchSyncedEntity({ ...item, transactions: [...item.transactions, transaction] })
+          : item
+      );
+    });
+  }
+
   async reconcileFinancialRecords(expenses: readonly Expense[], incomes: readonly Income[]): Promise<void> {
     await this.ensureReady();
     await this.mutate(accounts => {
