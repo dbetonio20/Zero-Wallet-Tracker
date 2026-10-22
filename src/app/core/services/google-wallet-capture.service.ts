@@ -8,6 +8,7 @@ export interface WalletCaptureStatus {
   supported: boolean;
   enabled: boolean;
   permissionGranted: boolean;
+  listenerConnected: boolean;
 }
 
 export interface CapturedWalletNotification extends Omit<
@@ -49,6 +50,7 @@ export class GoogleWalletCaptureService {
     supported: false,
     enabled: false,
     permissionGranted: false,
+    listenerConnected: false,
   });
   private readonly _error = signal('');
   private readonly _initialized = signal(false);
@@ -63,6 +65,7 @@ export class GoogleWalletCaptureService {
     const status = this._status();
     if (!status.supported) return 'Notification capture is available on Android only.';
     if (!status.permissionGranted) return 'Notification access is not granted.';
+    if (!status.listenerConnected) return 'Android notification access is granted; listener is reconnecting.';
     return status.enabled ? 'Google Wallet notification capture is enabled.' : 'Capture is disabled.';
   });
 
@@ -135,7 +138,12 @@ export class GoogleWalletCaptureService {
   }
 
   private async initializeNative(): Promise<void> {
-    this._status.set({ supported: true, enabled: false, permissionGranted: false });
+    this._status.set({
+      supported: true,
+      enabled: false,
+      permissionGranted: false,
+      listenerConnected: false,
+    });
     await this.queue.ready();
     this.eventHandle = await nativeCapture.addListener('notificationCaptured', notification => {
       void this.processNotification(notification, true).catch(error => this.setError(error));

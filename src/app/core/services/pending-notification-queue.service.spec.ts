@@ -72,6 +72,15 @@ describe('PendingNotificationQueueService', () => {
     expect(reloaded.pendingCount()).toBe(1);
   });
 
+  it('announces a new candidate once for immediate review', async () => {
+    const received: PendingNotificationCandidate[] = [];
+    queue.candidateAdded$.subscribe(item => received.push(item));
+
+    expect(await queue.add(candidate)).toBeTrue();
+    expect(await queue.add(candidate)).toBeFalse();
+    expect(received).toEqual([jasmine.objectContaining({ id: candidate.id })]);
+  });
+
   it('keeps skipped candidates out of review and blocks redelivery', async () => {
     await queue.add(candidate);
     await queue.skip(candidate.id);
@@ -87,6 +96,13 @@ describe('PendingNotificationQueueService', () => {
 
     expect(queue.pendingCandidates()).toEqual([]);
     expect(await queue.add(candidate)).toBeFalse();
+  });
+
+  it('hands off a one-time expense review request', () => {
+    queue.requestExpenseReview(candidate.id);
+
+    expect(queue.takeExpenseReviewRequest()).toBe(candidate.id);
+    expect(queue.takeExpenseReviewRequest()).toBeNull();
   });
 
   it('allows retry after a storage failure without losing the candidate', async () => {

@@ -1,5 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
+import { Subject } from 'rxjs';
 import { PendingNotificationCandidate } from '../models';
 import { StorageService } from './storage.service';
 
@@ -23,17 +24,22 @@ export interface NewPendingNotification {
 export class PendingNotificationQueueService {
   private readonly _candidates = signal<PendingNotificationCandidate[]>([]);
   private readonly _loadError = signal('');
+  private readonly candidateAdded = new Subject<PendingNotificationCandidate>();
+  private readonly expenseReviewFinished = new Subject<void>();
   private readonly _pendingCandidates = computed(() =>
     this._candidates().filter(candidate => candidate.reviewStatus === 'pending')
   );
   private readonly fingerprints = new Set<string>();
   private loadPromise: Promise<void> | null = null;
+  private expenseReviewRequestId: string | null = null;
 
   readonly candidates = this._candidates.asReadonly();
   readonly pendingCandidates = this._pendingCandidates;
   readonly pendingCount = computed(() => this._pendingCandidates().length);
   readonly pendingCandidates$ = toObservable(this._pendingCandidates);
   readonly loadError = this._loadError.asReadonly();
+  readonly candidateAdded$ = this.candidateAdded.asObservable();
+  readonly expenseReviewFinished$ = this.expenseReviewFinished.asObservable();
 
   constructor(private readonly storage: StorageService) {
     void this.ensureLoaded().catch(error => this.setLoadError(error));
@@ -42,6 +48,28 @@ export class PendingNotificationQueueService {
   /** Loads the local-only queue before returning a snapshot. */
   async ready(): Promise<void> {
     await this.ensureLoaded();
+  }
+
+  /** Requests that the Expenses page open its confirmation form for a pending candidate. */
+  requestExpenseReview(id: string): void {
+    this.expenseReviewRequestId = id;
+  }
+
+  /** Consumes the one-time request to open an expense confirmation form. */
+  takeExpenseReviewRequest(): string | null {
+    const id = this.expenseReviewRequestId;
+    this.expenseReviewRequestId = null;
+    return id;
+  }
+
+  /** Cancels a review request if navigation to Expenses did not succeed. */
+  cancelExpenseReviewRequest(id: string): void {
+    if (this.expenseReviewRequestId === id) this.expenseReviewRequestId = null;
+  }
+
+  /** Notifies the app shell that the expense confirmation form has closed. */
+  notifyExpenseReviewFinished(): void {
+    this.expenseReviewFinished.next();
   }
 
   /** Adds a notification candidate once, using its stable fingerprint for deduplication. */
@@ -71,6 +99,7 @@ export class PendingNotificationQueueService {
       }
       throw error;
     }
+    this.candidateAdded.next(updated[0]);
     return true;
   }
 

@@ -2,11 +2,11 @@ import { Component, OnInit, inject, OnDestroy, ChangeDetectionStrategy } from '@
 import { AsyncPipe, CurrencyPipe, DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  AlertController, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
+  IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel,
   IonBadge, IonFab, IonFabButton, IonIcon, IonModal, IonButton, IonButtons,
   IonInput, IonSelect, IonSelectOption, IonTextarea,
   IonItemSliding, IonItemOptions, IonItemOption, IonNote,
-  IonSearchbar, IonSegment, IonSegmentButton, IonToggle,
+  IonSearchbar, IonSegment, IonSegmentButton,
   IonListHeader, IonChip, IonProgressBar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -35,7 +35,6 @@ import {
 } from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
 import { PendingNotificationQueueService } from '../../core/services/pending-notification-queue.service';
-import { GoogleWalletCaptureService } from '../../core/services/google-wallet-capture.service';
 
 export type PeriodFilter = 'month' | 'year' | 'all';
 
@@ -66,13 +65,12 @@ const METHODS = ['Cash', 'GCash', 'Credit Card', 'Debit Card', 'Bank Transfer'];
     IonBadge, IonFab, IonFabButton, IonIcon, IonModal, IonButton, IonButtons,
     IonInput, IonSelect, IonSelectOption, IonTextarea,
     IonItemSliding, IonItemOptions, IonItemOption, IonNote,
-    IonSearchbar, IonSegment, IonSegmentButton, IonToggle,
+    IonSearchbar, IonSegment, IonSegmentButton,
     IonListHeader, IonChip, IonProgressBar,
     PayModalComponent,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './expenses.component.html',
-  styleUrl: './expenses.component.scss',
 })
 export class ExpensesComponent implements OnInit, OnDestroy {
   private engine = inject(FinancialEngineService);
@@ -81,9 +79,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   categoryService = inject(CategoryService);
   private quickAdd = inject(QuickAddService);
   creditCardService = inject(CreditCardService);
-  private alertController = inject(AlertController);
   readonly pendingQueue = inject(PendingNotificationQueueService);
-  readonly walletCapture = inject(GoogleWalletCaptureService);
 
   // ── UI state ─────────────────────────────────────────────────────────
   isModalOpen = false;
@@ -94,11 +90,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   editingCategory: Category | null = null;
   paidAtForm = '';
   recordingCandidate: PendingNotificationCandidate | null = null;
-  showPendingCandidates = false;
   isSavingExpense = false;
   saveError = '';
-  walletActionError = '';
-  walletMessage = '';
+  notificationReviewError = '';
 
   // ── Filters ──────────────────────────────────────────────────────────
   searchText$ = new BehaviorSubject<string>('');
@@ -241,14 +235,15 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     this.userName = await this.prefs.getUserName();
     this.userInitial = this.prefs.getUserInitial(this.userName);
-    void this.walletCapture.refreshStatus().catch(error => {
-      this.walletActionError =
-        error instanceof Error ? error.message : 'Could not check notification access.';
-    });
+    await this.openRequestedWalletCandidate();
     // Open add-expense modal when Quick-Log FAB is tapped from Dashboard
     this.quickAdd.onTrigger$.pipe(takeUntil(this.destroy$)).subscribe(() => {
       setTimeout(() => this.openModal(), 120);
     });
+  }
+
+  ionViewWillEnter(): void {
+    void this.openRequestedWalletCandidate();
   }
 
   ngOnDestroy(): void {
@@ -336,6 +331,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   closeModal(): void {
+    if (this.recordingCandidate) this.pendingQueue.notifyExpenseReviewFinished();
     this.isModalOpen = false;
     this.editingExpense = null;
     this.recordingCandidate = null;
@@ -415,101 +411,25 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.isModalOpen = true;
   }
 
-  async skipCandidate(candidate: PendingNotificationCandidate): Promise<void> {
-    this.walletActionError = '';
+  private async openRequestedWalletCandidate(): Promise<void> {
+    const candidateId = this.pendingQueue.takeExpenseReviewRequest();
+    if (!candidateId) return;
+    this.notificationReviewError = '';
     try {
-      await this.pendingQueue.skip(candidate.id);
-    } catch (error) {
-      this.walletActionError =
-        error instanceof Error ? error.message : 'Could not skip this notification.';
-    }
-  }
-
-  async setCaptureEnabled(enabled: boolean): Promise<void> {
-    this.walletActionError = '';
-    this.walletMessage = '';
-    try {
-      await this.walletCapture.setEnabled(enabled);
-    } catch (error) {
-      this.walletActionError =
-        error instanceof Error ? error.message : 'Could not update notification capture.';
-    }
-  }
-
-  async openNotificationAccessSettings(): Promise<void> {
-    this.walletActionError = '';
-    try {
-      await this.walletCapture.openAccessSettings();
-    } catch (error) {
-      this.walletActionError =
-        error instanceof Error ? error.message : 'Could not open Android notification settings.';
-    }
-  }
-
-  async confirmNotificationImport(): Promise<void> {
-    const alert = await this.alertController.create({
-      header: 'Import Previous Notifications',
-      message:
-        'Would you like to check for previous Google Wallet purchase notifications and import the transactions we can access?',
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        { text: 'Check History', role: 'confirm', handler: () => this.importWalletNotifications() },
-      ],
-    });
-    await alert.present();
-  }
-
-  async importWalletNotifications(): Promise<void> {
-    this.walletActionError = '';
-    this.walletMessage = '';
-    try {
-      const result = await this.walletCapture.importPreviousNotifications();
-      if (!result.permissionGranted) {
-        this.walletMessage =
-          'Grant Android notification access to check currently active Google Wallet notifications.';
-      } else if (!result.serviceConnected) {
-        this.walletMessage =
-          'Android notification access is granted, but its listener is not connected yet. Android does not expose the complete notification history.';
-      } else if (!result.accessibleCount) {
-        this.walletMessage =
-          'No active Google Wallet notifications were accessible. Android does not expose the complete notification history; add expenses manually instead.';
+      await this.pendingQueue.ready();
+      const candidate = this.pendingQueue
+        .pendingCandidates()
+        .find(item => item.id === candidateId);
+      if (candidate) {
+        this.recordCandidate(candidate);
       } else {
-        this.walletMessage =
-          `Checked ${result.accessibleCount} active notification(s); ${result.addedCount} new candidate(s) are ready for review. Android does not expose the complete notification history.`;
+        this.notificationReviewError = 'This notification is no longer pending review.';
+        this.pendingQueue.notifyExpenseReviewFinished();
       }
     } catch (error) {
-      this.walletActionError =
-        error instanceof Error ? error.message : 'Could not check accessible Google Wallet notifications.';
-    }
-  }
-
-  async clearPendingCandidates(): Promise<void> {
-    const alert = await this.alertController.create({
-      header: 'Clear pending transactions?',
-      message: 'Pending candidates will be removed from review. No expenses will be created.',
-      buttons: [
-        { text: 'Cancel', role: 'cancel' },
-        {
-          text: 'Clear',
-          role: 'destructive',
-          handler: () => {
-            void this.clearPendingCandidatesConfirmed();
-          },
-        },
-      ],
-    });
-    await alert.present();
-  }
-
-  private async clearPendingCandidatesConfirmed(): Promise<void> {
-    this.walletActionError = '';
-    try {
-      await this.pendingQueue.clearPending();
-      await this.walletCapture.clearNativeQueue();
-      this.walletMessage = 'Pending candidates were cleared. No expenses were created.';
-    } catch (error) {
-      this.walletActionError =
-        error instanceof Error ? error.message : 'Could not clear pending notifications.';
+      this.notificationReviewError =
+        error instanceof Error ? error.message : 'Could not load the pending notification.';
+      this.pendingQueue.notifyExpenseReviewFinished();
     }
   }
 

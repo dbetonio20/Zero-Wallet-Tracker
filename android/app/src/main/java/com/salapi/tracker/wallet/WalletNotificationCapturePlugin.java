@@ -60,6 +60,7 @@ public class WalletNotificationCapturePlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("enabled", WalletCaptureStore.isEnabled(getContext()));
         result.put("permissionGranted", hasNotificationAccess());
+        result.put("listenerConnected", WalletNotificationListenerService.isConnected());
         call.resolve(result);
     }
 
