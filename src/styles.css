@@ -1034,7 +1034,7 @@ ion-content {
   margin-bottom: 16px;
 }
 
-.empty-state ion-button {
+.empty-state ion-button[fill='outline'] {
   --border-color: var(--accent-green);
   --color: var(--accent-green);
   font-size: 0.8rem;
