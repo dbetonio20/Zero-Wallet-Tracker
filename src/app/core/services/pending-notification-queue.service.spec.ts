@@ -129,6 +129,13 @@ describe('PendingNotificationQueueService', () => {
     expect(queue.takeExpenseReviewRequest()).toBeNull();
   });
 
+  it('remembers the route a candidate review was opened from, one time only', () => {
+    queue.requestExpenseReview(candidate.id, '/settings');
+
+    expect(queue.takeExpenseReviewReturnUrl()).toBe('/settings');
+    expect(queue.takeExpenseReviewReturnUrl()).toBeNull();
+  });
+
   it('allows retry after a storage failure without losing the candidate', async () => {
     failNextListWrite = true;
 

@@ -346,7 +346,7 @@ export class SettingsComponent implements OnInit {
 
   async recordCandidate(candidate: PendingNotificationCandidate): Promise<void> {
     this.walletActionError = '';
-    this.pendingQueue.requestExpenseReview(candidate.id);
+    this.pendingQueue.requestExpenseReview(candidate.id, this.router.url);
     try {
       const navigated = await this.router.navigateByUrl('/expenses');
       if (!navigated) {

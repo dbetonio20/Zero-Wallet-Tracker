@@ -32,6 +32,7 @@ export class PendingNotificationQueueService {
   private readonly fingerprints = new Set<string>();
   private loadPromise: Promise<void> | null = null;
   private expenseReviewRequestId: string | null = null;
+  private expenseReviewReturnUrl: string | null = null;
 
   readonly candidates = this._candidates.asReadonly();
   readonly pendingCandidates = this._pendingCandidates;
@@ -51,8 +52,9 @@ export class PendingNotificationQueueService {
   }
 
   /** Requests that the Expenses page open its confirmation form for a pending candidate. */
-  requestExpenseReview(id: string): void {
+  requestExpenseReview(id: string, returnUrl: string | null = null): void {
     this.expenseReviewRequestId = id;
+    this.expenseReviewReturnUrl = returnUrl;
   }
 
   /** Consumes the one-time request to open an expense confirmation form. */
@@ -62,9 +64,19 @@ export class PendingNotificationQueueService {
     return id;
   }
 
+  /** Consumes the route the review was opened from, so the user can return to it. */
+  takeExpenseReviewReturnUrl(): string | null {
+    const url = this.expenseReviewReturnUrl;
+    this.expenseReviewReturnUrl = null;
+    return url;
+  }
+
   /** Cancels a review request if navigation to Expenses did not succeed. */
   cancelExpenseReviewRequest(id: string): void {
-    if (this.expenseReviewRequestId === id) this.expenseReviewRequestId = null;
+    if (this.expenseReviewRequestId === id) {
+      this.expenseReviewRequestId = null;
+      this.expenseReviewReturnUrl = null;
+    }
   }
 
   /** Notifies the app shell that the expense confirmation form has closed. */

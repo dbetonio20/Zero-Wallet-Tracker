@@ -93,6 +93,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   editingCategory: Category | null = null;
   paidAtForm = '';
   recordingCandidate: PendingNotificationCandidate | null = null;
+  /** Route the candidate review was opened from; the user returns there when it closes. */
+  private reviewReturnUrl: string | null = null;
   /** How the reviewed notification is recorded; null until the user chooses for ambiguous ones. */
   recordingType: 'expense' | 'transfer' | null = null;
   transferDirection: 'out' | 'in' | null = null;
@@ -339,6 +341,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   }
 
   closeModal(): void {
+    const returnUrl = this.reviewReturnUrl;
+    this.reviewReturnUrl = null;
     if (this.recordingCandidate) this.pendingQueue.notifyExpenseReviewFinished();
     this.isModalOpen = false;
     this.editingExpense = null;
@@ -348,6 +352,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.recordedTransferCandidateId = null;
     this.paidAtForm = '';
     this.saveError = '';
+    if (returnUrl) void this.router.navigateByUrl(returnUrl);
   }
 
   /** Blocks saving until a reviewed notification has its type and the fields that type needs. */
@@ -514,7 +519,9 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   private async openRequestedWalletCandidate(): Promise<void> {
     const candidateId = this.pendingQueue.takeExpenseReviewRequest();
+    const returnUrl = this.pendingQueue.takeExpenseReviewReturnUrl();
     if (!candidateId) return;
+    this.reviewReturnUrl = returnUrl;
     this.notificationReviewError = '';
     try {
       await this.pendingQueue.ready();
