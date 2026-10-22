@@ -153,6 +153,9 @@ export interface PendingNotificationCandidate {
   notificationTimestamp: string;
   transactionTimestamp: string | null;
   fingerprint: string;
+  transactionType?: 'payment' | 'transfer' | 'refund' | 'fee' | 'unknown';
+  direction?: 'outgoing' | 'incoming' | 'unknown';
+  referenceNumber?: string | null;
   reviewStatus: PendingNotificationReviewStatus;
   importedAt: string;
 }

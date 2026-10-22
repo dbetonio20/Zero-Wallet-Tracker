@@ -1,4 +1,13 @@
-export const GOOGLE_WALLET_PACKAGE = 'com.google.android.apps.walletnfcrel';
+import {
+  classifyNotification,
+  extractReferenceNumber,
+  GOOGLE_WALLET_PACKAGE,
+  monitoredSourceLabel,
+  NotificationDirection,
+  NotificationTransactionType,
+} from './notification-sources';
+
+export { GOOGLE_WALLET_PACKAGE };
 
 export interface WalletNotificationInput {
   sourceApplication: string;
@@ -19,6 +28,9 @@ export interface ParsedWalletNotification {
   notificationTimestamp: string;
   transactionTimestamp: string | null;
   fingerprint: string;
+  transactionType: NotificationTransactionType;
+  direction: NotificationDirection;
+  referenceNumber: string | null;
 }
 
 const GENERIC_TITLES = /^(google wallet|wallet|payment|purchase|transaction|notification)$/i;
@@ -26,11 +38,13 @@ const GENERIC_TITLES = /^(google wallet|wallet|payment|purchase|transaction|noti
 export function parseWalletNotification(
   input: WalletNotificationInput
 ): ParsedWalletNotification | null {
-  if (input.sourceApplication !== GOOGLE_WALLET_PACKAGE) return null;
+  if (monitoredSourceLabel(input.sourceApplication) === null) return null;
 
   const title = input.title?.trim() ?? '';
   const text = input.text?.trim() ?? '';
   const content = [title, text].filter(Boolean).join('\n');
+  const classification = classifyNotification(content);
+  const referenceNumber = extractReferenceNumber(content);
   const amountMatch = content.match(/(?:₱|PHP\s*)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
   const parsedAmount = amountMatch ? Number(amountMatch[1].replaceAll(',', '')) : NaN;
   const amount = Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : null;
@@ -82,6 +96,9 @@ export function parseWalletNotification(
     notificationTimestamp: input.notificationTimestamp,
     transactionTimestamp: null,
     fingerprint,
+    transactionType: classification.transactionType,
+    direction: classification.direction,
+    referenceNumber,
   };
 }
 

@@ -16,6 +16,20 @@ import java.util.regex.Pattern;
 
 final class WalletNotificationParser {
     static final String GOOGLE_WALLET_PACKAGE = "com.google.android.apps.walletnfcrel";
+    static final java.util.Set<String> MONITORED_PACKAGES = new java.util.HashSet<>(java.util.Arrays.asList(
+            GOOGLE_WALLET_PACKAGE,
+            "com.globe.gcash.android",
+            "ph.com.gotyme.android",
+            "com.unionbankph.online",
+            "com.rcbc.rcbcpulz",
+            "com.rcbc.mobilebanking",
+            "com.eastwestbanking.easyway",
+            "com.metrobank.mobbanking"
+    ));
+    private static final Pattern REFERENCE = Pattern.compile(
+            "\\b(?:ref(?:erence)?|trace|txn)\\.?\\s*(?:no\\.?|number|#)?\\s*[:#]?\\s*([A-Z0-9][A-Z0-9-]{4,})\\b",
+            Pattern.CASE_INSENSITIVE
+    );
     private static final Pattern AMOUNT = Pattern.compile(
             "(?:₱|PHP\\s*)\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)",
             Pattern.CASE_INSENSITIVE
@@ -36,7 +50,8 @@ final class WalletNotificationParser {
     private WalletNotificationParser() {}
 
     static JSONObject parse(StatusBarNotification statusBarNotification) {
-        if (!GOOGLE_WALLET_PACKAGE.equals(statusBarNotification.getPackageName())) return null;
+        String sourcePackage = statusBarNotification.getPackageName();
+        if (!MONITORED_PACKAGES.contains(sourcePackage)) return null;
 
         Notification notification = statusBarNotification.getNotification();
         Bundle extras = notification.extras;
@@ -95,14 +110,14 @@ final class WalletNotificationParser {
 
         String key = statusBarNotification.getKey();
         if (key == null || key.isEmpty()) {
-            key = GOOGLE_WALLET_PACKAGE + "|" + statusBarNotification.getPostTime() + "|" + title;
+            key = sourcePackage + "|" + statusBarNotification.getPostTime() + "|" + title;
         }
         String fingerprint = sha256(key);
 
         try {
             JSONObject candidate = new JSONObject();
             candidate.put("id", "wallet-" + fingerprint);
-            candidate.put("sourceApplication", GOOGLE_WALLET_PACKAGE);
+            candidate.put("sourceApplication", sourcePackage);
             candidate.put("merchantName", merchantName == null ? JSONObject.NULL : merchantName);
             candidate.put("amount", amount == null ? JSONObject.NULL : amount);
             candidate.put("currency", amount == null ? JSONObject.NULL : "PHP");
@@ -111,10 +126,35 @@ final class WalletNotificationParser {
             candidate.put("notificationTimestamp", statusBarNotification.getPostTime());
             candidate.put("transactionTimestamp", JSONObject.NULL);
             candidate.put("fingerprint", fingerprint);
+            String[] classification = classify(content.toLowerCase(Locale.ROOT));
+            candidate.put("transactionType", classification[0]);
+            candidate.put("direction", classification[1]);
+            Matcher referenceMatcher = REFERENCE.matcher(content);
+            boolean hasReference = referenceMatcher.find() && referenceMatcher.group(1).matches(".*\\d.*");
+            candidate.put("referenceNumber", hasReference
+                    ? referenceMatcher.group(1).toUpperCase(Locale.ROOT) : JSONObject.NULL);
             return candidate;
         } catch (JSONException exception) {
             return null;
         }
+    }
+
+    /** Mirrors classifyNotification in notification-sources.ts. Returns {transactionType, direction}. */
+    static String[] classify(String text) {
+        String type;
+        if (text.matches("(?s).*\\b(refund|reversed|reversal)\\b.*")) type = "refund";
+        else if (text.matches("(?s).*\\b(service fee|fee|charge|convenience fee)\\b.*")) type = "fee";
+        else if (text.matches("(?s).*\\b(instapay|pesonet|transfer|sent money|money sent|received money|you received)\\b.*")) type = "transfer";
+        else if (text.matches("(?s).*\\b(paid|payment|spent|purchase|you paid)\\b.*")) type = "payment";
+        else type = "unknown";
+
+        String direction;
+        if (text.matches("(?s).*\\b(received|incoming|credited|you got)\\b.*")) direction = "incoming";
+        else if (text.matches("(?s).*\\b(sent|paid|spent|debited|outgoing|purchase)\\b.*")) direction = "outgoing";
+        else direction = "unknown";
+
+        if ("refund".equals(type)) direction = "incoming";
+        return new String[] {type, direction};
     }
 
     private static String text(Bundle extras, String key) {

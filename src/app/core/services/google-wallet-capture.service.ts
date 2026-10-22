@@ -2,7 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { App } from '@capacitor/app';
 import { Capacitor, PluginListenerHandle, registerPlugin } from '@capacitor/core';
 import { PendingNotificationQueueService, NewPendingNotification } from './pending-notification-queue.service';
-import { GOOGLE_WALLET_PACKAGE } from './wallet-notification-parser';
+import { monitoredSourceLabel } from './notification-sources';
 
 export interface WalletCaptureStatus {
   supported: boolean;
@@ -170,7 +170,7 @@ export class GoogleWalletCaptureService {
     notification: CapturedWalletNotification,
     acknowledge: boolean
   ): Promise<boolean> {
-    if (notification.sourceApplication !== GOOGLE_WALLET_PACKAGE) return false;
+    if (monitoredSourceLabel(notification.sourceApplication) === null) return false;
     const added = await this.addNotification(notification);
     if (acknowledge) {
       await nativeCapture.acknowledgeNotification({ id: notification.id });
