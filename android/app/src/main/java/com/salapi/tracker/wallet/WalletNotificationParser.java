@@ -34,6 +34,10 @@ final class WalletNotificationParser {
             "(?:₱|PHP\\s*)\\s*([0-9][0-9,]*(?:\\.[0-9]{1,2})?)",
             Pattern.CASE_INSENSITIVE
     );
+    private static final Pattern VERB_AMOUNT = Pattern.compile(
+            "\\b(?:received|sent|paid|spent|debited|credited|transferred)\\s+([0-9][0-9,]*\\.[0-9]{2})\\b",
+            Pattern.CASE_INSENSITIVE
+    );
     private static final Pattern MERCHANT = Pattern.compile(
             "\\b(?:at|to)\\s+([^\\n,;]+?)(?=\\s+(?:for|using|with|on)\\b|\\s*(?:₱|PHP\\b)|\\s*[·|]\\s*(?=(?:₱|PHP\\b|EastWest|BDO|BPI|Metrobank|UnionBank|Security Bank|Citibank|HSBC|Maybank|Visa|Mastercard|Amex|Card\\b))|$)",
             Pattern.CASE_INSENSITIVE
@@ -72,8 +76,14 @@ final class WalletNotificationParser {
 
         String content = (title + "\n" + text).trim();
         Matcher amountMatcher = AMOUNT.matcher(content);
+        boolean hasPesoAmount = amountMatcher.find();
+        if (!hasPesoAmount) {
+            // GCash-style bodies omit the peso sign, e.g. "You have received 20.00 of GCash".
+            amountMatcher = VERB_AMOUNT.matcher(content);
+            if (!amountMatcher.find()) amountMatcher = null;
+        }
+        boolean hasAmount = amountMatcher != null;
         Double amount = null;
-        boolean hasAmount = amountMatcher.find();
         if (hasAmount) {
             try {
                 double parsed = Double.parseDouble(amountMatcher.group(1).replace(",", ""));
@@ -86,7 +96,7 @@ final class WalletNotificationParser {
         String merchantName = null;
         Matcher merchantMatcher = MERCHANT.matcher(content);
         if (merchantMatcher.find()) merchantName = cleanMerchant(merchantMatcher.group(1));
-        if ((merchantName == null || merchantName.isEmpty()) && hasAmount) {
+        if ((merchantName == null || merchantName.isEmpty()) && hasPesoAmount) {
             int lineStart = content.lastIndexOf('\n', amountMatcher.start());
             String beforeAmount = content.substring(lineStart + 1, amountMatcher.start()).trim();
             beforeAmount = beforeAmount.replaceFirst("(?i)^(?:you\\s+(?:spent|paid)|purchase(?:\\s+at)?)\\s+", "");

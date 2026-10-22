@@ -46,4 +46,18 @@ describe('parseWalletNotification', () => {
     expect(candidate?.currency).toBeNull();
     expect(candidate?.merchantName).toBeNull();
   });
+
+  it('reads the amount from GCash bodies that omit the peso sign', () => {
+    const candidate = parseWalletNotification({
+      sourceApplication: 'com.globe.gcash.android',
+      title: 'You have received money in GCash!',
+      text: 'You have received 20.00 of GCash from Union Bank of the Philippines with account ending in 1422. Your new balance is 66.40 10-23-26 12:01 AM. Ref. No. 20261023UBPHPHMMXXXB999687679742929.',
+      notificationTimestamp: '2026-10-22T16:01:39.000Z',
+      notificationKey: 'gcash-notification-key',
+    });
+
+    expect(candidate?.amount).toBe(20);
+    expect(candidate?.currency).toBe('PHP');
+    expect(candidate?.merchantName).toBe('You have received money in GCash!');
+  });
 });

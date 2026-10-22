@@ -7,6 +7,9 @@ import {
   NotificationTransactionType,
 } from './notification-sources';
 
+/** Verb-led amount with a required decimal part, e.g. "received 20.00" or "sent 1,250.50". */
+const VERB_AMOUNT_PATTERN = /\b(?:received|sent|paid|spent|debited|credited|transferred)\s+([0-9][0-9,]*\.[0-9]{2})\b/i;
+
 export { GOOGLE_WALLET_PACKAGE };
 
 export interface WalletNotificationInput {
@@ -46,9 +49,15 @@ export function parseWalletNotification(
   const classification = classifyNotification(content);
   const referenceNumber = extractReferenceNumber(content);
   const amountMatch = content.match(/(?:₱|PHP\s*)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
-  const parsedAmount = amountMatch ? Number(amountMatch[1].replaceAll(',', '')) : NaN;
+  // GCash-style bodies omit the peso sign ("You have received 20.00 of GCash"), so fall back to a verb-led amount.
+  const verbAmountMatch = amountMatch ? null : content.match(VERB_AMOUNT_PATTERN);
+  const parsedAmount = amountMatch
+    ? Number(amountMatch[1].replaceAll(',', ''))
+    : verbAmountMatch
+      ? Number(verbAmountMatch[1].replaceAll(',', ''))
+      : NaN;
   const amount = Number.isFinite(parsedAmount) && parsedAmount > 0 ? parsedAmount : null;
-  const currency = amount === null ? null : /₱|PHP/i.test(amountMatch?.[0] ?? '') ? 'PHP' : null;
+  const currency = amount === null ? null : 'PHP';
 
   const merchantMatch = content.match(
     /\b(?:at|to)\s+([^\n,;]+?)(?=\s+(?:for|using|with|on)\b|\s*(?:₱|PHP\b)|\s*[·|]\s*(?=(?:₱|PHP\b|EastWest|BDO|BPI|Metrobank|UnionBank|Security Bank|Citibank|HSBC|Maybank|Visa|Mastercard|Amex|Card\b))|$)/i
