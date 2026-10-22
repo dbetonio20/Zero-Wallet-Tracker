@@ -138,7 +138,7 @@ export class App implements OnInit {
       this.isWalletAlertOpen = false;
       if (role === 'confirm') {
         this.isExpenseConfirmationOpen = true;
-        this.pendingQueue.requestExpenseReview(candidate.id, this.currentReturnUrl());
+        this.pendingQueue.requestExpenseReview(candidate.id);
         try {
           const navigated = await this.router.navigateByUrl('/expenses');
           if (!navigated) {
@@ -162,12 +162,6 @@ export class App implements OnInit {
         'danger'
       );
     }
-  }
-
-  /** The route the user is on, unless it is Expenses itself (nothing to return to). */
-  private currentReturnUrl(): string | null {
-    const url = this.router.url;
-    return url === '/expenses' || url.startsWith('/expenses?') ? null : url;
   }
 
   private walletReviewMessage(candidate: PendingNotificationCandidate): string {
