@@ -359,17 +359,15 @@
     <app-wallets [currencyCode]="currencyCode"></app-wallets>
   }
 
-  <!-- FAB (the Accounts tab has its own labeled "Add account" button) -->
-  @if (activeMainTab !== 'accounts') {
-    <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-      <ion-fab-button
-        (click)="openAddModal()"
-        [attr.aria-label]="activeMainTab === 'savings' ? 'Add savings account' : activeSegment === 'installments' ? 'Add installment' : 'Add credit card'"
-      >
-        <ion-icon name="add-outline" />
-      </ion-fab-button>
-    </ion-fab>
-  }
+  <!-- FAB -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button
+      (click)="openAddModal()"
+      [attr.aria-label]="activeMainTab === 'accounts' ? 'Add account' : activeMainTab === 'savings' ? 'Add savings account' : activeSegment === 'installments' ? 'Add installment' : 'Add credit card'"
+    >
+      <ion-icon name="add-outline" />
+    </ion-fab-button>
+  </ion-fab>
 
   <!-- Add Installment Modal -->
   <ion-modal [isOpen]="isInstallmentModalOpen" (didDismiss)="closeInstallmentModal()">

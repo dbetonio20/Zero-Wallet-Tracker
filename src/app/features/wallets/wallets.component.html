@@ -1,9 +1,5 @@
 <section class="wallets-section">
   <div class="wallets-actions">
-    <ion-button (click)="openCreate()">
-      <ion-icon name="add-outline" slot="start" />
-      Add account
-    </ion-button>
     <ion-button fill="outline" (click)="openTransfer()" [disabled]="accounts().filter(a => !a.isArchived).length < 2">
       <ion-icon name="swap-horizontal-outline" slot="start" />
       Transfer
