@@ -1,9 +1,9 @@
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { DatePipe, NgFor, NgIf, NgStyle } from '@angular/common';
+import { CurrencyPipe, DatePipe, NgFor, NgIf, NgStyle } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonContent, IonItem, IonLabel,
-  IonButtons, IonBackButton, IonSpinner,
+  IonButtons, IonBackButton, IonSpinner, IonButton, IonToggle,
   AlertController, ToastController,
 } from '@ionic/angular/standalone';
 import { inject, signal } from '@angular/core';
@@ -13,6 +13,9 @@ import { SyncService } from '../../core/services/sync.service';
 import { GUEST_MODE_KEY } from '../../core/guards/auth.guard';
 import { Router } from '@angular/router';
 import { OnboardingService } from '../onboarding/onboarding.service';
+import { PendingNotificationCandidate } from '../../core/models';
+import { PendingNotificationQueueService } from '../../core/services/pending-notification-queue.service';
+import { GoogleWalletCaptureService } from '../../core/services/google-wallet-capture.service';
 
 const PALETTES = [
   { id: 'default',   name: 'Emerald',   lightBg: '#ffffff', accent: '#2dd36f', darkBg: '#111713', darkAccent: '#62d98b' },
@@ -27,9 +30,9 @@ const PALETTES = [
   selector: 'app-settings',
   standalone: true,
   imports: [
-    FormsModule, NgFor, NgIf, NgStyle, DatePipe,
+    FormsModule, NgFor, NgIf, NgStyle, DatePipe, CurrencyPipe,
     IonHeader, IonToolbar, IonContent, IonItem, IonLabel,
-    IonButtons, IonBackButton, IonSpinner,
+    IonButtons, IonBackButton, IonSpinner, IonButton, IonToggle,
   ],
   templateUrl: './settings.component.html',
   changeDetection: ChangeDetectionStrategy.Eager,
@@ -129,6 +132,83 @@ const PALETTES = [
       color: #ff4961;
       line-height: 1.4;
     }
+    .wallet-settings {
+      padding: 14px 16px;
+    }
+    .wallet-settings-heading,
+    .wallet-settings-actions,
+    .wallet-candidate,
+    .wallet-candidate-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .wallet-settings-heading h3 {
+      margin: 0;
+      color: var(--ion-text-color);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .wallet-settings-heading p,
+    .wallet-access-help,
+    .wallet-message,
+    .wallet-empty {
+      margin: 4px 0 0;
+      color: var(--ion-color-medium);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+    .wallet-access-help {
+      margin: 8px 0;
+    }
+    .wallet-settings-actions {
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .wallet-pending-list {
+      margin-top: 8px;
+      border-top: 1px solid var(--card-border);
+    }
+    .wallet-candidate {
+      align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .wallet-candidate-details {
+      display: flex;
+      min-width: 0;
+      flex: 1;
+      flex-direction: column;
+      gap: 4px;
+      color: var(--ion-text-color);
+      overflow-wrap: anywhere;
+    }
+    .wallet-candidate-details span {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+    .wallet-candidate-details small {
+      color: var(--ion-color-medium);
+    }
+    .wallet-candidate-actions {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .wallet-error {
+      margin: 8px 0;
+      color: var(--accent-red);
+      font-size: 0.82rem;
+    }
+    @media (max-width: 480px) {
+      .wallet-candidate {
+        flex-direction: column;
+      }
+      .wallet-candidate-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+    }
   `],
 })
 export class SettingsComponent implements OnInit {
@@ -144,6 +224,11 @@ export class SettingsComponent implements OnInit {
   syncWarningCount!: () => number;
   readonly syncing = signal(false);
   readonly deleting = signal(false);
+  readonly pendingQueue = inject(PendingNotificationQueueService);
+  readonly walletCapture = inject(GoogleWalletCaptureService);
+  showPendingCandidates = false;
+  walletActionError = '';
+  walletMessage = '';
 
   private readonly onboarding = inject(OnboardingService);
 
@@ -173,6 +258,124 @@ export class SettingsComponent implements OnInit {
     this.currencySymbol = await this.prefs.getCurrencySymbol();
     this.currencyCode = await this.prefs.getCurrencyCode();
     this.colorPalette = await this.prefs.getPalette();
+    await this.pendingQueue.ready().catch(error => {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not load pending notifications.';
+    });
+    await this.walletCapture.refreshStatus().catch(error => {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not check notification access.';
+    });
+  }
+
+  async setCaptureEnabled(enabled: boolean): Promise<void> {
+    this.walletActionError = '';
+    this.walletMessage = '';
+    try {
+      await this.walletCapture.setEnabled(enabled);
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not update notification capture.';
+    }
+  }
+
+  async openNotificationAccessSettings(): Promise<void> {
+    this.walletActionError = '';
+    try {
+      await this.walletCapture.openAccessSettings();
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not open Android notification settings.';
+    }
+  }
+
+  async confirmNotificationImport(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Import Previous Notifications',
+      message:
+        'Check for Google Wallet purchase notifications that are still active. Dismissed notifications are not available.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { text: 'Check Active Alerts', role: 'confirm' },
+      ],
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role === 'confirm') await this.importWalletNotifications();
+  }
+
+  async importWalletNotifications(): Promise<void> {
+    this.walletActionError = '';
+    this.walletMessage = '';
+    try {
+      const result = await this.walletCapture.importPreviousNotifications();
+      if (!result.permissionGranted) {
+        this.walletMessage =
+          'Grant Android notification access to check currently active Google Wallet notifications.';
+      } else if (!result.serviceConnected) {
+        this.walletMessage =
+          'Android notification access is granted, but its listener is reconnecting. Android does not expose the complete notification history.';
+      } else if (!result.accessibleCount) {
+        this.walletMessage =
+          'No currently active Google Wallet alerts were accessible. Dismissed entries in Android Notification History cannot be imported.';
+      } else {
+        this.walletMessage =
+          `Checked ${result.accessibleCount} active notification(s); ${result.addedCount} new candidate(s) are ready for review.`;
+      }
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not check accessible Google Wallet notifications.';
+    }
+  }
+
+  async skipCandidate(candidate: PendingNotificationCandidate): Promise<void> {
+    this.walletActionError = '';
+    try {
+      await this.pendingQueue.skip(candidate.id);
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not skip this notification.';
+    }
+  }
+
+  async recordCandidate(candidate: PendingNotificationCandidate): Promise<void> {
+    this.walletActionError = '';
+    this.pendingQueue.requestExpenseReview(candidate.id);
+    try {
+      const navigated = await this.router.navigateByUrl('/expenses');
+      if (!navigated) {
+        this.pendingQueue.cancelExpenseReviewRequest(candidate.id);
+        this.walletActionError = 'Could not open Expenses to record this notification.';
+      }
+    } catch (error) {
+      this.pendingQueue.cancelExpenseReviewRequest(candidate.id);
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not open Expenses to record this notification.';
+    }
+  }
+
+  async clearPendingCandidates(): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: 'Clear pending transactions?',
+      message: 'Pending candidates will be removed from review. No expenses will be created.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        { text: 'Clear', role: 'destructive' },
+      ],
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role !== 'destructive') return;
+
+    this.walletActionError = '';
+    try {
+      await this.pendingQueue.clearPending();
+      await this.walletCapture.clearNativeQueue();
+      this.walletMessage = 'Pending candidates were cleared. No expenses were created.';
+    } catch (error) {
+      this.walletActionError =
+        error instanceof Error ? error.message : 'Could not clear pending notifications.';
+    }
   }
 
   async changeName(): Promise<void> {

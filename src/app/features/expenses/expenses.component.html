@@ -106,6 +106,10 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  @if (notificationReviewError) {
+    <p role="alert">{{ notificationReviewError }}</p>
+  }
+
   @if (groups$ | async; as groups) {
     @if (!groups.length) {
       <p class="empty-state">No expenses found. Tap + to add one.</p>
@@ -225,13 +229,25 @@
     <ng-template>
       <ion-header>
         <ion-toolbar>
-          <ion-title>{{ editingExpense ? 'Edit Expense' : 'Add Expense' }}</ion-title>
+          <ion-title>{{ recordingCandidate ? 'Record Expense' : editingExpense ? 'Edit Expense' : 'Add Expense' }}</ion-title>
           <ion-buttons slot="end">
-            <ion-button (click)="closeModal()">Cancel</ion-button>
+            <ion-button [disabled]="isSavingExpense" (click)="closeModal()">Cancel</ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
       <ion-content class="ion-padding">
+        @if (recordingCandidate) {
+          <p class="wallet-review-prompt"><strong>Record this expense?</strong> Check the details and choose a category.</p>
+          @if (
+            recordingCandidate.currency &&
+            recordingCandidate.currency.toUpperCase() !== currencyCode.toUpperCase()
+          ) {
+            <p class="wallet-error" role="alert">
+              The notification is in {{ recordingCandidate.currency }}, but this app uses {{ currencyCode }}.
+              Enter the amount to record in {{ currencyCode }}.
+            </p>
+          }
+        }
         <ion-item>
           <ion-input label="Name" [(ngModel)]="form.name" placeholder="e.g. Jollibee lunch" />
         </ion-item>
@@ -284,9 +300,12 @@
           </ion-item>
         }
         <ion-button expand="block" class="ion-margin-top" (click)="save()"
-          [disabled]="!form.category || !form.amount || !form.date">
-          {{ editingExpense ? 'Update Expense' : 'Save Expense' }}
+          [disabled]="!form.category || !form.amount || !form.date || isSavingExpense">
+          {{ isSavingExpense ? 'Saving…' : recordingCandidate ? 'Record Expense' : editingExpense ? 'Update Expense' : 'Save Expense' }}
         </ion-button>
+        @if (saveError) {
+          <p class="wallet-error" role="alert">{{ saveError }}</p>
+        }
       </ion-content>
     </ng-template>
   </ion-modal>

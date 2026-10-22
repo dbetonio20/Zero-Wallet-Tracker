@@ -6,7 +6,7 @@ import {
   IonBadge, IonFab, IonFabButton, IonIcon, IonModal, IonButton, IonButtons,
   IonInput, IonSelect, IonSelectOption, IonTextarea,
   IonItemSliding, IonItemOptions, IonItemOption, IonNote,
-  IonSearchbar, IonSegment, IonSegmentButton, IonToggle,
+  IonSearchbar, IonSegment, IonSegmentButton,
   IonListHeader, IonChip, IonProgressBar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -27,8 +27,16 @@ import { CategoryService } from '../../core/services/category.service';
 import { QuickAddService } from '../../core/services/quick-add.service';
 import { CreditCardService } from '../../core/services/credit-card.service';
 import { WalletService } from '../../core/services/wallet.service';
-import { Expense, PaymentStatus, Income, Category, WalletAccount } from '../../core/models';
+import {
+  Expense,
+  PaymentStatus,
+  Income,
+  Category,
+  WalletAccount,
+  PendingNotificationCandidate,
+} from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
+import { PendingNotificationQueueService } from '../../core/services/pending-notification-queue.service';
 
 export type PeriodFilter = 'month' | 'year' | 'all';
 
@@ -59,7 +67,7 @@ const METHODS = ['Cash', 'GCash', 'Credit Card', 'Debit Card', 'Bank Transfer'];
     IonBadge, IonFab, IonFabButton, IonIcon, IonModal, IonButton, IonButtons,
     IonInput, IonSelect, IonSelectOption, IonTextarea,
     IonItemSliding, IonItemOptions, IonItemOption, IonNote,
-    IonSearchbar, IonSegment, IonSegmentButton, IonToggle,
+    IonSearchbar, IonSegment, IonSegmentButton,
     IonListHeader, IonChip, IonProgressBar,
     PayModalComponent,
   ],
@@ -74,6 +82,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   private quickAdd = inject(QuickAddService);
   creditCardService = inject(CreditCardService);
   walletService = inject(WalletService);
+  readonly pendingQueue = inject(PendingNotificationQueueService);
 
   // ── UI state ─────────────────────────────────────────────────────────
   isModalOpen = false;
@@ -83,6 +92,10 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   editingExpense: Expense | null = null;
   editingCategory: Category | null = null;
   paidAtForm = '';
+  recordingCandidate: PendingNotificationCandidate | null = null;
+  isSavingExpense = false;
+  saveError = '';
+  notificationReviewError = '';
 
   // ── Filters ──────────────────────────────────────────────────────────
   searchText$ = new BehaviorSubject<string>('');
@@ -225,10 +238,15 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   async ngOnInit(): Promise<void> {
     this.userName = await this.prefs.getUserName();
     this.userInitial = this.prefs.getUserInitial(this.userName);
+    await this.openRequestedWalletCandidate();
     // Open add-expense modal when Quick-Log FAB is tapped from Dashboard
     this.quickAdd.onTrigger$.pipe(takeUntil(this.destroy$)).subscribe(() => {
       setTimeout(() => this.openModal(), 120);
     });
+  }
+
+  ionViewWillEnter(): void {
+    void this.openRequestedWalletCandidate();
   }
 
   ngOnDestroy(): void {
@@ -300,26 +318,46 @@ export class ExpensesComponent implements OnInit, OnDestroy {
 
   openModal(): void {
     this.editingExpense = null;
+    this.recordingCandidate = null;
+    this.saveError = '';
     this.form = this.blankForm();
     this.isModalOpen = true;
   }
 
   openEditExpense(expense: Expense): void {
     this.editingExpense = expense;
+    this.recordingCandidate = null;
+    this.saveError = '';
     this.form = { ...expense };
     this.paidAtForm = expense.paidAt ?? '';
     this.isModalOpen = true;
   }
 
-  closeModal(): void { this.isModalOpen = false; this.editingExpense = null; this.paidAtForm = ''; }
+  closeModal(): void {
+    if (this.recordingCandidate) this.pendingQueue.notifyExpenseReviewFinished();
+    this.isModalOpen = false;
+    this.editingExpense = null;
+    this.recordingCandidate = null;
+    this.paidAtForm = '';
+    this.saveError = '';
+  }
 
   async save(): Promise<void> {
-    if (!this.form.category || !this.form.amount || !this.form.date) return;
+    const amount = Number(this.form.amount);
+    if (!this.form.category || !Number.isFinite(amount) || amount <= 0 || !this.form.date) return;
+    if (this.isSavingExpense) return;
+    if (
+      this.recordingCandidate &&
+      !this.pendingQueue.pendingCandidates().some(candidate => candidate.id === this.recordingCandidate?.id)
+    ) {
+      this.saveError = 'This notification is no longer pending review. Close this form and refresh the list.';
+      return;
+    }
     const isCreditCard = this.form.paymentMethod === 'Credit Card';
     const base = {
       name: this.form.name || '',
       category: this.form.category!,
-      amount: +this.form.amount!,
+      amount,
       date: this.form.date!,
       paymentMethod: this.form.paymentMethod || 'Cash',
       accountId: this.form.paymentMethod === 'Credit Card' ? undefined : this.form.accountId || undefined,
@@ -327,16 +365,82 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       notes: this.form.notes || '',
       recurring: this.form.recurring ?? false,
     };
-    if (this.editingExpense) {
-      const paidAt = this.editingExpense.status === 'paid'
-        ? (this.paidAtForm || this.editingExpense.paidAt)
-        : this.editingExpense.paidAt;
-      await this.engine.updateExpense({ ...this.editingExpense, ...base, paidAt });
-    } else {
-      await this.engine.addExpense({ ...base, status: 'pending' });
+    this.isSavingExpense = true;
+    this.saveError = '';
+    try {
+      if (this.editingExpense) {
+        const paidAt = this.editingExpense.status === 'paid'
+          ? (this.paidAtForm || this.editingExpense.paidAt)
+          : this.editingExpense.paidAt;
+        await this.engine.updateExpense({ ...this.editingExpense, ...base, paidAt });
+      } else {
+        await this.engine.addExpense({
+          ...base,
+          status: 'pending',
+          ...(this.recordingCandidate
+            ? { sourceNotificationFingerprint: this.recordingCandidate.fingerprint }
+            : {}),
+        });
+      }
+      if (this.recordingCandidate) {
+        await this.pendingQueue.markImported(this.recordingCandidate.id);
+      }
+      this.closeModal();
+    } catch (error) {
+      this.saveError =
+        error instanceof Error ? error.message : 'Could not save this expense. The notification is still pending.';
+    } finally {
+      this.isSavingExpense = false;
     }
+  }
 
-    this.closeModal();
+  recordCandidate(candidate: PendingNotificationCandidate): void {
+    this.recordingCandidate = candidate;
+    this.editingExpense = null;
+    this.saveError = '';
+    const appCurrency = this.currencyCode.toUpperCase();
+    const candidateCurrency = candidate.currency?.toUpperCase() ?? null;
+    this.form = {
+      name: candidate.merchantName ?? '',
+      category: '',
+      amount: candidate.amount !== null && candidateCurrency === appCurrency
+        ? candidate.amount
+        : undefined,
+      date: this.inputDate(candidate.transactionTimestamp ?? candidate.notificationTimestamp),
+      paymentMethod: candidate.cardLabel || candidate.cardSuffix ? 'Credit Card' : 'Cash',
+      creditCardId: undefined,
+      notes: '',
+      recurring: false,
+    };
+    this.isModalOpen = true;
+  }
+
+  private async openRequestedWalletCandidate(): Promise<void> {
+    const candidateId = this.pendingQueue.takeExpenseReviewRequest();
+    if (!candidateId) return;
+    this.notificationReviewError = '';
+    try {
+      await this.pendingQueue.ready();
+      const candidate = this.pendingQueue
+        .pendingCandidates()
+        .find(item => item.id === candidateId);
+      if (candidate) {
+        this.recordCandidate(candidate);
+      } else {
+        this.notificationReviewError = 'This notification is no longer pending review.';
+        this.pendingQueue.notifyExpenseReviewFinished();
+      }
+    } catch (error) {
+      this.notificationReviewError =
+        error instanceof Error ? error.message : 'Could not load the pending notification.';
+      this.pendingQueue.notifyExpenseReviewFinished();
+    }
+  }
+
+  private inputDate(timestamp: string): string {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return new Date().toISOString().slice(0, 10);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   onPaymentPickerChange(value: string): void {

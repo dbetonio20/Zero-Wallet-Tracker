@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import com.getcapacitor.BridgeActivity;
+import com.salapi.tracker.wallet.WalletNotificationCapturePlugin;
 
 import java.io.File;
 
@@ -19,6 +20,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(WalletNotificationCapturePlugin.class);
         super.onCreate(savedInstanceState);
         removeLegacyModelFiles();
     }

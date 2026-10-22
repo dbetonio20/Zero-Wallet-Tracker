@@ -18,6 +18,7 @@ import {
 } from '../models';
 import { StorageService } from './storage.service';
 import { SyncService } from './sync.service';
+import { GoogleWalletCaptureService } from './google-wallet-capture.service';
 
 const KEYS = {
   USER_NAME: 'pref_user_name',
@@ -40,6 +41,8 @@ const IMPORT_LIST_KEYS = [
   'walletAccounts',
   'categories',
 ] as const;
+
+const LOCAL_ONLY_DATA_KEYS = ['wallet_pending_candidates', 'wallet_notification_fingerprints'];
 
 type ImportListKey = (typeof IMPORT_LIST_KEYS)[number];
 
@@ -84,6 +87,7 @@ export class PreferencesService {
   constructor(
     private storage: StorageService,
     private syncService: SyncService,
+    private walletCapture: GoogleWalletCaptureService,
   ) {
     this.loadCurrency();
     this.loadPalette();
@@ -167,8 +171,12 @@ export class PreferencesService {
   }
 
   async clearAllData(): Promise<void> {
+    await this.walletCapture.setEnabled(false);
+    await this.walletCapture.clearNativeQueue();
     await Promise.all(
-      [...IMPORT_LIST_KEYS, ...Object.values(KEYS)].map(key => this.storage.remove(key))
+      [...IMPORT_LIST_KEYS, ...Object.values(KEYS), ...LOCAL_ONLY_DATA_KEYS].map(key =>
+        this.storage.remove(key)
+      )
     );
     this.currencyCode.set('PHP');
     this.currencySymbol.set('₱');
