@@ -164,6 +164,22 @@ describe('ExpensesComponent notification expense flow', () => {
     expect(queue.markImported).toHaveBeenCalledWith(candidate.id);
   });
 
+  it('does not record a transfer twice when only the candidate update failed', async () => {
+    const component = fixture.componentInstance;
+    component.recordCandidate({ ...candidate, transactionType: 'transfer', direction: 'outgoing' });
+    component.form.accountId = 'bank-1';
+    component.form.amount = 250;
+    component.form.date = '2026-10-22';
+    queue.markImported.and.returnValues(Promise.reject(new Error('storage down')), Promise.resolve());
+
+    await component.save();
+    expect(component.saveError).toContain('Press Save again');
+    await component.save();
+
+    expect(wallet.recordExternalTransfer).toHaveBeenCalledTimes(1);
+    expect(queue.markImported).toHaveBeenCalledTimes(2);
+  });
+
   it('skips a notification without creating any record', async () => {
     const component = fixture.componentInstance;
     component.recordCandidate(candidate);

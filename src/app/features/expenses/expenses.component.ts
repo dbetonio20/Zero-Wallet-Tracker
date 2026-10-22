@@ -98,6 +98,8 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   transferDirection: 'out' | 'in' | null = null;
   isSavingExpense = false;
   saveError = '';
+  /** Candidate whose transfer was already written; a retry only re-marks it, never writes again. */
+  private recordedTransferCandidateId: string | null = null;
   notificationReviewError = '';
 
   // ── Filters ──────────────────────────────────────────────────────────
@@ -343,6 +345,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     this.recordingCandidate = null;
     this.recordingType = null;
     this.transferDirection = null;
+    this.recordedTransferCandidateId = null;
     this.paidAtForm = '';
     this.saveError = '';
   }
@@ -437,21 +440,23 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     }
     this.isSavingExpense = true;
     this.saveError = '';
-    let recorded = false;
+    const alreadyRecorded = this.recordedTransferCandidateId === candidate.id;
     try {
-      await this.walletService.recordExternalTransfer(
-        this.form.accountId,
-        this.transferDirection,
-        amount,
-        this.form.date,
-        this.form.name || candidate.merchantName || ''
-      );
-      recorded = true;
+      if (!alreadyRecorded) {
+        await this.walletService.recordExternalTransfer(
+          this.form.accountId,
+          this.transferDirection,
+          amount,
+          this.form.date,
+          this.form.name || candidate.merchantName || ''
+        );
+        this.recordedTransferCandidateId = candidate.id;
+      }
       await this.pendingQueue.markImported(candidate.id);
       this.closeModal();
     } catch (error) {
-      this.saveError = recorded
-        ? 'The transfer was recorded, but the notification could not be updated. Close this form and refresh the list. Do not record it again.'
+      this.saveError = this.recordedTransferCandidateId === candidate.id
+        ? 'The transfer was recorded, but the notification could not be updated. Press Save again to retry the update only.'
         : error instanceof Error
           ? error.message
           : 'Could not record this transfer. The notification is still pending.';
