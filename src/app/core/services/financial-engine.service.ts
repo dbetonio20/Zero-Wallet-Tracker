@@ -20,6 +20,7 @@ import {
 } from '../models';
 import { StorageService } from './storage.service';
 import { CreditCardService } from './credit-card.service';
+import { WalletService } from './wallet.service';
 
 const KEYS = {
   EXPENSES: 'expenses',
@@ -27,6 +28,7 @@ const KEYS = {
   INSTALLMENTS: 'installments',
   INSTALLMENT_PAYMENTS: 'installmentPayments',
   ALLOCATIONS: 'paymentAllocations',
+  WALLETS: 'walletAccounts',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -73,6 +75,7 @@ export class FinancialEngineService {
   constructor(
     private storage: StorageService,
     private cardService: CreditCardService,
+    private walletService: WalletService,
   ) {
     this.loadAll();
   }
@@ -161,24 +164,35 @@ export class FinancialEngineService {
       filterActiveSyncedEntities(payments),
       filterActiveSyncedEntities(ccCards)
     );
+    const linkedExpenses = await this.walletService.linkLegacyPaymentMethods(expenses);
+    if (linkedExpenses) {
+      await this.storage.saveList(KEYS.EXPENSES, linkedExpenses);
+      expenses = linkedExpenses;
+    }
     this._expenses.set(expenses);
     this._incomes.set(incomes);
     this._installments.set(installments);
     this._installmentPayments.set(payments);
     this._allocations.set(allocations);
+    await this.reconcileWalletLedger();
   }
 
   // ─── Expenses ────────────────────────────────────────────────────
   getExpenses() { return this.expenses$; }
 
   async addExpense(e: NewExpenseInput): Promise<void> {
+    this.validateAccountLink(e.accountId);
     const item: Expense = createSyncedEntity({ ...e, id: this.uuid() });
     const updated = [...this._expenses(), item];
     await this.storage.saveList(KEYS.EXPENSES, updated);
     this._expenses.set(updated);
+    await this.reconcileWalletLedger();
   }
 
   async updateExpense(e: Expense): Promise<void> {
+    const existing = this._expenses().find(expense => expense.id === e.id);
+    this.validateAccountLink(e.accountId, existing?.accountId);
+    await this.walletService.validateExpenseBalanceChange(existing, e);
     const updated = this._expenses().map(existingExpense =>
       existingExpense.id === e.id
         ? touchSyncedEntity({ ...existingExpense, ...e, createdAt: existingExpense.createdAt })
@@ -186,6 +200,7 @@ export class FinancialEngineService {
     );
     await this.storage.saveList(KEYS.EXPENSES, updated);
     this._expenses.set(updated);
+    await this.reconcileWalletLedger();
   }
 
   async deleteExpense(id: string): Promise<void> {
@@ -202,19 +217,25 @@ export class FinancialEngineService {
     ]);
     this._expenses.set(updated);
     this._allocations.set(allocs);
+    await this.reconcileWalletLedger();
   }
 
   // ─── Incomes ─────────────────────────────────────────────────────
   getIncomes() { return this.incomes$; }
 
   async addIncome(i: NewIncomeInput): Promise<void> {
+    this.validateAccountLink(i.accountId);
     const item: Income = createSyncedEntity({ ...i, id: this.uuid() });
     const updated = [...this._incomes(), item];
     await this.storage.saveList(KEYS.INCOMES, updated);
     this._incomes.set(updated);
+    await this.reconcileWalletLedger();
   }
 
   async updateIncome(i: Income): Promise<void> {
+    const existing = this._incomes().find(income => income.id === i.id);
+    this.validateAccountLink(i.accountId, existing?.accountId);
+    await this.walletService.validateIncomeBalanceChange(existing, i);
     const updated = this._incomes().map(existingIncome =>
       existingIncome.id === i.id
         ? touchSyncedEntity({ ...existingIncome, ...i, createdAt: existingIncome.createdAt })
@@ -222,9 +243,12 @@ export class FinancialEngineService {
     );
     await this.storage.saveList(KEYS.INCOMES, updated);
     this._incomes.set(updated);
+    await this.reconcileWalletLedger();
   }
 
   async deleteIncome(id: string): Promise<void> {
+    const existingIncome = this._incomes().find(income => income.id === id);
+    await this.walletService.validateIncomeBalanceChange(existingIncome);
     const updated = this._incomes().map(income =>
       income.id === id ? tombstoneSyncedEntity(income) : income
     );
@@ -267,6 +291,7 @@ export class FinancialEngineService {
     this._allocations.set(updatedAllocations);
     this._expenses.set(expenses);
     this._installmentPayments.set(payments);
+    await this.reconcileWalletLedger();
   }
 
   // ─── Installments ────────────────────────────────────────────────
@@ -458,6 +483,7 @@ export class FinancialEngineService {
         this._installmentPayments.set(payments);
       }
     }
+    await this.reconcileWalletLedger();
   }
 
   async removeAllocationsForExpense(expenseId: string): Promise<void> {
@@ -647,6 +673,7 @@ export class FinancialEngineService {
           normalizeSyncedEntity(e)
         );
         this._expenses.set(records);
+        await this.reconcileWalletLedger();
         break;
       }
       case KEYS.INCOMES: {
@@ -654,8 +681,10 @@ export class FinancialEngineService {
           normalizeSyncedEntity(i)
         );
         this._incomes.set(records);
+        await this.reconcileWalletLedger();
         break;
       }
+
       case KEYS.INSTALLMENTS: {
         const records = (await this.storage.getList<Installment>(KEYS.INSTALLMENTS)).map(i =>
           normalizeSyncedEntity(i)
@@ -677,6 +706,19 @@ export class FinancialEngineService {
         this._allocations.set(records);
         break;
       }
+    }
+  }
+
+  private async reconcileWalletLedger(): Promise<void> {
+    await this.walletService.reconcileFinancialRecords(this._expenses(), this._incomes());
+  }
+
+  private validateAccountLink(accountId?: string, existingAccountId?: string): void {
+    if (!accountId) return;
+    const account = this.walletService.getAccount(accountId);
+    if (!account) throw new Error('The selected account is no longer available.');
+    if (account.isArchived && accountId !== existingAccountId) {
+      throw new Error('Archived accounts cannot be selected for new transactions.');
     }
   }
 

@@ -31,7 +31,8 @@ import { NotificationService } from '../../core/services/notification.service';
 import { CategoryService } from '../../core/services/category.service';
 import { SavingsGoalService } from '../../core/services/savings-goal.service';
 import { QuickAddService } from '../../core/services/quick-add.service';
-import { FinancialSummary, Expense, InstallmentPayment, CreditCard, Income, PaymentAllocation, Installment, SavingsAccount, SavingsAccountType, SavingsGoal } from '../../core/models';
+import { WalletService } from '../../core/services/wallet.service';
+import { FinancialSummary, Expense, InstallmentPayment, CreditCard, Income, PaymentAllocation, Installment, SavingsAccount, SavingsAccountType, SavingsGoal, WalletAccount } from '../../core/models';
 
 const INCOME_SOURCES = ['Salary', 'Freelance', 'Business', 'Investment', 'Bonus', 'Other'];
 
@@ -157,12 +158,14 @@ export class DashboardComponent implements OnInit {
   goalFormMode: 'create' | 'edit' = 'create';
   goalFormType: SavingsAccountType = 'goal';
   initialSavingsAmount: number | null = null;
+  initialSavingsWalletAccountId = '';
   isGoalSaving = false;
   goalFormError = '';
   isContributeModalOpen = false;
   contributeGoal: SavingsAccountVM | null = null;
   contributeAmount = 0;
   contributeMode: 'add' | 'withdraw' = 'add';
+  contributeWalletAccountId = '';
   contributeError = '';
   isContributeSaving = false;
 
@@ -331,6 +334,7 @@ export class DashboardComponent implements OnInit {
     private categoryService: CategoryService,
     private goalService: SavingsGoalService,
     private quickAdd: QuickAddService,
+    public walletService: WalletService,
     private alertCtrl: AlertController,
   ) {
     addIcons({
@@ -776,9 +780,24 @@ export class DashboardComponent implements OnInit {
     const { name, source, amount, date, recurring } = this.incomeForm;
     if (!source || !amount || !date) return;
     if (this.editingIncome) {
-      await this.engine.updateIncome({ ...this.editingIncome, name: name || '', source, amount: +amount, date, recurring: !!recurring });
+      await this.engine.updateIncome({
+        ...this.editingIncome,
+        name: name || '',
+        source,
+        amount: +amount,
+        date,
+        recurring: !!recurring,
+        accountId: this.incomeForm.accountId || undefined,
+      });
     } else {
-      await this.engine.addIncome({ name: name || '', source, amount: +amount, date, recurring: !!recurring });
+      await this.engine.addIncome({
+        name: name || '',
+        source,
+        amount: +amount,
+        date,
+        recurring: !!recurring,
+        accountId: this.incomeForm.accountId || undefined,
+      });
     }
     this.closeIncomeModal();
   }
@@ -801,12 +820,18 @@ export class DashboardComponent implements OnInit {
     };
   }
 
+  isIncomeAccountSelectable(accountId: string): boolean {
+    const account = this.walletService.getAccount(accountId);
+    return !!account && account.currency === this.currencyCode && !account.isArchived;
+  }
+
   // ─── Savings Goals CRUD ──────────────────────────────────────────────
   openAddGoal(): void {
     this.editingGoal = null;
     this.goalFormMode = 'create';
     this.goalFormType = 'goal';
     this.initialSavingsAmount = null;
+    this.initialSavingsWalletAccountId = '';
     this.goalForm = this.blankGoal();
     this.goalFormError = '';
     this.isGoalModalOpen = true;
@@ -817,6 +842,7 @@ export class DashboardComponent implements OnInit {
     this.goalFormMode = 'edit';
     this.goalFormType = goal.type ?? 'goal';
     this.initialSavingsAmount = null;
+    this.initialSavingsWalletAccountId = '';
     this.goalForm = { ...goal };
     this.goalFormError = '';
     this.isGoalModalOpen = true;
@@ -874,6 +900,7 @@ export class DashboardComponent implements OnInit {
           type: this.goalFormType,
           targetAmount: this.goalFormType === 'goal' ? target : undefined,
           initialAmount,
+          walletAccountId: initialAmount > 0 ? this.initialSavingsWalletAccountId || undefined : undefined,
           deadline: this.goalFormType === 'goal' ? deadline : undefined,
           description: this.goalForm.description?.trim() || undefined,
           notes,
@@ -910,6 +937,7 @@ export class DashboardComponent implements OnInit {
     this.contributeGoal = goal;
     this.contributeAmount = 0;
     this.contributeMode = mode;
+    this.contributeWalletAccountId = '';
     this.contributeError = '';
     this.isContributeModalOpen = true;
   }
@@ -933,9 +961,19 @@ export class DashboardComponent implements OnInit {
     this.isContributeSaving = true;
     try {
       if (this.contributeMode === 'add') {
-        await this.goalService.contribute(this.contributeGoal.id, +this.contributeAmount);
+        await this.goalService.contribute(
+          this.contributeGoal.id,
+          +this.contributeAmount,
+          undefined,
+          this.contributeWalletAccountId || undefined
+        );
       } else {
-        await this.goalService.withdraw(this.contributeGoal.id, +this.contributeAmount);
+        await this.goalService.withdraw(
+          this.contributeGoal.id,
+          +this.contributeAmount,
+          undefined,
+          this.contributeWalletAccountId || undefined
+        );
       }
       this.closeContributeModal();
     } catch (error) {
@@ -947,6 +985,28 @@ export class DashboardComponent implements OnInit {
 
   private blankGoal(): Partial<SavingsGoal> {
     return { name: '', targetAmount: undefined, icon: 'flag-outline', color: '#4ade80', deadline: '', description: '', notes: '' };
+  }
+
+  walletAccountsForSavings(): WalletAccount[] {
+    return this.walletService.accounts().filter(account =>
+      !account.isArchived && account.currency === this.currencyCode
+    );
+  }
+
+  eligibleGoalWalletAccounts(): WalletAccount[] {
+    const accounts = this.walletAccountsForSavings();
+    if (this.contributeMode === 'add') return accounts;
+    const goal = this.contributeGoal;
+    if (!goal) return [];
+    return accounts.filter(account =>
+      (goal.transactions ?? [])
+        .filter(transaction => transaction.walletAccountId === account.id)
+        .reduce(
+          (total, transaction) =>
+            total + (transaction.type === 'deposit' ? transaction.amount : -transaction.amount),
+          0
+        ) > 0
+    );
   }
 
   // ─── Month / Sort Filter ──────────────────────────────────────────────

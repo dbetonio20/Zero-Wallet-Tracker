@@ -23,6 +23,7 @@ import { PreferencesService } from '../../core/services/preferences.service';
 import { Installment, InstallmentPayment, CreditCard, PaymentStatus, Income, Expense } from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
 import { SavingsComponent } from '../savings/savings.component';
+import { WalletsComponent } from '../wallets/wallets.component';
 
 interface InstallmentVM extends Installment {
   cardName: string;
@@ -59,13 +60,13 @@ interface CardWithExpensesVM {
     IonItemSliding, IonItemOptions, IonItemOption, IonNote,
     IonSegment, IonSegmentButton, IonCard, IonCardHeader, IonCardTitle,
     IonCardSubtitle, IonCardContent,
-    PayModalComponent, SavingsComponent,
+    PayModalComponent, SavingsComponent, WalletsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './debts.component.html',
 })
 export class DebtsComponent implements OnInit {
-  activeMainTab: 'debts' | 'savings' = 'debts';
+  activeMainTab: 'debts' | 'savings' | 'accounts' = 'debts';
   activeSegment = 'installments';
   installmentSegment: 'pending' | 'completed' = 'pending';
   userName = 'U';
@@ -92,6 +93,7 @@ export class DebtsComponent implements OnInit {
   installmentForm: Partial<Installment & { cardName: string }> = this.blankInstallmentForm();
   cardForm: Partial<CreditCard> = this.blankCardForm();
   @ViewChild(SavingsComponent) private savingsComponent?: SavingsComponent;
+  @ViewChild(WalletsComponent) private walletsComponent?: WalletsComponent;
 
   constructor(
     private engine: FinancialEngineService,
@@ -403,6 +405,10 @@ export class DebtsComponent implements OnInit {
   openAddModal(): void {
     if (this.activeMainTab === 'savings') {
       this.savingsComponent?.openCreate();
+      return;
+    }
+    if (this.activeMainTab === 'accounts') {
+      this.walletsComponent?.openCreate();
       return;
     }
     if (this.activeSegment === 'installments') {

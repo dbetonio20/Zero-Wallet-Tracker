@@ -4362,6 +4362,100 @@ ion-segment.debts-segment {
   font-weight: 650;
 }
 
+.wallets-section {
+  width: min(calc(100% - 32px), var(--page-max-width));
+  margin: 12px auto 112px;
+}
+
+.wallets-actions,
+.wallet-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.wallets-actions {
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.wallet-account-card {
+  margin: 12px 0;
+}
+
+.wallet-account-card ion-card-header,
+.wallet-account-card ion-card-content {
+  padding-inline: 16px;
+}
+
+.wallet-card-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wallet-account-type,
+.wallet-notes,
+.wallet-form-hint {
+  color: var(--ion-color-medium);
+  font-size: 0.85rem;
+}
+
+.wallet-account-type {
+  margin: 6px 0 0;
+  text-transform: capitalize;
+}
+
+.wallet-balance {
+  margin: 2px 0 8px;
+  color: var(--plan-ink);
+  font-size: clamp(1.5rem, 6vw, 2rem);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.wallet-account-actions {
+  margin: 10px -8px -8px;
+}
+
+.wallet-error {
+  color: var(--ion-color-danger);
+}
+
+.wallet-history {
+  padding-bottom: 112px;
+}
+
+.wallet-history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ion-color-step-150, rgba(128, 128, 128, 0.2));
+}
+
+.wallet-history-row p {
+  margin: 5px 0 0;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+}
+
+.wallet-history-row > span {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.wallet-credit {
+  color: var(--ion-color-success);
+}
+
+.wallet-debit {
+  color: var(--ion-color-danger);
+}
+
 .inst-pill-tabs {
   width: min(calc(100% - 32px), var(--page-max-width));
   margin: 16px auto 8px;

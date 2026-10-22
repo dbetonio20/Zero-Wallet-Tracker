@@ -16,6 +16,7 @@ import {
   touchSyncedEntity,
 } from '../models';
 import { StorageService } from './storage.service';
+import { WalletService } from './wallet.service';
 
 const KEY = 'savingsGoals';
 
@@ -40,7 +41,7 @@ export class SavingsGoalService {
   readonly accounts$ = toObservable(this.accounts);
   readonly goals$ = toObservable(this.goals);
 
-  constructor(private storage: StorageService) {
+  constructor(private storage: StorageService, private walletService: WalletService) {
     this.ready = this.load().catch(error => {
       this.initializationError = this.asError(error, 'Could not load savings accounts.');
     });
@@ -69,7 +70,7 @@ export class SavingsGoalService {
     }
     const id = this.uuid();
     const transaction = initialAmount > 0
-      ? this.newTransaction(id, 'deposit', initialAmount, 'Initial deposit')
+      ? this.newTransaction(id, 'deposit', initialAmount, 'Initial deposit', input.walletAccountId)
       : undefined;
     const account: SavingsGoal = createSyncedEntity({
       id,
@@ -84,7 +85,12 @@ export class SavingsGoalService {
       notes: input.notes?.trim() || undefined,
       transactions: transaction ? [transaction] : [],
     });
-    await this.mutate(accounts => [...accounts, account]);
+    await this.mutate(accounts => {
+      if (input.walletAccountId && initialAmount > 0) {
+        this.validateWalletAllocation(accounts, input.walletAccountId, initialAmount);
+      }
+      return [...accounts, account];
+    });
   }
 
   /** Keeps the original goal-creation API used by existing screens. */
@@ -155,13 +161,23 @@ export class SavingsGoalService {
   }
 
   /** Records a deposit and updates the balance and history in one persisted account record. */
-  async contribute(id: string, amount: number, description?: string): Promise<void> {
-    await this.recordTransaction(id, 'deposit', amount, description);
+  async contribute(
+    id: string,
+    amount: number,
+    description?: string,
+    walletAccountId?: string
+  ): Promise<void> {
+    await this.recordTransaction(id, 'deposit', amount, description, walletAccountId);
   }
 
   /** Records a withdrawal without allowing the account balance to become negative. */
-  async withdraw(id: string, amount: number, description?: string): Promise<void> {
-    await this.recordTransaction(id, 'withdrawal', amount, description);
+  async withdraw(
+    id: string,
+    amount: number,
+    description?: string,
+    walletAccountId?: string
+  ): Promise<void> {
+    await this.recordTransaction(id, 'withdrawal', amount, description, walletAccountId);
   }
 
   /** Tombstones an account while retaining its transaction history in stored data. */
@@ -195,7 +211,8 @@ export class SavingsGoalService {
     id: string,
     type: SavingsTransactionType,
     amount: number,
-    description?: string
+    description?: string,
+    walletAccountId?: string
   ): Promise<void> {
     await this.ensureReady();
     const normalizedAmount = this.roundAmount(amount);
@@ -213,10 +230,25 @@ export class SavingsGoalService {
       if (type === 'withdrawal' && normalizedAmount > existing.currentAmount) {
         throw new Error('The withdrawal cannot exceed the available balance.');
       }
+      if (walletAccountId && type === 'deposit') {
+        this.validateWalletAllocation(accounts, walletAccountId, normalizedAmount);
+      }
+      if (type === 'withdrawal') {
+        const withdrawable = walletAccountId
+          ? this.linkedAmount(existing, walletAccountId)
+          : this.roundAmount(existing.currentAmount - this.totalLinkedAmount(existing));
+        if (normalizedAmount > withdrawable) {
+          throw new Error(
+            walletAccountId
+              ? 'The withdrawal cannot exceed the savings reserved from this account.'
+              : 'Choose the wallet account these savings were reserved from.'
+          );
+        }
+      }
 
       const change = type === 'deposit' ? normalizedAmount : -normalizedAmount;
       const updatedBalance = this.roundAmount(existing.currentAmount + change);
-      const transaction = this.newTransaction(id, type, normalizedAmount, description);
+      const transaction = this.newTransaction(id, type, normalizedAmount, description, walletAccountId);
       return accounts.map(account =>
         account.id === id
           ? touchSyncedEntity({
@@ -257,16 +289,56 @@ export class SavingsGoalService {
     accountId: string,
     type: SavingsTransactionType,
     amount: number,
-    description?: string
+    description?: string,
+    walletAccountId?: string
   ): SavingsTransaction {
     return {
       id: this.uuid(),
       accountId,
+      walletAccountId,
       type,
       amount,
       date: new Date().toISOString(),
       description: description?.trim() || undefined,
     };
+  }
+
+  private validateWalletAllocation(
+    savingsAccounts: SavingsGoal[],
+    walletAccountId: string,
+    amount: number
+  ): void {
+    const walletAccount = this.walletService.getAccount(walletAccountId);
+    if (!walletAccount || walletAccount.isArchived) {
+      throw new Error('Choose an active wallet account for this savings allocation.');
+    }
+    const reserved = savingsAccounts
+      .filter(account => account.deletedAt === null)
+      .reduce((total, account) => total + this.linkedAmount(account, walletAccountId), 0);
+    const available = this.roundAmount(this.walletService.getBalance(walletAccount) - reserved);
+    if (amount > available) {
+      throw new Error("The savings allocation cannot exceed the account's available balance.");
+    }
+  }
+
+  private linkedAmount(account: SavingsGoal, walletAccountId?: string): number {
+    return (account.transactions ?? [])
+      .filter(transaction => transaction.walletAccountId === walletAccountId)
+      .reduce(
+        (total, transaction) =>
+          total + (transaction.type === 'deposit' ? transaction.amount : -transaction.amount),
+        0
+      );
+  }
+
+  private totalLinkedAmount(account: SavingsGoal): number {
+    return (account.transactions ?? [])
+      .filter(transaction => !!transaction.walletAccountId)
+      .reduce(
+        (total, transaction) =>
+          total + (transaction.type === 'deposit' ? transaction.amount : -transaction.amount),
+        0
+      );
   }
 
   private defaultIcon(type: SavingsAccountType): string {

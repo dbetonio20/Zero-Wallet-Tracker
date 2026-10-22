@@ -20,6 +20,10 @@
       <ion-icon name="wallet-outline" aria-hidden="true"></ion-icon>
       <ion-label>Savings</ion-label>
     </ion-segment-button>
+    <ion-segment-button value="accounts" layout="icon-start">
+      <ion-icon name="card-outline" aria-hidden="true"></ion-icon>
+      <ion-label>Accounts</ion-label>
+    </ion-segment-button>
   </ion-segment>
 
   @if (activeMainTab === 'debts') {
@@ -344,15 +348,22 @@
       }
     }
   }
-  } @else {
+  } @else if (activeMainTab === 'savings') {
     <app-savings [currencyCode]="currencyCode"></app-savings>
+  } @else {
+    <section class="money-view-heading" aria-live="polite">
+      <span class="money-view-eyebrow">WALLETS &amp; ACCOUNTS</span>
+      <h1>Account balances</h1>
+      <p>Track balances you enter manually. This app does not connect to banks or payment providers. Savings can reserve wallet funds as an allocation without moving wallet cash.</p>
+    </section>
+    <app-wallets [currencyCode]="currencyCode"></app-wallets>
   }
 
   <!-- FAB -->
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
     <ion-fab-button
       (click)="openAddModal()"
-      [attr.aria-label]="activeMainTab === 'savings' ? 'Add savings account' : activeSegment === 'installments' ? 'Add installment' : 'Add credit card'"
+      [attr.aria-label]="activeMainTab === 'accounts' ? 'Add account' : activeMainTab === 'savings' ? 'Add savings account' : activeSegment === 'installments' ? 'Add installment' : 'Add credit card'"
     >
       <ion-icon name="add-outline" />
     </ion-fab-button>

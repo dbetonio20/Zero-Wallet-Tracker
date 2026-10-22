@@ -1,24 +1,46 @@
 import { TestBed } from '@angular/core/testing';
-import { SavingsGoal } from '../models';
+import { SavingsGoal, WalletAccount } from '../models';
 import { StorageService } from './storage.service';
 import { SavingsGoalService } from './savings-goal.service';
+import { WalletService } from './wallet.service';
 
 describe('SavingsGoalService', () => {
   let service: SavingsGoalService;
   let persistedAccounts: SavingsGoal[];
+  let walletBalance: number;
+  const walletAccount: WalletAccount = {
+    id: 'wallet',
+    name: 'GCash',
+    type: 'e-wallet',
+    openingBalance: 100,
+    currency: 'PHP',
+    notes: '',
+    isArchived: false,
+    transactions: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    serverUpdatedAt: null,
+    deletedAt: null,
+  };
   const storageMock: Pick<StorageService, 'getList' | 'saveList'> = {
     getList: async <T>(): Promise<T[]> => persistedAccounts as unknown as T[],
     saveList: async <T>(_key: string, list: T[]): Promise<void> => {
       persistedAccounts = list as SavingsGoal[];
     },
   };
+  const walletMock: Pick<WalletService, 'getAccount' | 'getBalance'> = {
+    getAccount: id => id === walletAccount.id ? walletAccount : undefined,
+    getBalance: () => walletBalance,
+  };
 
   beforeEach(async () => {
     persistedAccounts = [];
+    walletBalance = 100;
     TestBed.configureTestingModule({
       providers: [
         SavingsGoalService,
         { provide: StorageService, useValue: storageMock },
+        { provide: WalletService, useValue: walletMock },
       ],
     });
     service = TestBed.inject(SavingsGoalService);
@@ -114,5 +136,26 @@ describe('SavingsGoalService', () => {
       'deposit',
     ]);
     expect(service.accounts().reduce((total, account) => total + account.currentAmount, 0)).toBe(50);
+  });
+
+  it('tracks savings as an allocation against wallet funds without moving the wallet balance', async () => {
+    await service.addAccount({ name: 'Travel', type: 'flexible' });
+    const savingsId = service.accounts()[0].id;
+
+    await service.contribute(savingsId, 60, 'Trip fund', walletAccount.id);
+    expect(service.accounts()[0].currentAmount).toBe(60);
+    expect(service.accounts()[0].transactions?.[0].walletAccountId).toBe(walletAccount.id);
+    expect(walletBalance).toBe(100);
+
+    await expectAsync(service.contribute(savingsId, 50, 'More savings', walletAccount.id))
+      .toBeRejectedWithError("The savings allocation cannot exceed the account's available balance.");
+    await service.withdraw(savingsId, 20, 'Trip expense', walletAccount.id);
+    await service.contribute(savingsId, 20, 'Unassigned funds');
+    expect(service.accounts()[0].currentAmount).toBe(60);
+
+    await expectAsync(service.withdraw(savingsId, 41, 'Too much', walletAccount.id))
+      .toBeRejectedWithError('The withdrawal cannot exceed the savings reserved from this account.');
+    await expectAsync(service.withdraw(savingsId, 21, 'Unassigned overdraw'))
+      .toBeRejectedWithError('Choose the wallet account these savings were reserved from.');
   });
 });

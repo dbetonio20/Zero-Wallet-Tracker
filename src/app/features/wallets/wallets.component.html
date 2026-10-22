@@ -1,0 +1,219 @@
+<section class="wallets-section">
+  <div class="wallets-actions">
+    <ion-button fill="outline" (click)="openTransfer()" [disabled]="accounts().filter(a => !a.isArchived).length < 2">
+      <ion-icon name="swap-horizontal-outline" slot="start" />
+      Transfer
+    </ion-button>
+    <ion-button fill="outline" (click)="openAdjustment()" [disabled]="!accounts().some(a => !a.isArchived)">
+      <ion-icon name="cash-outline" slot="start" />
+      Adjust balance
+    </ion-button>
+  </div>
+  @if (actionError()) {
+    <p class="wallet-error" role="alert">{{ actionError() }}</p>
+  }
+
+  <ion-segment [value]="accountView()" (ionChange)="accountView.set($any($event).detail.value)" class="wallet-view-segment" aria-label="Account views">
+    <ion-segment-button value="active">
+      <ion-label>Active ({{ countActive() }})</ion-label>
+    </ion-segment-button>
+    <ion-segment-button value="archived">
+      <ion-label>Archived ({{ countArchived() }})</ion-label>
+    </ion-segment-button>
+  </ion-segment>
+
+  @if (isLoading()) {
+    <p class="empty-state">Loading accounts…</p>
+  } @else if (loadError()) {
+    <div class="empty-state" role="alert">
+      <p>{{ loadError() }}</p>
+      <ion-button fill="outline" (click)="retryLoad()">Try again</ion-button>
+    </div>
+  } @else if (!accounts().length) {
+    <div class="empty-state">
+      <ion-icon name="cash-outline" class="empty-icon" />
+      <h2>No accounts yet</h2>
+      <p>Create a wallet or bank account to start tracking balances. Balances are entered and maintained manually.</p>
+      <ion-button (click)="openCreate()">
+        <ion-icon name="add-outline" slot="start" />
+        Add account
+      </ion-button>
+    </div>
+  } @else {
+    <div class="wallet-account-list">
+      @for (account of visibleAccounts(); track account.id) {
+        <ion-card class="wallet-account-card">
+          <ion-card-header>
+            <div class="wallet-card-title-row">
+              <div>
+                <ion-card-title>{{ account.name }}</ion-card-title>
+                <p class="wallet-account-type">{{ account.type }} · {{ account.currency }}</p>
+              </div>
+              @if (account.isArchived) {
+                <ion-badge color="medium">Archived</ion-badge>
+              }
+            </div>
+          </ion-card-header>
+          <ion-card-content>
+            <div class="wallet-balance">
+              {{ balance(account) | currency:account.currency:'symbol':'1.2-2' }}
+            </div>
+            @if (account.notes) {
+              <p class="wallet-notes">{{ account.notes }}</p>
+            }
+            <div class="wallet-account-actions">
+              <ion-button fill="clear" size="small" (click)="openHistory(account)">
+                <ion-icon name="time-outline" slot="start" />
+                History
+              </ion-button>
+              <ion-button fill="clear" size="small" (click)="openEdit(account)">
+                <ion-icon name="create-outline" slot="start" />
+                Edit
+              </ion-button>
+              @if (!account.isArchived) {
+                <ion-button fill="clear" size="small" color="medium" (click)="archive(account)">
+                  <ion-icon name="archive-outline" slot="start" />
+                  Archive
+                </ion-button>
+                <ion-button fill="clear" size="small" color="primary" (click)="openAdjustment(account)">
+                  Adjust
+                </ion-button>
+              } @else {
+                <ion-button fill="clear" size="small" color="primary" (click)="restore(account)">
+                  <ion-icon name="refresh-outline" slot="start" />
+                  Restore
+                </ion-button>
+              }
+              <ion-button fill="clear" size="small" color="danger" (click)="confirmDelete(account)">
+                <ion-icon name="trash-outline" slot="start" />
+                Delete
+              </ion-button>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      } @empty {
+        <p class="empty-state">
+          {{ accountView() === 'archived' ? 'No archived accounts.' : 'No active accounts. Restore an archived account or add a new one.' }}
+        </p>
+      }
+    </div>
+  }
+</section>
+
+<ion-modal [isOpen]="isTransferOpen" (didDismiss)="isTransferOpen = false">
+  <ng-template>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <ion-title>Transfer funds</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="isTransferOpen = false">Close</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <ion-item>
+        <ion-select label="From account" [(ngModel)]="transferForm.sourceId">
+          @for (account of accounts(); track account.id) {
+            @if (!account.isArchived) {
+              <ion-select-option [value]="account.id">{{ account.name }} · {{ balance(account) | currency:account.currency:'symbol':'1.2-2' }}</ion-select-option>
+            }
+          }
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-select label="To account" [(ngModel)]="transferForm.destinationId">
+          @for (account of accounts(); track account.id) {
+            @if (!account.isArchived) {
+              <ion-select-option [value]="account.id">{{ account.name }} · {{ account.currency }}</ion-select-option>
+            }
+          }
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-input [label]="'Amount (' + currencyCode + ')'" type="number" min="0.01" [(ngModel)]="transferForm.amount" />
+      </ion-item>
+      <ion-item>
+        <ion-input label="Date" type="date" [(ngModel)]="transferForm.date" />
+      </ion-item>
+      <ion-item>
+        <ion-textarea label="Note (optional)" [(ngModel)]="transferForm.note" />
+      </ion-item>
+      @if (transferError()) {
+        <p class="wallet-error" role="alert">{{ transferError() }}</p>
+      }
+      <ion-button expand="block" class="ion-margin-top" [disabled]="isSaving" (click)="saveTransfer()">
+        {{ isSaving ? 'Transferring…' : 'Record transfer' }}
+      </ion-button>
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="isAdjustmentOpen" (didDismiss)="isAdjustmentOpen = false">
+  <ng-template>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <ion-title>Adjust account balance</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="isAdjustmentOpen = false">Close</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding">
+      <ion-item>
+        <ion-select label="Account" [(ngModel)]="adjustmentForm.accountId">
+          @for (account of accounts(); track account.id) {
+            @if (!account.isArchived) {
+              <ion-select-option [value]="account.id">{{ account.name }}</ion-select-option>
+            }
+          }
+        </ion-select>
+      </ion-item>
+      <ion-item>
+        <ion-input [label]="'Corrected balance (' + currencyCode + ')'" type="number" min="0" [(ngModel)]="adjustmentForm.balance" />
+      </ion-item>
+      <ion-item>
+        <ion-input label="Date" type="date" [(ngModel)]="adjustmentForm.date" />
+      </ion-item>
+      <ion-item>
+        <ion-textarea label="Reason (optional)" [(ngModel)]="adjustmentForm.reason" />
+      </ion-item>
+      @if (adjustmentError()) {
+        <p class="wallet-error" role="alert">{{ adjustmentError() }}</p>
+      }
+      <ion-button expand="block" class="ion-margin-top" [disabled]="isSaving" (click)="saveAdjustment()">
+        {{ isSaving ? 'Saving…' : 'Save adjustment' }}
+      </ion-button>
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<ion-modal [isOpen]="isHistoryOpen" (didDismiss)="isHistoryOpen = false">
+  <ng-template>
+    <ion-header class="ion-no-border">
+      <ion-toolbar>
+        <ion-title>{{ selectedAccount?.name }} history</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="isHistoryOpen = false">Close</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="ion-padding wallet-history">
+      @if (selectedAccount; as account) {
+        <p>Current balance: {{ balance(account) | currency:account.currency:'symbol':'1.2-2' }}</p>
+        @for (transaction of historyTransactions(account); track transaction.id) {
+          <div class="wallet-history-row">
+            <div>
+              <strong>{{ transaction.description }}</strong>
+              <p>{{ transaction.date | date:'mediumDate' }} · {{ transaction.type }}</p>
+            </div>
+            <span [class.wallet-credit]="transaction.amount > 0" [class.wallet-debit]="transaction.amount < 0">
+              {{ transaction.amount > 0 ? '+' : '' }}{{ transaction.amount | currency:account.currency:'symbol':'1.2-2' }}
+            </span>
+          </div>
+        } @empty {
+          <p class="empty-state">No account activity yet.</p>
+        }
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>

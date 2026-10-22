@@ -157,6 +157,9 @@
                   @if (transaction.description) {
                     <span>{{ transaction.description }}</span>
                   }
+                  @if (transaction.walletAccountId) {
+                    <span>Reserved in {{ walletAccountName(transaction.walletAccountId) }}</span>
+                  }
                 </span>
                 <strong class="savings-transaction-amount" [class.withdrawal]="transaction.type === 'withdrawal'">
                   {{ transaction.type === 'deposit' ? '+' : '−' }}{{ transaction.amount | currency:currencyCode:'symbol':'1.0-2' }}
@@ -231,6 +234,16 @@
         <ion-item>
           <ion-input label="Initial deposit (optional)" type="number" min="0" [(ngModel)]="form.initialAmount" placeholder="0.00" />
         </ion-item>
+        @if (form.initialAmount && walletAccountsForCurrency().length) {
+          <ion-item>
+            <ion-select label="Reserve from account (optional)" [(ngModel)]="form.walletAccountId">
+              <ion-select-option value="">Unassigned funds</ion-select-option>
+              @for (account of walletAccountsForCurrency(); track account.id) {
+                <ion-select-option [value]="account.id">{{ account.name }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+        }
       }
       <ion-item>
         <ion-textarea label="Description (optional)" [(ngModel)]="form.description" rows="2" placeholder="What are you saving for?" />
@@ -270,6 +283,18 @@
       <ion-item>
         <ion-input label="Amount" type="number" min="0.01" [(ngModel)]="transactionAmount" placeholder="0.00" />
       </ion-item>
+      @if (eligibleWalletAccounts().length || transactionType === 'withdrawal') {
+        <ion-item>
+          <ion-select
+            [label]="transactionType === 'deposit' ? 'Reserve from account (optional)' : 'Release allocation from'"
+            [(ngModel)]="transactionWalletAccountId">
+            <ion-select-option value="">Unassigned savings</ion-select-option>
+            @for (account of eligibleWalletAccounts(); track account.id) {
+              <ion-select-option [value]="account.id">{{ account.name }}</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+      }
       <ion-item>
         <ion-input label="Description (optional)" [(ngModel)]="transactionDescription" placeholder="e.g. Monthly savings" />
       </ion-item>

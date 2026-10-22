@@ -636,6 +636,16 @@
           <ion-input label="Date" type="date" [(ngModel)]="incomeForm.date" />
         </ion-item>
         <ion-item class="form-item">
+          <ion-select label="Deposit account (optional)" [(ngModel)]="incomeForm.accountId">
+            <ion-select-option value="">No linked account</ion-select-option>
+            @for (account of walletService.accounts(); track account.id) {
+              @if (isIncomeAccountSelectable(account.id)) {
+                <ion-select-option [value]="account.id">{{ account.name }}</ion-select-option>
+              }
+            }
+          </ion-select>
+        </ion-item>
+        <ion-item class="form-item">
           <ion-toggle [(ngModel)]="incomeForm.recurring" labelPlacement="start">Recurring monthly</ion-toggle>
         </ion-item>
         <ion-button expand="block" class="save-btn" (click)="saveIncome()">
@@ -775,6 +785,16 @@
           <ion-item class="form-item">
             <ion-input label="Initial deposit (optional)" type="number" [(ngModel)]="initialSavingsAmount" placeholder="0.00" />
           </ion-item>
+          @if (initialSavingsAmount && walletAccountsForSavings().length) {
+            <ion-item class="form-item">
+              <ion-select label="Reserve from account (optional)" [(ngModel)]="initialSavingsWalletAccountId">
+                <ion-select-option value="">Unassigned funds</ion-select-option>
+                @for (account of walletAccountsForSavings(); track account.id) {
+                  <ion-select-option [value]="account.id">{{ account.name }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-item>
+          }
         }
         <ion-item class="form-item">
           <ion-textarea label="Description (optional)" [(ngModel)]="goalForm.description" rows="2" placeholder="What are you saving for?" />
@@ -857,6 +877,18 @@
         <ion-item class="form-item">
           <ion-input label="Amount" type="number" [(ngModel)]="contributeAmount" placeholder="0.00" />
         </ion-item>
+        @if (eligibleGoalWalletAccounts().length || contributeMode === 'withdraw') {
+          <ion-item class="form-item">
+            <ion-select
+              [label]="contributeMode === 'add' ? 'Reserve from account (optional)' : 'Release allocation from'"
+              [(ngModel)]="contributeWalletAccountId">
+              <ion-select-option value="">Unassigned savings</ion-select-option>
+              @for (account of eligibleGoalWalletAccounts(); track account.id) {
+                <ion-select-option [value]="account.id">{{ account.name }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+        }
         @if (contributeMode === 'withdraw' && contributeAmount > (contributeGoal?.currentAmount ?? 0)) {
           <p class="savings-form-error" role="alert">The withdrawal cannot exceed the available balance.</p>
         }

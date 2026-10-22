@@ -11,6 +11,8 @@ import {
   IonInput,
   IonItem,
   IonModal,
+  IonSelect,
+  IonSelectOption,
   IonTextarea,
   IonTitle,
   IonToolbar,
@@ -32,8 +34,10 @@ import {
   SavingsAccount,
   SavingsAccountType,
   SavingsTransactionType,
+  WalletAccount,
 } from '../../core/models';
 import { SavingsGoalService } from '../../core/services/savings-goal.service';
+import { WalletService } from '../../core/services/wallet.service';
 
 interface SavingsAccountForm {
   name: string;
@@ -43,6 +47,7 @@ interface SavingsAccountForm {
   deadline: string;
   description: string;
   notes: string;
+  walletAccountId: string;
 }
 
 @Component({
@@ -60,6 +65,8 @@ interface SavingsAccountForm {
     IonInput,
     IonItem,
     IonModal,
+    IonSelect,
+    IonSelectOption,
     IonTextarea,
     IonTitle,
     IonToolbar,
@@ -70,6 +77,7 @@ interface SavingsAccountForm {
 export class SavingsComponent implements OnInit {
   @Input() currencyCode = 'PHP';
   private readonly savingsService = inject(SavingsGoalService);
+  private readonly walletService = inject(WalletService);
   readonly accounts = this.savingsService.accounts;
   selectedAccountId: string | null = null;
   isDetailsOpen = false;
@@ -80,6 +88,7 @@ export class SavingsComponent implements OnInit {
   transactionType: SavingsTransactionType = 'deposit';
   transactionAmount: number | null = null;
   transactionDescription = '';
+  transactionWalletAccountId = '';
   readonly formError = signal('');
   readonly transactionError = signal('');
   readonly isLoading = signal(true);
@@ -164,6 +173,7 @@ export class SavingsComponent implements OnInit {
       deadline: account.deadline ?? '',
       description: account.description ?? '',
       notes: account.notes ?? '',
+      walletAccountId: '',
     };
     this.formError.set('');
     this.isDetailsOpen = false;
@@ -199,6 +209,7 @@ export class SavingsComponent implements OnInit {
           type: this.form.type,
           targetAmount: this.form.type === 'goal' ? Number(this.form.targetAmount) : undefined,
           initialAmount: this.form.initialAmount ?? 0,
+          walletAccountId: this.form.walletAccountId || undefined,
           deadline: this.form.type === 'goal' ? this.form.deadline : undefined,
           description: this.form.description.trim() || undefined,
           notes: this.form.notes.trim() || undefined,
@@ -218,6 +229,7 @@ export class SavingsComponent implements OnInit {
     this.transactionType = type;
     this.transactionAmount = null;
     this.transactionDescription = '';
+    this.transactionWalletAccountId = '';
     this.transactionError.set('');
     this.isTransactionOpen = true;
   }
@@ -248,9 +260,19 @@ export class SavingsComponent implements OnInit {
     this.isSaving.set(true);
     try {
       if (this.transactionType === 'deposit') {
-        await this.savingsService.contribute(account.id, amount, this.transactionDescription);
+        await this.savingsService.contribute(
+          account.id,
+          amount,
+          this.transactionDescription,
+          this.transactionWalletAccountId || undefined
+        );
       } else {
-        await this.savingsService.withdraw(account.id, amount, this.transactionDescription);
+        await this.savingsService.withdraw(
+          account.id,
+          amount,
+          this.transactionDescription,
+          this.transactionWalletAccountId || undefined
+        );
       }
       this.isTransactionOpen = false;
     } catch (error) {
@@ -258,6 +280,34 @@ export class SavingsComponent implements OnInit {
     } finally {
       this.isSaving.set(false);
     }
+  }
+
+  eligibleWalletAccounts(): WalletAccount[] {
+    const active = this.walletAccountsForCurrency();
+    if (this.transactionType === 'deposit') return active;
+    const savingsAccount = this.selectedAccount;
+    if (!savingsAccount) return [];
+    return active.filter(account => this.walletAllocation(savingsAccount, account.id) > 0);
+  }
+
+  private walletAllocation(account: SavingsAccount, walletAccountId: string): number {
+    return (account.transactions ?? [])
+      .filter(transaction => transaction.walletAccountId === walletAccountId)
+      .reduce(
+        (total, transaction) =>
+          total + (transaction.type === 'deposit' ? transaction.amount : -transaction.amount),
+        0
+      );
+  }
+
+  walletAccountsForCurrency(): WalletAccount[] {
+    return this.walletService.accounts().filter(account =>
+      !account.isArchived && account.currency === this.currencyCode
+    );
+  }
+
+  walletAccountName(id?: string): string {
+    return id ? this.walletService.getAccount(id)?.name ?? 'Archived account' : '';
   }
 
   async confirmDelete(account: SavingsAccount): Promise<void> {
@@ -359,6 +409,7 @@ export class SavingsComponent implements OnInit {
       deadline: '',
       description: '',
       notes: '',
+      walletAccountId: '',
     };
   }
 }

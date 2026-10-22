@@ -26,7 +26,8 @@ import { PreferencesService } from '../../core/services/preferences.service';
 import { CategoryService } from '../../core/services/category.service';
 import { QuickAddService } from '../../core/services/quick-add.service';
 import { CreditCardService } from '../../core/services/credit-card.service';
-import { Expense, PaymentStatus, Income, Category } from '../../core/models';
+import { WalletService } from '../../core/services/wallet.service';
+import { Expense, PaymentStatus, Income, Category, WalletAccount } from '../../core/models';
 import { PayModalComponent, PayModalResult } from '../shared/pay-modal/pay-modal.component';
 
 export type PeriodFilter = 'month' | 'year' | 'all';
@@ -72,6 +73,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
   categoryService = inject(CategoryService);
   private quickAdd = inject(QuickAddService);
   creditCardService = inject(CreditCardService);
+  walletService = inject(WalletService);
 
   // ── UI state ─────────────────────────────────────────────────────────
   isModalOpen = false;
@@ -320,6 +322,7 @@ export class ExpensesComponent implements OnInit, OnDestroy {
       amount: +this.form.amount!,
       date: this.form.date!,
       paymentMethod: this.form.paymentMethod || 'Cash',
+      accountId: this.form.paymentMethod === 'Credit Card' ? undefined : this.form.accountId || undefined,
       creditCardId: isCreditCard ? (this.form.creditCardId || undefined) : undefined,
       notes: this.form.notes || '',
       recurring: this.form.recurring ?? false,
@@ -332,7 +335,50 @@ export class ExpensesComponent implements OnInit, OnDestroy {
     } else {
       await this.engine.addExpense({ ...base, status: 'pending' });
     }
+
     this.closeModal();
+  }
+
+  onPaymentPickerChange(value: string): void {
+    if (value?.startsWith('account:')) {
+      const accountId = value.slice('account:'.length);
+      const account = this.walletService.getAccount(accountId);
+      this.form.accountId = accountId;
+      this.form.paymentMethod = account?.name ?? 'Cash';
+      this.form.creditCardId = undefined;
+      return;
+    }
+    const method = value?.startsWith('method:') ? value.slice('method:'.length) : 'Cash';
+    this.form.accountId = undefined;
+    this.form.paymentMethod = method;
+    if (method !== 'Credit Card') this.form.creditCardId = undefined;
+  }
+
+  get paymentPickerValue(): string {
+    const linked = this.form.accountId ? this.walletService.getAccount(this.form.accountId) : undefined;
+    if (linked && this.isAccountSelectable(linked)) return 'account:' + linked.id;
+    return 'method:' + (this.form.paymentMethod || 'Cash');
+  }
+
+  selectableAccounts(): WalletAccount[] {
+    return this.walletService.accounts().filter(account => this.isAccountSelectable(account));
+  }
+
+  /** Legacy payment methods without a matching active account. GCash is only offered as an account. */
+  untrackedMethods(): string[] {
+    const accountNames = new Set(this.selectableAccounts().map(a => a.name.toLowerCase()));
+    return this.methods.filter(m =>
+      m !== 'GCash' && !accountNames.has(m.toLowerCase())
+    );
+  }
+
+  accountName(id?: string): string {
+    if (!id) return '';
+    return this.walletService.getAccount(id)?.name ?? 'Archived account';
+  }
+
+  isAccountSelectable(account: WalletAccount): boolean {
+    return account.currency === this.currencyCode && !account.isArchived;
   }
 
   async markPaid(e: Expense): Promise<void> {

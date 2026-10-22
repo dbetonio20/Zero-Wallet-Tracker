@@ -88,6 +88,7 @@ export type SavingsTransactionType = 'deposit' | 'withdrawal';
 export interface SavingsTransaction {
   id: string;
   accountId: string;
+  walletAccountId?: string;
   type: SavingsTransactionType;
   amount: number;
   date: string; // ISO 8601 timestamp
@@ -101,6 +102,7 @@ export interface NewSavingsAccountInput {
   type: SavingsAccountType;
   targetAmount?: number;
   initialAmount?: number;
+  walletAccountId?: string;
   deadline?: string;
   description?: string;
   notes?: string;
@@ -127,6 +129,7 @@ export interface Expense extends SyncMetadata {
   amount: number;
   date: string; // ISO date string
   paymentMethod: string;
+  accountId?: string;
   creditCardId?: string; // set when paymentMethod is 'Credit Card'
   status: PaymentStatus;
   paidAt?: string; // YYYY-MM-DD date when marked as paid
@@ -143,9 +146,47 @@ export interface Income extends SyncMetadata {
   amount: number;
   date: string;
   recurring: boolean;
+  accountId?: string;
 }
 
 export type NewIncomeInput = NewSyncedEntityInput<Income>;
+
+export type WalletAccountType = 'e-wallet' | 'bank' | 'cash' | 'savings' | 'other';
+export type WalletTransactionType =
+  | 'opening'
+  | 'expense'
+  | 'income'
+  | 'transfer-in'
+  | 'transfer-out'
+  | 'adjustment';
+
+export interface WalletTransaction {
+  id: string;
+  type: WalletTransactionType;
+  amount: number;
+  date: string;
+  description: string;
+  sourceType?: 'expense' | 'income' | 'transfer' | 'adjustment' | 'opening';
+  sourceId?: string;
+  transferId?: string;
+  voided?: boolean;
+}
+
+export interface WalletAccount extends SyncMetadata {
+  id: string;
+  name: string;
+  type: WalletAccountType;
+  openingBalance: number;
+  currency: string;
+  notes: string;
+  isArchived: boolean;
+  transactions: WalletTransaction[];
+}
+
+export type NewWalletAccountInput = Omit<
+  WalletAccount,
+  'id' | SyncMetadataField | 'transactions'
+>;
 
 export interface CreditCard extends SyncMetadata {
   id: string;
@@ -215,6 +256,7 @@ export type SyncedEntity =
   | InstallmentPayment
   | PaymentAllocation
   | SavingsGoal
+  | WalletAccount
   | UserPreferences;
 
 export function nowIsoTimestamp(date = new Date()): string {

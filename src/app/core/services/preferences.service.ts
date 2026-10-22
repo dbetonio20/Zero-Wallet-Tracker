@@ -37,6 +37,7 @@ const IMPORT_LIST_KEYS = [
   'credit_cards',
   'paymentAllocations',
   'savingsGoals',
+  'walletAccounts',
   'categories',
 ] as const;
 
@@ -50,6 +51,7 @@ type ImportDataByKey = {
   credit_cards: NormalizedImportedRecord[];
   paymentAllocations: NormalizedImportedRecord[];
   savingsGoals: NormalizedImportedRecord[];
+  walletAccounts: NormalizedImportedRecord[];
   categories: NormalizedImportedRecord[];
 };
 
@@ -201,6 +203,7 @@ export class PreferencesService {
       credit_cards: [],
       paymentAllocations: [],
       savingsGoals: [],
+      walletAccounts: [],
       categories: [],
     };
 
@@ -466,11 +469,22 @@ export class PreferencesService {
     const activeCards = this.indexActiveIds(dataByKey.credit_cards);
     const activeIncomes = this.indexActiveIds(dataByKey.incomes);
     const activeExpenses = this.indexActiveIds(dataByKey.expenses);
+    const activeWalletAccounts = this.indexActiveIds(dataByKey.walletAccounts);
     const activeInstallments = this.indexActiveIds(dataByKey.installments);
     const activeInstallmentPayments = this.indexActiveIds(dataByKey.installmentPayments);
 
     for (const rawExpense of dataByKey.expenses as Expense[]) {
       if (!isActiveSyncedEntity(rawExpense)) continue;
+      if (rawExpense.accountId && !activeWalletAccounts.has(rawExpense.accountId)) {
+        issues.push(
+          this.createImportIssue(
+            'broken-reference',
+            'expenses',
+            `Expense ${rawExpense.id} references missing account ${rawExpense.accountId}.`,
+            rawExpense.id
+          )
+        );
+      }
       if (
         rawExpense.paymentMethod === 'Credit Card' &&
         rawExpense.creditCardId &&
@@ -482,6 +496,23 @@ export class PreferencesService {
             'expenses',
             `Expense ${rawExpense.id} references missing credit card ${rawExpense.creditCardId}.`,
             rawExpense.id
+          )
+        );
+      }
+    }
+
+    for (const rawIncome of dataByKey.incomes as Income[]) {
+      if (
+        isActiveSyncedEntity(rawIncome) &&
+        rawIncome.accountId &&
+        !activeWalletAccounts.has(rawIncome.accountId)
+      ) {
+        issues.push(
+          this.createImportIssue(
+            'broken-reference',
+            'incomes',
+            `Income ${rawIncome.id} references missing account ${rawIncome.accountId}.`,
+            rawIncome.id
           )
         );
       }

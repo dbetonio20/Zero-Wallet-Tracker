@@ -27,6 +27,7 @@ import { CreditCardService } from './credit-card.service';
 import { FinancialEngineService } from './financial-engine.service';
 import { SavingsGoalService } from './savings-goal.service';
 import { StorageService } from './storage.service';
+import { WalletService } from './wallet.service';
 
 /** All storage keys that are synced to Firestore. */
 const SYNC_KEYS = [
@@ -38,6 +39,7 @@ const SYNC_KEYS = [
   'credit_cards',
   'categories',
   'savingsGoals',
+  'walletAccounts',
 ] as const;
 
 const TOMBSTONE_RETENTION_DAYS = 60;
@@ -97,6 +99,7 @@ export class SyncService {
   private readonly cardService = inject(CreditCardService);
   private readonly categoryService = inject(CategoryService);
   private readonly goalService = inject(SavingsGoalService);
+  private readonly walletService = inject(WalletService);
   private readonly keyUnsubscribers = new Map<SyncKey, () => void>();
   private readonly pendingPushes = new Set<Promise<void>>();
   private readonly pendingSnapshotMerges = new Set<Promise<void>>();
@@ -326,6 +329,9 @@ export class SyncService {
         break;
       case 'savingsGoals':
         await this.goalService.reloadFromStorage();
+        break;
+      case 'walletAccounts':
+        await this.walletService.reloadFromStorage();
         break;
     }
   }

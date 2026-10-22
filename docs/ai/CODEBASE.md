@@ -329,6 +329,18 @@ donutOptions: ChartOptions<'doughnut'>
 
 **Template:** page-header, segment toggle, installment accordion group (each accordion shows full payment schedule with mark-paid swipe), credit card tiles showing bank/name/due/cutoff/limit/nextDue, FAB (delegates add to correct modal), add-installment modal, add-card modal.
 
+### Wallets & Accounts (verified implementation)
+
+`DebtsComponent` hosts an Accounts section alongside its existing Debts and Savings sections; it does not add a bottom-navigation tab. `WalletsComponent` manages user-entered accounts, history, transfers, and balance adjustments.
+
+**Model and storage:** `WalletAccount` records are stored under `walletAccounts` and synced like other collections. The authoritative balance is derived from `openingBalance` plus non-voided wallet transaction amounts. Opening entries are shown in history but are not added a second time. Transfers persist paired entries with a shared transfer ID; adjustments persist the delta and reason.
+
+**Financial links:** `Expense.accountId` is optional and only affects an account when the expense is paid. `Income.accountId` is optional and credits the linked account. `FinancialEngineService` reconciles these entries by source record ID, so edits, payment status changes, reassignment, and deletion do not duplicate their balance effects. Legacy expense and income records remain unlinked. Credit-card expenses retain their existing credit-card relationship and are not posted to wallet balances.
+
+Home and reports continue to use their existing income/expense calculations; wallet balances are a separate manual cash-tracking view. Savings and goal balances remain separately stored allocations. A savings deposit can optionally be assigned to a wallet account to prevent allocations from exceeding that wallet's unreserved balance; it does not create a second wallet cash movement. Legacy and unassigned savings transactions remain valid.
+
+**Backup/import:** `walletAccounts` is included in sync and data import. Import validation checks linked expense and income account IDs when present.
+
 ---
 
 ### SettingsComponent (`features/settings/`)

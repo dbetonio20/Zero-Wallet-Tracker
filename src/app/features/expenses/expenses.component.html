@@ -141,7 +141,7 @@
             <ion-item [class.expense-preview]="e.isPreview">
               <ion-label>
                 <h3>{{ displayName(e) }}</h3>
-                <p>{{ e.date | date:'MMM d, y' }} · {{ e.paymentMethod }}{{ e.creditCardId ? ' (' + (creditCardService.getById(e.creditCardId)?.bank + ' – ' + creditCardService.getById(e.creditCardId)?.name) + ')' : '' }}</p>
+                <p>{{ e.date | date:'MMM d, y' }} · {{ e.paymentMethod }}{{ e.accountId ? ' · ' + accountName(e.accountId) : '' }}{{ e.creditCardId ? ' (' + (creditCardService.getById(e.creditCardId)?.bank + ' – ' + creditCardService.getById(e.creditCardId)?.name) + ')' : '' }}</p>
                 @if (e.recurring) {
                   <ion-badge color="tertiary" class="recurring-badge">
                     <ion-icon name="repeat-outline" /> Recurring
@@ -251,9 +251,12 @@
           <ion-input label="Date" type="date" [(ngModel)]="form.date" />
         </ion-item>
         <ion-item>
-          <ion-select label="Payment Method" [(ngModel)]="form.paymentMethod">
-            @for (m of methods; track m) {
-              <ion-select-option [value]="m">{{ m }}</ion-select-option>
+          <ion-select label="Payment Method" [value]="paymentPickerValue" (ionChange)="onPaymentPickerChange($event.detail.value)">
+            @for (account of selectableAccounts(); track account.id) {
+              <ion-select-option [value]="'account:' + account.id">{{ account.name }}</ion-select-option>
+            }
+            @for (m of untrackedMethods(); track m) {
+              <ion-select-option [value]="'method:' + m">{{ m }}{{ m === 'Credit Card' ? '' : ' (untracked)' }}</ion-select-option>
             }
           </ion-select>
         </ion-item>
