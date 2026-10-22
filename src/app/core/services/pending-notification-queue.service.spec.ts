@@ -55,8 +55,22 @@ describe('PendingNotificationQueueService', () => {
         { provide: StorageService, useValue: storageMock },
       ],
     });
+
     queue = TestBed.inject(PendingNotificationQueueService);
     await queue.ready();
+  });
+
+  it('re-surfaces a pending candidate without adding a duplicate', async () => {
+    await queue.add(candidate);
+    const emitted: string[] = [];
+    const subscription = queue.candidateAdded$.subscribe(item => emitted.push(item.id));
+
+    expect(await queue.add(candidate)).toBeFalse();
+    expect(queue.resurfacePending(candidate.fingerprint)).toBeTrue();
+    expect(emitted).toEqual([candidate.id]);
+    expect(queue.pendingCandidates().length).toBe(1);
+
+    subscription.unsubscribe();
   });
 
   it('persists candidates locally and deduplicates across service restarts', async () => {

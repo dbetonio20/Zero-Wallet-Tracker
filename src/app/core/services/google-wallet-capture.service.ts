@@ -123,6 +123,7 @@ export class GoogleWalletCaptureService {
     let addedCount = 0;
     for (const notification of notifications) {
       if (await this.addNotification(notification)) addedCount += 1;
+      else this.queue.resurfacePending(notification.fingerprint);
     }
     return {
       permissionGranted: true,

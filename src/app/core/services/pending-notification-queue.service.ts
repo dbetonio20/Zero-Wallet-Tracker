@@ -103,6 +103,16 @@ export class PendingNotificationQueueService {
     return true;
   }
 
+  /** Re-surfaces a still-pending candidate for review when its notification is seen again. */
+  resurfacePending(fingerprint: string): boolean {
+    const existing = this._candidates().find(
+      item => item.fingerprint === fingerprint && item.reviewStatus === 'pending'
+    );
+    if (!existing) return false;
+    this.candidateAdded.next(existing);
+    return true;
+  }
+
   /** Updates a stored candidate without changing its review state. */
   async update(candidate: PendingNotificationCandidate): Promise<void> {
     await this.ensureLoaded();
